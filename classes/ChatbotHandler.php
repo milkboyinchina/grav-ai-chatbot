@@ -184,7 +184,7 @@ class ChatbotHandler
             $systemPrompt .= "INDEXED WEBSITE CONTENT:\n{$siteContext}\n\n";
         }
 
-        // 8. Invoke AI Engine via Factory
+        // 9. Invoke AI Engine via Factory
         $aiClient = AiClientFactory::create($this->config);
         
         $messages = [];
@@ -199,12 +199,44 @@ class ChatbotHandler
 
         $aiResult = $aiClient->generateResponse($systemPrompt, $messages);
 
-        // 9. Log Interaction
+        // 10. Handle AI API Failure / Timeout / Error
+        if (!$aiResult['success']) {
+            $contactResolver = new ContactPageResolver(
+                $this->grav,
+                $this->config['contact_route'] ?? '/contact',
+                $this->config['hidden_contact_route'] ?? '/hidden-contacts',
+                !empty($this->config['enable_hidden_contacts'])
+            );
+            $contactDetails = $contactResolver->getContactInformation($question);
+
+            $fallbackMsg = "The AI Assistant is currently unavailable. Please contact our team directly for assistance:\n\n" . $contactDetails;
+
+            if (!empty($this->config['logging_enabled'])) {
+                $this->logger->logInteraction([
+                    'question' => $question,
+                    'answer' => "AI Error [{$aiResult['error']}]: " . $aiResult['answer'],
+                    'source' => 'ai_error',
+                    'provider' => $this->config['provider'] ?? 'gemini',
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0
+                ]);
+            }
+
+            return [
+                'http_code' => 200,
+                'success' => false,
+                'source' => 'ai_error',
+                'error_detail' => $aiResult['error'],
+                'answer' => $fallbackMsg
+            ];
+        }
+
+        // 11. Log Successful Interaction
         if (!empty($this->config['logging_enabled'])) {
             $this->logger->logInteraction([
                 'question' => $question,
                 'answer' => $aiResult['answer'],
-                'source' => $aiResult['success'] ? 'ai_api' : 'ai_error',
+                'source' => 'ai_api',
                 'provider' => $this->config['provider'] ?? 'gemini',
                 'prompt_tokens' => $aiResult['prompt_tokens'],
                 'completion_tokens' => $aiResult['completion_tokens']
@@ -212,8 +244,8 @@ class ChatbotHandler
         }
 
         return [
-            'http_code' => $aiResult['success'] ? 200 : 500,
-            'success' => $aiResult['success'],
+            'http_code' => 200,
+            'success' => true,
             'source' => 'ai_api',
             'answer' => $aiResult['answer']
         ];
