@@ -5,11 +5,11 @@ en:
     AI_ENABLED: Enable AI API Fallback
     AI_ENABLED_HELP: When disabled, chatbot strictly uses local FAQ page answers and will not make AI API calls.
     PROVIDER: AI Provider Engine
-    PROVIDER_HELP: Select your preferred AI provider model (Google Gemini, OpenRouter, OpenAI, or Custom)
+    PROVIDER_HELP: Select your preferred AI provider model (Groq, Google Gemini, OpenRouter, OpenAI, or Custom)
     API_KEY: API Key
     API_KEY_HELP: Enter your provider API Key securely
     MODEL: Model Identifier
-    MODEL_HELP: E.g., gemini-1.5-flash, google/gemini-flash-1.5, gpt-4o-mini
+    MODEL_HELP: E.g. llama-3.3-70b-versatile, llama-3.1-8b-instant, gemini-1.5-flash, gpt-4o-mini
     CUSTOM_ENDPOINT: Custom Base Endpoint URL
     CUSTOM_ENDPOINT_HELP: E.g. https://openrouter.ai/api/v1 (only required for Custom provider)
     TEST_CONNECTION: Test AI API Connection
@@ -62,13 +62,13 @@ es:
     ENABLED: Habilitado
     PROVIDER_SETTINGS: Configuración de Proveedor IA
     AI_ENABLED: Habilitar API de IA
-    AI_ENABLED_HELP: Cuando se deshabilita, el chatbot responde estrictamente con las FAQ locales sin llamar a la API de IA.
+    AI_ENABLED_HELP: Cuando se deshabilita, el chatbot responde strictly con las FAQ locales sin llamar a la API de IA.
     PROVIDER: Motor Proveedor de IA
-    PROVIDER_HELP: Seleccione su motor preferido (Google Gemini, OpenRouter, OpenAI, o Personalizado)
+    PROVIDER_HELP: Seleccione su motor preferido (Groq, Google Gemini, OpenRouter, OpenAI, o Personalizado)
     API_KEY: Clave de API
     API_KEY_HELP: Ingrese su clave de API de forma segura
     MODEL: Identificador de Modelo
-    MODEL_HELP: Ej., gemini-1.5-flash, google/gemini-flash-1.5, gpt-4o-mini
+    MODEL_HELP: Ej. llama-3.3-70b-versatile, llama-3.1-8b-instant, gemini-1.5-flash, gpt-4o-mini
     CUSTOM_ENDPOINT: URL Endpoint Personalizado
     CUSTOM_ENDPOINT_HELP: Ej. https://openrouter.ai/api/v1 (solo requerido para proveedor personalizado)
     TEST_CONNECTION: Probar Conexión de IA

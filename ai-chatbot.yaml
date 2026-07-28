@@ -1,8 +1,8 @@
 enabled: true
 ai_enabled: true
-provider: gemini
+provider: groq
 api_key: ''
-model: gemini-1.5-flash
+model: llama-3.3-70b-versatile
 custom_endpoint: ''
 
 faq_enabled: true
