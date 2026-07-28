@@ -16,6 +16,57 @@
   left: 24px;
 }
 
+/* Notification Toast */
+.grav-chatbot-toast {
+  position: absolute;
+  bottom: 70px;
+  width: 260px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  color: #1f2937;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  animation: gravToastFade 0.3s ease;
+  cursor: pointer;
+}
+
+.grav-chatbot-container.bottom-right .grav-chatbot-toast {
+  right: 0;
+}
+
+.grav-chatbot-container.bottom-left .grav-chatbot-toast {
+  left: 0;
+}
+
+@keyframes gravToastFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.grav-chatbot-toast-close {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.grav-chatbot-toast-close:hover {
+  color: #4b5563;
+}
+
+/* Launcher Button */
 .grav-chatbot-launcher {
   width: 56px;
   height: 56px;
@@ -36,6 +87,7 @@
   box-shadow: 0 12px 28px rgba(59, 130, 246, 0.5);
 }
 
+/* Chat Window Box */
 .grav-chatbot-window {
   position: absolute;
   bottom: 72px;
@@ -43,10 +95,10 @@
   height: 500px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 100px);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 18px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -55,13 +107,8 @@
   animation: gravChatbotSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.grav-chatbot-container.bottom-right .grav-chatbot-window {
-  right: 0;
-}
-
-.grav-chatbot-container.bottom-left .grav-chatbot-window {
-  left: 0;
-}
+.grav-chatbot-container.bottom-right .grav-chatbot-window { right: 0; }
+.grav-chatbot-container.bottom-left .grav-chatbot-window { left: 0; }
 
 @keyframes gravChatbotSlideUp {
   from { opacity: 0; transform: translateY(16px) scale(0.96); }
@@ -110,13 +157,8 @@
   max-width: 85%;
 }
 
-.grav-chatbot-msg.user {
-  align-self: flex-end;
-}
-
-.grav-chatbot-msg.assistant {
-  align-self: flex-start;
-}
+.grav-chatbot-msg.user { align-self: flex-end; }
+.grav-chatbot-msg.assistant { align-self: flex-start; }
 
 .grav-chatbot-bubble {
   padding: 10px 14px;
@@ -176,9 +218,7 @@
   transition: background 0.15s ease;
 }
 
-.grav-chatbot-pill:hover {
-  background: #f3f4f6;
-}
+.grav-chatbot-pill:hover { background: #f3f4f6; }
 
 .grav-chatbot-input-area {
   padding: 12px;
@@ -197,18 +237,67 @@
   outline: none;
 }
 
-.grav-chatbot-input-area input:focus {
-  border-color: #3b82f6;
-}
+.grav-chatbot-input-area input:focus { border-color: #3b82f6; }
 
 .grav-chatbot-input-area button {
   width: 38px;
   height: 38px;
   border-radius: 19px;
   border: none;
+  background: #3b82f6;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+/* ==========================================================================
+   THEME PRESETS
+   ========================================================================== */
+
+/* Theme: Emerald Dark */
+.theme-emerald_dark .grav-chatbot-launcher,
+.theme-emerald_dark .grav-chatbot-header,
+.theme-emerald_dark .grav-chatbot-msg.user .grav-chatbot-bubble,
+.theme-emerald_dark .grav-chatbot-input-area button {
+  background: #059669 !important;
+}
+
+.theme-emerald_dark .grav-chatbot-window {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.theme-emerald_dark .grav-chatbot-msg.assistant .grav-chatbot-bubble {
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+.theme-emerald_dark .grav-chatbot-input-area {
+  background: #0f172a;
+  border-top-color: #334155;
+}
+
+.theme-emerald_dark .grav-chatbot-input-area input {
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+/* Theme: Purple Haze */
+.theme-purple_haze .grav-chatbot-launcher,
+.theme-purple_haze .grav-chatbot-header,
+.theme-purple_haze .grav-chatbot-msg.user .grav-chatbot-bubble,
+.theme-purple_haze .grav-chatbot-input-area button {
+  background: #8b5cf6 !important;
+}
+
+/* Theme: Sunset Orange */
+.theme-sunset_orange .grav-chatbot-launcher,
+.theme-sunset_orange .grav-chatbot-header,
+.theme-sunset_orange .grav-chatbot-msg.user .grav-chatbot-bubble,
+.theme-sunset_orange .grav-chatbot-input-area button {
+  background: #f97316 !important;
 }

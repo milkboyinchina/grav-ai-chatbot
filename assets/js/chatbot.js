@@ -1,7 +1,9 @@
 (function () {
   document.addEventListener('DOMContentLoaded', function () {
     const config = window.GravChatbotConfig || {};
-    const apiEndpoint = config.apiEndpoint || '/api/chatbot/query';
+    const apiEndpoint = config.apiEndpoint || '/chatbot-api';
+    const retentionDays = parseInt(config.sessionRetentionDays, 10) || 7;
+    const STORAGE_KEY = 'grav_ai_chatbot_session_v1';
 
     const toggleBtn = document.getElementById('grav-chatbot-toggle');
     const closeBtn = document.getElementById('grav-chatbot-close');
@@ -9,25 +11,61 @@
     const messagesFeed = document.getElementById('grav-chatbot-messages');
     const inputForm = document.getElementById('grav-chatbot-form');
     const inputField = document.getElementById('grav-chatbot-input');
+    const toastBox = document.getElementById('grav-chatbot-toast');
+    const toastClose = document.getElementById('grav-chatbot-toast-close');
     const iconChat = toggleBtn ? toggleBtn.querySelector('.grav-chatbot-icon-chat') : null;
     const iconClose = toggleBtn ? toggleBtn.querySelector('.grav-chatbot-icon-close') : null;
 
     let history = [];
+    let isOpen = false;
 
     if (!toggleBtn || !windowBox) return;
 
+    // Load persistent session from localStorage
+    loadSession();
+
+    // Proactive Toast Notification Timer
+    if (config.notificationEnabled && toastBox) {
+      const delayMs = (parseInt(config.notificationDelaySeconds, 10) || 4) * 1000;
+      setTimeout(function () {
+        if (!isOpen && !sessionStorage.getItem('grav_chatbot_toast_dismissed')) {
+          toastBox.style.display = 'flex';
+        }
+      }, delayMs);
+
+      if (toastClose) {
+        toastClose.addEventListener('click', function (e) {
+          e.stopPropagation();
+          dismissToast();
+        });
+      }
+
+      toastBox.addEventListener('click', function () {
+        dismissToast();
+        toggleChat(true);
+      });
+    }
+
+    function dismissToast() {
+      if (toastBox) toastBox.style.display = 'none';
+      sessionStorage.setItem('grav_chatbot_toast_dismissed', 'true');
+    }
+
     function toggleChat(show) {
-      const isVisible = show !== undefined ? show : windowBox.style.display === 'none';
-      windowBox.style.display = isVisible ? 'flex' : 'none';
+      isOpen = show !== undefined ? show : windowBox.style.display === 'none';
+      windowBox.style.display = isOpen ? 'flex' : 'none';
 
       if (iconChat && iconClose) {
-        iconChat.style.display = isVisible ? 'none' : 'block';
-        iconClose.style.display = isVisible ? 'block' : 'none';
+        iconChat.style.display = isOpen ? 'none' : 'block';
+        iconClose.style.display = isOpen ? 'block' : 'none';
       }
 
-      if (isVisible && inputField) {
-        inputField.focus();
+      if (isOpen) {
+        dismissToast();
+        if (inputField) inputField.focus();
       }
+
+      saveSession();
     }
 
     toggleBtn.addEventListener('click', function () {
@@ -40,7 +78,7 @@
       });
     }
 
-    function appendMessage(role, text, source) {
+    function appendMessage(role, text, source, skipSave) {
       const msgDiv = document.createElement('div');
       msgDiv.className = 'grav-chatbot-msg ' + role;
 
@@ -63,7 +101,11 @@
       messagesFeed.appendChild(msgDiv);
       messagesFeed.scrollTop = messagesFeed.scrollHeight;
 
-      history.push({ role: role, content: text });
+      history.push({ role: role, content: text, source: source });
+
+      if (!skipSave) {
+        saveSession();
+      }
     }
 
     function showTypingIndicator() {
@@ -127,7 +169,7 @@
       });
     }
 
-    // Quick Action Pill Delegation
+    // Quick Action Pills
     document.addEventListener('click', function (e) {
       if (e.target && e.target.classList.contains('grav-chatbot-pill')) {
         const action = e.target.getAttribute('data-action');
@@ -143,15 +185,58 @@
       }
     });
 
+    // Session Persistence Handlers
+    function saveSession() {
+      if (retentionDays <= 0) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+
+      const expiryMs = Date.now() + (retentionDays * 86400000);
+      const sessionData = {
+        expiry: expiryMs,
+        isOpen: isOpen,
+        history: history
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionData));
+      } catch (err) {}
+    }
+
+    function loadSession() {
+      if (retentionDays <= 0) return;
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+
+        const session = JSON.parse(raw);
+        if (session && session.expiry && Date.now() < session.expiry) {
+          if (Array.isArray(session.history) && session.history.length > 0) {
+            messagesFeed.innerHTML = '';
+            history = [];
+            session.history.forEach(function (msg) {
+              appendMessage(msg.role, msg.content, msg.source, true);
+            });
+          }
+          if (session.isOpen) {
+            toggleChat(true);
+          }
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (err) {}
+    }
+
     function escapeAndFormatMarkdown(str) {
+      if (!str) return '';
       let safe = str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       
-      // Bold formatting **text**
       safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Newlines
       safe = safe.replace(/\n/g, '<br/>');
       return safe;
     }

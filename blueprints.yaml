@@ -1,14 +1,14 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.0.0
-description: AI-powered chatbot plugin for Grav CMS with local FAQ pre-matching, multi-tier contact resolution, page summarization, rate-limiting, and analytics reporting.
+version: 1.1.0
+description: AI-powered chatbot plugin for Grav CMS with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, and analytics reporting.
 icon: robot
 author:
   name: milkboyinchina
   email: milkboyinchina@users.noreply.github.com
 homepage: https://github.com/milkboyinchina/grav-ai-chatbot
-keywords: grav, plugin, ai, chatbot, gemini, openrouter, openai, faq, rag
+keywords: grav, plugin, ai, chatbot, gemini, openrouter, openai, faq, rag, themes, session
 bugs: https://github.com/milkboyinchina/grav-ai-chatbot/issues
 docs: https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/README.md
 license: GPL-3.0-or-later
@@ -94,6 +94,16 @@ form:
           validate:
             type: bool
 
+        enable_multilingual_faq:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.ENABLE_MULTILINGUAL_FAQ
+          help: PLUGIN_AI_CHATBOT.ENABLE_MULTILINGUAL_FAQ_HELP
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+
         faq_route:
           type: text
           label: PLUGIN_AI_CHATBOT.FAQ_ROUTE
@@ -169,6 +179,20 @@ form:
             1: PLUGIN_ADMIN.ENABLED
             0: PLUGIN_ADMIN.DISABLED
 
+    section_session:
+      type: section
+      title: PLUGIN_AI_CHATBOT.SESSION_SETTINGS
+      underline: true
+      fields:
+        session_retention_days:
+          type: number
+          label: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS
+          help: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS_HELP
+          default: 7
+          validate:
+            min: 0
+            max: 365
+
     section_logging:
       type: section
       title: PLUGIN_AI_CHATBOT.LOGGING_SETTINGS
@@ -197,6 +221,18 @@ form:
       title: PLUGIN_AI_CHATBOT.UI_SETTINGS
       underline: true
       fields:
+        theme_preset:
+          type: select
+          label: PLUGIN_AI_CHATBOT.THEME_PRESET
+          help: PLUGIN_AI_CHATBOT.THEME_PRESET_HELP
+          default: glass_blue
+          options:
+            glass_blue: Glassmorphic Indigo / Blue
+            emerald_dark: Emerald Dark Mode
+            purple_haze: Neon Purple & Violet
+            sunset_orange: Warm Sunset Orange
+            custom: Custom Color Picker
+
         position:
           type: select
           label: PLUGIN_AI_CHATBOT.WIDGET_POSITION
@@ -213,4 +249,25 @@ form:
         accent_color:
           type: colorpicker
           label: PLUGIN_AI_CHATBOT.ACCENT_COLOR
+          help: PLUGIN_AI_CHATBOT.ACCENT_COLOR_HELP
           default: '#3b82f6'
+
+        notification_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.NOTIFICATION_ENABLED
+          help: PLUGIN_AI_CHATBOT.NOTIFICATION_ENABLED_HELP
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+
+        notification_text:
+          type: text
+          label: PLUGIN_AI_CHATBOT.NOTIFICATION_TEXT
+          default: 👋 Hi there! Need help finding anything on our website?
+
+        notification_delay_seconds:
+          type: number
+          label: PLUGIN_AI_CHATBOT.NOTIFICATION_DELAY
+          default: 4

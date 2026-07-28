@@ -106,12 +106,17 @@ class AiChatbotPlugin extends Plugin
         $assets = $this->grav['assets'];
         $assets->addCss('plugin://ai-chatbot/assets/css/chatbot.css');
 
-        // Pass safe configuration data to JavaScript
+        // Pass configuration data to JavaScript
         $jsConfig = json_encode([
-            'apiEndpoint' => '/api/chatbot/query',
+            'apiEndpoint' => '/chatbot-api',
             'position' => $config['position'] ?? 'bottom-right',
             'welcomeMessage' => $config['welcome_message'] ?? 'Hello! How can I help you with this website today?',
             'accentColor' => $config['accent_color'] ?? '#3b82f6',
+            'themePreset' => $config['theme_preset'] ?? 'glass_blue',
+            'sessionRetentionDays' => (int)($config['session_retention_days'] ?? 7),
+            'notificationEnabled' => !empty($config['notification_enabled']),
+            'notificationText' => $config['notification_text'] ?? '👋 Hi there! Need help finding anything on our website?',
+            'notificationDelaySeconds' => (int)($config['notification_delay_seconds'] ?? 4),
             'currentRoute' => $this->grav['uri']->path(),
         ]);
 

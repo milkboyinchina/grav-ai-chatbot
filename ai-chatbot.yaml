@@ -6,6 +6,7 @@ model: gemini-1.5-flash
 custom_endpoint: ''
 
 faq_enabled: true
+enable_multilingual_faq: true
 faq_route: /faq
 faq_similarity_threshold: 70
 
@@ -18,9 +19,16 @@ rate_limit_max_requests: 10
 rate_limit_window_seconds: 60
 strict_site_scope: true
 
+session_retention_days: 7
+
 logging_enabled: true
 log_api_usage: true
 
+theme_preset: glass_blue
 position: bottom-right
 welcome_message: 'Hello! How can I help you with this website today?'
 accent_color: '#3b82f6'
+
+notification_enabled: true
+notification_text: '👋 Hi there! Need help finding anything on our website?'
+notification_delay_seconds: 4

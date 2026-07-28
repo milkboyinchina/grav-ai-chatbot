@@ -1,4 +1,10 @@
-<div id="grav-ai-chatbot-root" class="grav-chatbot-container {{ config.plugins['ai-chatbot'].position|default('bottom-right') }}">
+<div id="grav-ai-chatbot-root" class="grav-chatbot-container {{ config.plugins['ai-chatbot'].position|default('bottom-right') }} theme-{{ config.plugins['ai-chatbot'].theme_preset|default('glass_blue') }}">
+  <!-- Proactive Notification Toast -->
+  <div id="grav-chatbot-toast" class="grav-chatbot-toast" style="display: none;">
+    <span id="grav-chatbot-toast-text" class="grav-chatbot-toast-text">{{ config.plugins['ai-chatbot'].notification_text|default('👋 Hi there! Need help finding anything on our website?') }}</span>
+    <button id="grav-chatbot-toast-close" class="grav-chatbot-toast-close">&times;</button>
+  </div>
+
   <!-- Floating Launcher Button -->
   <button id="grav-chatbot-toggle" class="grav-chatbot-launcher" aria-label="Open Chatbot">
     <svg class="grav-chatbot-icon-chat" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

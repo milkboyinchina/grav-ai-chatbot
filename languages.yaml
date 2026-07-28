@@ -15,6 +15,8 @@ en:
     FAQ_SETTINGS: FAQ Pre-Matching Settings
     FAQ_ENABLED: Enable FAQ Pre-Matching
     FAQ_ENABLED_HELP: Answers matching questions from the FAQ page directly without using AI API keys
+    ENABLE_MULTILINGUAL_FAQ: Enable Multilingual FAQ Matching
+    ENABLE_MULTILINGUAL_FAQ_HELP: Automatically uses visitor language to match localized FAQ pages (e.g. faq.es.md, /es/faq)
     FAQ_ROUTE: FAQ Page Route
     FAQ_ROUTE_HELP: Route to your website FAQ page (e.g. /faq)
     FAQ_SIMILARITY: FAQ Match Sensitivity (%)
@@ -31,10 +33,30 @@ en:
     RATE_LIMIT_MAX: Max Requests Per Window
     RATE_LIMIT_WINDOW: Window Duration (Seconds)
     STRICT_SITE_SCOPE: Strict Site Scope
+    SESSION_SETTINGS: Session Retention Settings
+    SESSION_RETENTION_DAYS: Chat Retention Period (Days)
+    SESSION_RETENTION_DAYS_HELP: Number of days to retain visitor chat history & active state across pages, tabs, and refreshes (set 0 for session-only)
     LOGGING_SETTINGS: Logging & FAQ Analytics
     LOGGING_ENABLED: Enable Interaction Logging
     LOG_API_USAGE: Track Token Usage & Estimated Cost
-    UI_SETTINGS: Chatbot Widget UI Settings
+    UI_SETTINGS: Chatbot Widget UI & Themes
+    THEME_PRESET: UI Theme Preset
+    THEME_PRESET_HELP: Select visual color theme styling
     WIDGET_POSITION: Floating Widget Position
     WELCOME_MESSAGE: Welcome Greeting
-    ACCENT_COLOR: Widget Accent Color
+    ACCENT_COLOR: Custom Accent Color
+    ACCENT_COLOR_HELP: Used when 'Custom Color Picker' theme is selected
+    NOTIFICATION_ENABLED: Proactive Notification Toast
+    NOTIFICATION_ENABLED_HELP: Shows pop-up message toast above launcher button
+    NOTIFICATION_TEXT: Toast Notification Text
+    NOTIFICATION_DELAY: Toast Delay (Seconds)
+
+es:
+  PLUGIN_AI_CHATBOT:
+    ENABLED: Habilitado
+    PROVIDER_SETTINGS: Configuración del proveedor de IA
+    AI_ENABLED: Habilitar respaldo de API de IA
+    FAQ_SETTINGS: Configuración de coincidencias de FAQ
+    ENABLE_MULTILINGUAL_FAQ: Coincidencia de FAQ multilingüe
+    UI_SETTINGS: Temas y widget de chatbot
+    WELCOME_MESSAGE: Mensaje de bienvenida

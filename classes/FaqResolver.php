@@ -6,7 +6,7 @@ use Grav\Common\Page\Page;
 
 /**
  * Class FaqResolver
- * Pre-matches visitor questions against local FAQ page content to answer instantly with 0 API calls.
+ * Pre-matches visitor questions against local FAQ page content, supporting multilingual sites.
  *
  * @license GPL-3.0-or-later
  */
@@ -15,12 +15,14 @@ class FaqResolver
     protected Grav $grav;
     protected string $faqRoute;
     protected int $threshold;
+    protected bool $enableMultilingual;
 
-    public function __construct(Grav $grav, string $faqRoute = '/faq', int $threshold = 70)
+    public function __construct(Grav $grav, string $faqRoute = '/faq', int $threshold = 70, bool $enableMultilingual = true)
     {
         $this->grav = $grav;
         $this->faqRoute = $faqRoute ?: '/faq';
         $this->threshold = max(50, min(100, $threshold));
+        $this->enableMultilingual = $enableMultilingual;
     }
 
     /**
@@ -47,10 +49,8 @@ class FaqResolver
         foreach ($faqPairs as $faq) {
             $faqQClean = $this->normalizeString($faq['question']);
             
-            // Check exact containment or similarity
             similar_text($userQuestionClean, $faqQClean, $percent);
 
-            // Also check token intersection ratio
             $tokenScore = $this->calculateTokenOverlap($userQuestionClean, $faqQClean);
             $combinedScore = max($percent, $tokenScore);
 
@@ -72,12 +72,35 @@ class FaqResolver
     }
 
     /**
-     * Load FAQ Q&A pairs from Grav Page header or Markdown content.
+     * Load FAQ Q&A pairs from localized Grav Page headers or Markdown content.
      */
     public function loadFaqItems(): array
     {
         $pages = $this->grav['pages'];
-        $page = $pages->find($this->faqRoute);
+        $lang = $this->grav['language']->getLanguage() ?: 'en';
+        
+        $page = null;
+
+        if ($this->enableMultilingual && !empty($lang) && $lang !== 'en') {
+            // 1. Check language-prefixed route e.g. /es/faq
+            $page = $pages->find('/' . $lang . $this->faqRoute);
+
+            // 2. Check translated page instance
+            if (!$page instanceof Page || !$page->exists()) {
+                $defaultPage = $pages->find($this->faqRoute);
+                if ($defaultPage instanceof Page && $defaultPage->exists()) {
+                    $translated = $defaultPage->translatedPage($lang);
+                    if ($translated instanceof Page && $translated->exists()) {
+                        $page = $translated;
+                    }
+                }
+            }
+        }
+
+        // 3. Fallback to default route page
+        if (!$page instanceof Page || !$page->exists()) {
+            $page = $pages->find($this->faqRoute);
+        }
 
         if (!$page instanceof Page || !$page->exists()) {
             return [];
@@ -86,7 +109,7 @@ class FaqResolver
         $items = [];
         $header = $page->header();
 
-        // 1. Sourced from Header YAML (faq: array)
+        // 1. Header YAML (faq: array)
         if (!empty($header->faq) && is_array($header->faq)) {
             foreach ($header->faq as $f) {
                 if (!empty($f['question']) && !empty($f['answer'])) {
@@ -98,7 +121,7 @@ class FaqResolver
             }
         }
 
-        // 2. Sourced from Markdown content headers (### Q: / ### ... followed by paragraph)
+        // 2. Markdown headers (### Q: / ### ... followed by paragraph)
         $rawMarkdown = $page->rawMarkdown();
         if (preg_match_all('/^###?\s+(?:Q:\s*)?(.+?)$(.*?)(?=^###?|\z)/msi', $rawMarkdown, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
@@ -128,7 +151,7 @@ class FaqResolver
         $tokens1 = array_unique(explode(' ', $str1));
         $tokens2 = array_unique(explode(' ', $str2));
         
-        $stopWords = ['is', 'the', 'this', 'a', 'an', 'what', 'when', 'where', 'how', 'who', 'does', 'do', 'can', 'you', 'your', 'our'];
+        $stopWords = ['is', 'the', 'this', 'a', 'an', 'what', 'when', 'where', 'how', 'who', 'does', 'do', 'can', 'you', 'your', 'our', 'que', 'como', 'donde', 'cuando', 'quien', 'es', 'el', 'la', 'los', 'las', 'un', 'una'];
         $tokens1 = array_diff($tokens1, $stopWords);
         $tokens2 = array_diff($tokens2, $stopWords);
 

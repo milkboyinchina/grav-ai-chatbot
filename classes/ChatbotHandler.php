@@ -93,8 +93,9 @@ class ChatbotHandler
         if (!empty($this->config['faq_enabled']) && !empty($question)) {
             $faqRoute = $this->config['faq_route'] ?? '/faq';
             $threshold = (int)($this->config['faq_similarity_threshold'] ?? 70);
+            $enableMulti = !empty($this->config['enable_multilingual_faq']);
 
-            $faqResolver = new FaqResolver($this->grav, $faqRoute, $threshold);
+            $faqResolver = new FaqResolver($this->grav, $faqRoute, $threshold, $enableMulti);
             $faqMatch = $faqResolver->matchQuestion($question);
 
             if ($faqMatch !== null) {
