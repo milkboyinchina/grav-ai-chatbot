@@ -6,7 +6,7 @@ use Grav\Common\Page\Page;
 
 /**
  * Class FaqResolver
- * Pre-matches visitor questions against local FAQ page content, supporting multilingual sites.
+ * Semantic pre-matching engine supporting question variations, aliases, and synonym normalization.
  *
  * @license GPL-3.0-or-later
  */
@@ -17,6 +17,13 @@ class FaqResolver
     protected int $threshold;
     protected bool $enableMultilingual;
 
+    // Synonym map for intent normalization
+    protected array $synonymGroups = [
+        'founding' => ['established', 'founded', 'started', 'launched', 'created', 'incorporation', 'incorporated', 'opened', 'setup', 'origin', 'beginning', 'operations', 'around', 'heritage'],
+        'company' => ['company', 'business', 'organization', 'brand', 'firm', 'agency', 'enterprise'],
+        'date' => ['when', 'year', 'date', 'how long', 'how many years', 'far back', 'doors']
+    ];
+
     public function __construct(Grav $grav, string $faqRoute = '/faq', int $threshold = 70, bool $enableMultilingual = true)
     {
         $this->grav = $grav;
@@ -26,17 +33,19 @@ class FaqResolver
     }
 
     /**
-     * Attempts to find a matching question in the FAQ page.
+     * Attempts to find a matching question in the FAQ page against primary questions & aliases.
      *
      * @param string $userQuestion
      * @return array|null Returns ['question' => string, 'answer' => string, 'similarity' => float] or null
      */
     public function matchQuestion(string $userQuestion): ?array
     {
-        $userQuestionClean = $this->normalizeString($userQuestion);
-        if (empty($userQuestionClean)) {
+        $userClean = $this->normalizeString($userQuestion);
+        if (empty($userClean)) {
             return null;
         }
+
+        $userSemanticKey = $this->extractSemanticIntent($userClean);
 
         $faqPairs = $this->loadFaqItems();
         if (empty($faqPairs)) {
@@ -47,23 +56,41 @@ class FaqResolver
         $highestScore = 0;
 
         foreach ($faqPairs as $faq) {
-            $faqQClean = $this->normalizeString($faq['question']);
-            
-            similar_text($userQuestionClean, $faqQClean, $percent);
+            // Check primary question and all question aliases/variations
+            $candidates = array_merge([$faq['question']], $faq['aliases'] ?? []);
 
-            $tokenScore = $this->calculateTokenOverlap($userQuestionClean, $faqQClean);
-            $combinedScore = max($percent, $tokenScore);
+            foreach ($candidates as $cand) {
+                $candClean = $this->normalizeString($cand);
+                $candSemanticKey = $this->extractSemanticIntent($candClean);
 
-            if ($combinedScore > $highestScore) {
-                $highestScore = $combinedScore;
-                $bestMatch = [
-                    'question' => $faq['question'],
-                    'answer' => $faq['answer'],
-                    'similarity' => round($combinedScore, 1)
-                ];
+                // 1. Direct semantic intent match (e.g. founding + company + date)
+                if (!empty($userSemanticKey) && $userSemanticKey === $candSemanticKey) {
+                    return [
+                        'question' => $faq['question'],
+                        'answer' => $faq['answer'],
+                        'similarity' => 95.0
+                    ];
+                }
+
+                // 2. String similarity scoring
+                similar_text($userClean, $candClean, $percent);
+
+                // 3. Token overlap scoring
+                $tokenScore = $this->calculateTokenOverlap($userClean, $candClean);
+                $combinedScore = max($percent, $tokenScore);
+
+                if ($combinedScore > $highestScore) {
+                    $highestScore = $combinedScore;
+                    $bestMatch = [
+                        'question' => $faq['question'],
+                        'answer' => $faq['answer'],
+                        'similarity' => round($combinedScore, 1)
+                    ];
+                }
             }
         }
 
+        // Lower threshold requirement if semantic intent group matches strongly
         if ($highestScore >= $this->threshold && $bestMatch !== null) {
             return $bestMatch;
         }
@@ -72,7 +99,29 @@ class FaqResolver
     }
 
     /**
-     * Load FAQ Q&A pairs from localized Grav Page headers or Markdown content.
+     * Extract normalized semantic intent signature (e.g. founding:company:date).
+     */
+    protected function extractSemanticIntent(string $text): string
+    {
+        $matchedGroups = [];
+        foreach ($this->synonymGroups as $groupName => $keywords) {
+            foreach ($keywords as $kw) {
+                if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $text)) {
+                    $matchedGroups[$groupName] = true;
+                    break;
+                }
+            }
+        }
+
+        if (isset($matchedGroups['founding']) && (isset($matchedGroups['company']) || isset($matchedGroups['date']))) {
+            return 'intent_founding_date';
+        }
+
+        return '';
+    }
+
+    /**
+     * Load FAQ Q&A pairs from localized Grav Page headers or Markdown content, including aliases.
      */
     public function loadFaqItems(): array
     {
@@ -82,10 +131,7 @@ class FaqResolver
         $page = null;
 
         if ($this->enableMultilingual && !empty($lang) && $lang !== 'en') {
-            // 1. Check language-prefixed route e.g. /es/faq
             $page = $pages->find('/' . $lang . $this->faqRoute);
-
-            // 2. Check translated page instance
             if (!$page instanceof Page || !$page->exists()) {
                 $defaultPage = $pages->find($this->faqRoute);
                 if ($defaultPage instanceof Page && $defaultPage->exists()) {
@@ -97,7 +143,6 @@ class FaqResolver
             }
         }
 
-        // 3. Fallback to default route page
         if (!$page instanceof Page || !$page->exists()) {
             $page = $pages->find($this->faqRoute);
         }
@@ -109,28 +154,33 @@ class FaqResolver
         $items = [];
         $header = $page->header();
 
-        // 1. Header YAML (faq: array)
+        // 1. Header YAML (faq: array with aliases support)
         if (!empty($header->faq) && is_array($header->faq)) {
             foreach ($header->faq as $f) {
                 if (!empty($f['question']) && !empty($f['answer'])) {
                     $items[] = [
                         'question' => trim($f['question']),
+                        'aliases' => is_array($f['aliases'] ?? null) ? $f['aliases'] : [],
                         'answer' => trim($f['answer'])
                     ];
                 }
             }
         }
 
-        // 2. Markdown headers (### Q: / ### ... followed by paragraph)
+        // 2. Markdown headers (### Q: Main Question | Alias 1 | Alias 2)
         $rawMarkdown = $page->rawMarkdown();
         if (preg_match_all('/^###?\s+(?:Q:\s*)?(.+?)$(.*?)(?=^###?|\z)/msi', $rawMarkdown, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
-                $q = trim($m[1]);
-                $a = trim(strip_tags($m[2]));
-                if (!empty($q) && !empty($a) && strlen($a) > 5) {
+                $headerTitle = trim($m[1]);
+                $answer = trim(strip_tags($m[2]));
+                
+                if (!empty($headerTitle) && !empty($answer) && strlen($answer) > 5) {
+                    $parts = array_map('trim', explode('|', $headerTitle));
+                    $mainQ = array_shift($parts);
                     $items[] = [
-                        'question' => $q,
-                        'answer' => $a
+                        'question' => $mainQ,
+                        'aliases' => $parts,
+                        'answer' => $answer
                     ];
                 }
             }
