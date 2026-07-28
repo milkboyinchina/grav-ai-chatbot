@@ -28,34 +28,71 @@ class ContextIndexer
      */
     public function buildSiteContext(array $excludeRoutes = []): string
     {
-        /** @var Collection $pages */
-        $pages = $this->grav['pages']->all();
+        $pages = [];
+        try {
+            $pagesContainer = $this->grav['pages'] ?? null;
+            if ($pagesContainer) {
+                if (method_exists($pagesContainer, 'init')) {
+                    try {
+                        $pagesContainer->init();
+                    } catch (\Throwable $t) {
+                        // Already initialized or safely handled
+                    }
+                }
+                $pages = $pagesContainer->all() ?: [];
+            }
+        } catch (\Throwable $e) {
+            $pages = [];
+        }
+
         $siteContext = [];
 
         /** @var Page $page */
         foreach ($pages as $page) {
-            if (!$page->published() || !$page->routable()) {
+            try {
+                if (!$page->published() || !$page->routable()) {
+                    continue;
+                }
+
+                $route = $page->route();
+                if (in_array($route, $excludeRoutes) || strpos($route, '/hidden-') !== false) {
+                    continue;
+                }
+
+                $title = $page->title();
+                $content = strip_tags($page->content());
+                // Truncate individual page length to prevent excessive tokens
+                $cleanContent = trim(preg_replace('/\s+/', ' ', $content));
+                if (strlen($cleanContent) > 600) {
+                    $cleanContent = substr($cleanContent, 0, 600) . '...';
+                }
+
+                if (!empty($cleanContent)) {
+                    $siteContext[] = "Page Title: {$title} (Route: {$route})\nSummary: {$cleanContent}";
+                }
+            } catch (\Throwable $t) {
                 continue;
-            }
-
-            $route = $page->route();
-            if (in_array($route, $excludeRoutes) || strpos($route, '/hidden-') !== false) {
-                continue;
-            }
-
-            $title = $page->title();
-            $content = strip_tags($page->content());
-            // Truncate individual page length to prevent excessive tokens
-            $cleanContent = trim(preg_replace('/\s+/', ' ', $content));
-            if (strlen($cleanContent) > 600) {
-                $cleanContent = substr($cleanContent, 0, 600) . '...';
-            }
-
-            if (!empty($cleanContent)) {
-                $siteContext[] = "Page Title: {$title} (Route: {$route})\nSummary: {$cleanContent}";
             }
         }
 
         return implode("\n\n---\n\n", array_slice($siteContext, 0, 15));
+    }
+
+    /**
+     * Search context chunks relevant to question.
+     *
+     * @param string $question User query
+     * @param int $maxChunks Maximum chunks to return
+     * @return array Chunks array
+     */
+    public function searchContext(string $question, int $maxChunks = 3): array
+    {
+        $fullContext = $this->buildSiteContext();
+        if (empty($fullContext)) {
+            return [];
+        }
+
+        $chunks = explode("\n\n---\n\n", $fullContext);
+        return array_slice($chunks, 0, $maxChunks);
     }
 }

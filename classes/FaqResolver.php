@@ -24,22 +24,31 @@ class FaqResolver
         'date' => ['when', 'year', 'date', 'how long', 'how many years', 'far back', 'doors']
     ];
 
-    public function __construct(Grav $grav, string $faqRoute = '/faq', int $threshold = 70, bool $enableMultilingual = true)
+    public function __construct(Grav $grav, array $config = [])
     {
         $this->grav = $grav;
-        $this->faqRoute = $faqRoute ?: '/faq';
-        $this->threshold = max(50, min(100, $threshold));
-        $this->enableMultilingual = $enableMultilingual;
+        
+        if (is_string($config)) {
+            $this->faqRoute = $config ?: '/faq';
+            $this->threshold = 70;
+            $this->enableMultilingual = true;
+        } else {
+            $this->faqRoute = $config['faq_route'] ?? '/faq';
+            $this->threshold = max(50, min(100, (int)($config['faq_similarity_threshold'] ?? 70)));
+            $this->enableMultilingual = !empty($config['enable_multilingual_faq']);
+        }
     }
 
     /**
      * Attempts to find a matching question in the FAQ page against primary questions & aliases.
      *
      * @param string $userQuestion
-     * @return array|null Returns ['question' => string, 'answer' => string, 'similarity' => float] or null
+     * @param int|null $customThreshold
+     * @return array|null Returns ['matched_question' => string, 'answer' => string, 'similarity' => float] or null
      */
-    public function matchQuestion(string $userQuestion): ?array
+    public function findMatch(string $userQuestion, ?int $customThreshold = null): ?array
     {
+        $threshold = $customThreshold !== null ? max(50, min(100, $customThreshold)) : $this->threshold;
         $userClean = $this->normalizeString($userQuestion);
         if (empty($userClean)) {
             return null;
@@ -61,37 +70,39 @@ class FaqResolver
 
             foreach ($candidates as $cand) {
                 $candClean = $this->normalizeString($cand);
-                $candSemanticKey = $this->extractSemanticIntent($candClean);
+                if (empty($candClean)) continue;
 
-                // 1. Direct semantic intent match (e.g. founding + company + date)
-                if (!empty($userSemanticKey) && $userSemanticKey === $candSemanticKey) {
+                // 1. Exact or Substring match
+                if ($userClean === $candClean || strpos($userClean, $candClean) !== false || strpos($candClean, $userClean) !== false) {
                     return [
-                        'question' => $faq['question'],
+                        'matched_question' => $faq['question'],
                         'answer' => $faq['answer'],
-                        'similarity' => 95.0
+                        'similarity' => 100
                     ];
                 }
 
-                // 2. String similarity scoring
+                // 2. Similar text percentage match
                 similar_text($userClean, $candClean, $percent);
 
-                // 3. Token overlap scoring
-                $tokenScore = $this->calculateTokenOverlap($userClean, $candClean);
-                $combinedScore = max($percent, $tokenScore);
+                // 3. Semantic Intent Boost
+                $candSemanticKey = $this->extractSemanticIntent($candClean);
+                if (!empty($userSemanticKey) && $userSemanticKey === $candSemanticKey) {
+                    $percent = max($percent, 95.0);
+                }
 
-                if ($combinedScore > $highestScore) {
-                    $highestScore = $combinedScore;
+                if ($percent > $highestScore) {
+                    $highestScore = $percent;
                     $bestMatch = [
-                        'question' => $faq['question'],
+                        'matched_question' => $faq['question'],
                         'answer' => $faq['answer'],
-                        'similarity' => round($combinedScore, 1)
+                        'similarity' => round($percent, 1)
                     ];
                 }
             }
         }
 
-        // Lower threshold requirement if semantic intent group matches strongly
-        if ($highestScore >= $this->threshold && $bestMatch !== null) {
+        // Lower threshold requirement if score is sufficient
+        if ($highestScore >= $threshold && $bestMatch !== null) {
             return $bestMatch;
         }
 
@@ -99,7 +110,7 @@ class FaqResolver
     }
 
     /**
-     * Extract normalized semantic intent signature (e.g. founding:company:date).
+     * Extract normalized semantic intent signature (e.g. intent_founding_date).
      */
     protected function extractSemanticIntent(string $text): string
     {
@@ -125,92 +136,100 @@ class FaqResolver
      */
     public function loadFaqItems(): array
     {
-        $pages = $this->grav['pages'];
-        $lang = $this->grav['language']->getLanguage() ?: 'en';
+        $pagesContainer = $this->grav['pages'] ?? null;
+        if (!$pagesContainer) {
+            return [];
+        }
+
+        try {
+            if (method_exists($pagesContainer, 'init')) {
+                try {
+                    $pagesContainer->init();
+                } catch (\Throwable $t) {}
+            }
+        } catch (\Throwable $e) {}
+
+        $lang = '';
+        if (isset($this->grav['language']) && method_exists($this->grav['language'], 'getLanguage')) {
+            $lang = $this->grav['language']->getLanguage() ?: 'en';
+        }
         
         $page = null;
 
-        if ($this->enableMultilingual && !empty($lang) && $lang !== 'en') {
-            $page = $pages->find('/' . $lang . $this->faqRoute);
-            if (!$page instanceof Page || !$page->exists()) {
-                $defaultPage = $pages->find($this->faqRoute);
-                if ($defaultPage instanceof Page && $defaultPage->exists()) {
-                    $translated = $defaultPage->translatedPage($lang);
-                    if ($translated instanceof Page && $translated->exists()) {
-                        $page = $translated;
+        try {
+            if ($this->enableMultilingual && !empty($lang) && $lang !== 'en') {
+                $page = $pagesContainer->find('/' . $lang . $this->faqRoute);
+                if (!$page instanceof Page || !$page->exists()) {
+                    $defaultPage = $pagesContainer->find($this->faqRoute);
+                    if ($defaultPage instanceof Page && $defaultPage->exists()) {
+                        $translated = $defaultPage->translatedPage($lang);
+                        if ($translated instanceof Page && $translated->exists()) {
+                            $page = $translated;
+                        }
                     }
                 }
             }
-        }
 
-        if (!$page instanceof Page || !$page->exists()) {
-            $page = $pages->find($this->faqRoute);
+            if (!$page instanceof Page || !$page->exists()) {
+                $page = $pagesContainer->find($this->faqRoute);
+            }
+        } catch (\Throwable $t) {
+            $page = null;
         }
 
         if (!$page instanceof Page || !$page->exists()) {
             return [];
         }
 
-        $items = [];
         $header = $page->header();
+        $faqItems = [];
 
-        // 1. Header YAML (faq: array with aliases support)
-        if (!empty($header->faq) && is_array($header->faq)) {
-            foreach ($header->faq as $f) {
-                if (!empty($f['question']) && !empty($f['answer'])) {
-                    $items[] = [
-                        'question' => trim($f['question']),
-                        'aliases' => is_array($f['aliases'] ?? null) ? $f['aliases'] : [],
-                        'answer' => trim($f['answer'])
+        // 1. Check YAML Frontmatter `faqs:` header list
+        if (!empty($header->faqs) && is_array($header->faqs)) {
+            foreach ($header->faqs as $item) {
+                if (!empty($item['question']) && !empty($item['answer'])) {
+                    $faqItems[] = [
+                        'question' => trim($item['question']),
+                        'aliases' => (array)($item['aliases'] ?? []),
+                        'answer' => trim($item['answer'])
                     ];
                 }
             }
         }
 
-        // 2. Markdown headers (### Q: Main Question | Alias 1 | Alias 2)
-        $rawMarkdown = $page->rawMarkdown();
-        if (preg_match_all('/^###?\s+(?:Q:\s*)?(.+?)$(.*?)(?=^###?|\z)/msi', $rawMarkdown, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $m) {
-                $headerTitle = trim($m[1]);
-                $answer = trim(strip_tags($m[2]));
-                
-                if (!empty($headerTitle) && !empty($answer) && strlen($answer) > 5) {
-                    $parts = array_map('trim', explode('|', $headerTitle));
-                    $mainQ = array_shift($parts);
-                    $items[] = [
-                        'question' => $mainQ,
-                        'aliases' => $parts,
-                        'answer' => $answer
+        // 2. Parse Markdown H2/H3 headers if YAML faqs not defined
+        if (empty($faqItems)) {
+            $content = $page->rawMarkdown();
+            $blocks = preg_split('/^#{2,3}\s+/m', $content);
+
+            foreach ($blocks as $block) {
+                $block = trim($block);
+                if (empty($block)) continue;
+
+                $lines = explode("\n", $block);
+                $qLine = trim(array_shift($lines));
+                $answerText = trim(implode("\n", $lines));
+
+                if (!empty($qLine) && !empty($answerText)) {
+                    $faqItems[] = [
+                        'question' => $qLine,
+                        'aliases' => [],
+                        'answer' => $answerText
                     ];
                 }
             }
         }
 
-        return $items;
+        return $faqItems;
     }
 
+    /**
+     * Clean string for fuzzy text matching.
+     */
     protected function normalizeString(string $text): string
     {
         $text = strtolower($text);
         $text = preg_replace('/[^\w\s]/u', '', $text);
         return trim(preg_replace('/\s+/', ' ', $text));
-    }
-
-    protected function calculateTokenOverlap(string $str1, string $str2): float
-    {
-        $tokens1 = array_unique(explode(' ', $str1));
-        $tokens2 = array_unique(explode(' ', $str2));
-        
-        $stopWords = ['is', 'the', 'this', 'a', 'an', 'what', 'when', 'where', 'how', 'who', 'does', 'do', 'can', 'you', 'your', 'our', 'que', 'como', 'donde', 'cuando', 'quien', 'es', 'el', 'la', 'los', 'las', 'un', 'una'];
-        $tokens1 = array_diff($tokens1, $stopWords);
-        $tokens2 = array_diff($tokens2, $stopWords);
-
-        if (empty($tokens1) || empty($tokens2)) {
-            return 0.0;
-        }
-
-        $intersection = array_intersect($tokens1, $tokens2);
-        $overlap = count($intersection) / min(count($tokens1), count($tokens2));
-        return $overlap * 100.0;
     }
 }

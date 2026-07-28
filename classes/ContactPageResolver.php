@@ -17,12 +17,26 @@ class ContactPageResolver
     protected string $hiddenRoute;
     protected bool $enableHidden;
 
-    public function __construct(Grav $grav, string $publicRoute = '/contact', string $hiddenRoute = '/hidden-contacts', bool $enableHidden = true)
+    public function __construct(Grav $grav, $publicRoute = '/contact', string $hiddenRoute = '/hidden-contacts', bool $enableHidden = true)
     {
         $this->grav = $grav;
-        $this->publicRoute = $publicRoute ?: '/contact';
-        $this->hiddenRoute = $hiddenRoute ?: '/hidden-contacts';
-        $this->enableHidden = $enableHidden;
+        if (is_array($publicRoute)) {
+            $this->publicRoute = $publicRoute['contact_route'] ?? '/contact';
+            $this->hiddenRoute = $publicRoute['hidden_contact_route'] ?? '/hidden-contacts';
+            $this->enableHidden = !empty($publicRoute['enable_hidden_contacts']);
+        } else {
+            $this->publicRoute = $publicRoute ?: '/contact';
+            $this->hiddenRoute = $hiddenRoute ?: '/hidden-contacts';
+            $this->enableHidden = $enableHidden;
+        }
+    }
+
+    /**
+     * Alias method for resolving contact details.
+     */
+    public function resolveContactDetails(string $userQuestion): string
+    {
+        return $this->getContactInformation($userQuestion);
     }
 
     /**
@@ -65,10 +79,22 @@ class ContactPageResolver
      */
     protected function fetchPageText(string $route, bool $allowHidden = false): string
     {
-        $pages = $this->grav['pages'];
+        $pagesContainer = $this->grav['pages'] ?? null;
+        if (!$pagesContainer) {
+            return '';
+        }
 
-        /** @var Page|null $page */
-        $page = $pages->find($route);
+        try {
+            if (method_exists($pagesContainer, 'init')) {
+                try {
+                    $pagesContainer->init();
+                } catch (\Throwable $t) {}
+            }
+            /** @var Page|null $page */
+            $page = $pagesContainer->find($route);
+        } catch (\Throwable $e) {
+            $page = null;
+        }
 
         if (!$page instanceof Page || !$page->exists()) {
             return '';
