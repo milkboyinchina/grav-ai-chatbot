@@ -26,6 +26,8 @@ log_api_usage: true
 
 theme_preset: glass_blue
 position: bottom-right
+display_mode: all
+display_pages: "/\n/contact\n/faq"
 welcome_message: 'Hello! How can I help you with this website today?'
 accent_color: '#3b82f6'
 

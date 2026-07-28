@@ -43,6 +43,10 @@ en:
     THEME_PRESET: UI Theme Preset
     THEME_PRESET_HELP: Select visual color theme styling
     WIDGET_POSITION: Floating Widget Position
+    DISPLAY_MODE: Widget Display Visibility
+    DISPLAY_MODE_HELP: Control which website pages show the chatbot widget (All Pages, Only Selected Pages, or Exclude Selected Pages)
+    DISPLAY_PAGES: Page Routes (One per line)
+    DISPLAY_PAGES_HELP: Enter route paths, e.g. / for home, /contact, /faq
     WELCOME_MESSAGE: Welcome Greeting
     ACCENT_COLOR: Custom Accent Color
     ACCENT_COLOR_HELP: Used when 'Custom Color Picker' theme is selected

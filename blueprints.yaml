@@ -241,6 +241,23 @@ form:
             bottom-right: Bottom Right
             bottom-left: Bottom Left
 
+        display_mode:
+          type: select
+          label: PLUGIN_AI_CHATBOT.DISPLAY_MODE
+          help: PLUGIN_AI_CHATBOT.DISPLAY_MODE_HELP
+          default: all
+          options:
+            all: All Pages
+            selected_only: Only Selected Pages
+            exclude_selected: All Pages Except Selected
+
+        display_pages:
+          type: textarea
+          label: PLUGIN_AI_CHATBOT.DISPLAY_PAGES
+          help: PLUGIN_AI_CHATBOT.DISPLAY_PAGES_HELP
+          default: "/\n/contact\n/faq"
+          rows: 3
+
         welcome_message:
           type: text
           label: PLUGIN_AI_CHATBOT.WELCOME_MESSAGE

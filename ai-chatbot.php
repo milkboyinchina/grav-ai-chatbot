@@ -1,35 +1,29 @@
 <?php
-namespace Grav\Plugin;
-
-// Autoload plugin classes
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-    require_once __DIR__ . '/vendor/autoload.php';
-} else {
-    spl_autoload_register(function ($class) {
-        $prefix = 'Grav\\Plugin\\AiChatbot\\';
-        $baseDir = __DIR__ . '/classes/';
-        $len = strlen($prefix);
-        if (strncmp($prefix, $class, $len) !== 0) {
-            return;
-        }
-        $relativeClass = substr($class, $len);
-        $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-        if (file_exists($file)) {
-            require $file;
-        }
-    });
-}
+namespace Grav\Plugin\AiChatbot;
 
 use Grav\Common\Plugin;
-use Grav\Common\Uri;
-use Grav\Plugin\AiChatbot\ChatbotHandler;
-use Grav\Plugin\AiChatbot\AnalyticsReportGenerator;
+
+// Register PSR-4 Autoloader for Plugin Classes
+spl_autoload_register(function ($class) {
+    $prefix = 'Grav\\Plugin\\AiChatbot\\';
+    $baseDir = __DIR__ . '/classes/';
+
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+
+    $relativeClass = substr($class, $len);
+    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+
+    if (file_exists($file)) {
+        require $file;
+    }
+});
 
 /**
- * Grav AI Chatbot Plugin
- *
- * Provides AI chatbot capabilities, local FAQ pre-matching, multi-tier contact resolution,
- * rate limiting, interaction logging, and an Admin Analytics dashboard.
+ * Class AiChatbotPlugin
+ * Grav CMS AI Chatbot Plugin entry point.
  *
  * @license GPL-3.0-or-later
  */
@@ -112,11 +106,33 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Inject front-end assets & CSS/JS configuration for floating chat widget.
+     * Inject front-end assets & CSS/JS configuration for floating chat widget based on page visibility rules.
      */
     public function onTwigSiteVariables()
     {
         $config = $this->config->get('plugins.ai-chatbot');
+        if (empty($config['enabled'])) {
+            return;
+        }
+
+        // Page Display Visibility Rules (all, selected_only, exclude_selected)
+        $currentRoute = $this->grav['uri']->path() ?: '/';
+        $displayMode = $config['display_mode'] ?? 'all';
+
+        if ($displayMode !== 'all') {
+            $rawPages = $config['display_pages'] ?? '';
+            $pagesList = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawPages))));
+
+            $isListed = in_array($currentRoute, $pagesList, true);
+
+            if ($displayMode === 'selected_only' && !$isListed) {
+                return; // Hide widget on this page
+            }
+
+            if ($displayMode === 'exclude_selected' && $isListed) {
+                return; // Hide widget on this page
+            }
+        }
 
         $assets = $this->grav['assets'];
         $assets->addCss('plugin://ai-chatbot/assets/css/chatbot.css');
@@ -132,73 +148,61 @@ class AiChatbotPlugin extends Plugin
             'notificationEnabled' => !empty($config['notification_enabled']),
             'notificationText' => $config['notification_text'] ?? '👋 Hi there! Need help finding anything on our website?',
             'notificationDelaySeconds' => (int)($config['notification_delay_seconds'] ?? 4),
-            'currentRoute' => $this->grav['uri']->path(),
+            'currentRoute' => $currentRoute,
         ]);
 
         $assets->addInlineJs("window.GravChatbotConfig = {$jsConfig};");
-        $assets->addJs('plugin://ai-chatbot/assets/js/chatbot.js', ['group' => 'bottom', 'loading' => 'defer']);
+        $assets->addJs('plugin://ai-chatbot/assets/js/chatbot.js', ['group' => 'bottom']);
+
+        // Render Widget Twig Partial into Page Body
+        $twig = $this->grav['twig'];
+        $widgetHtml = $twig->processTemplate('partials/chatbot-widget.html.twig', [
+            'config' => $this->config
+        ]);
+
+        $this->grav['assets']->addInlineJs("
+            document.addEventListener('DOMContentLoaded', function() {
+                if (!document.getElementById('grav-ai-chatbot-root')) {
+                    const div = document.createElement('div');
+                    div.innerHTML = " . json_encode($widgetHtml) . ";
+                    document.body.appendChild(div.firstElementChild);
+                }
+            });
+        ", ['group' => 'bottom']);
     }
 
     /**
-     * Inject Admin Analytics CSS/JS assets when accessing plugin settings in Admin.
+     * Inject Admin Analytics Dashboard CSS & JS.
      */
     public function onAdminTwigSiteVariables()
     {
-        $uri = $this->grav['uri'];
-        if (strpos($uri->path(), '/admin/plugins/ai-chatbot') !== false) {
-            $assets = $this->grav['assets'];
-            $assets->addCss('plugin://ai-chatbot/assets/css/admin-analytics.css');
-            $assets->addJs('plugin://ai-chatbot/assets/js/admin-analytics.js', ['group' => 'bottom']);
-
-            // Inject Analytics Summary Data for Admin Dashboard Graphs
-            $reportGen = new AnalyticsReportGenerator($this->grav);
-            $analyticsData = json_encode($reportGen->getDashboardAnalyticsData());
-            $assets->addInlineJs("window.GravChatbotAnalytics = {$analyticsData};");
-        }
+        $assets = $this->grav['assets'];
+        $assets->addCss('plugin://ai-chatbot/assets/css/admin-analytics.css');
+        $assets->addJs('plugin://ai-chatbot/assets/js/admin-analytics.js', ['group' => 'bottom']);
     }
 
     /**
-     * Handles POST AJAX calls to /api/chatbot/query
+     * Controller method for AJAX Chatbot API requests.
      */
     protected function handleChatbotQueryApi()
     {
         header('Content-Type: application/json');
+        $config = $this->config->get('plugins.ai-chatbot');
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method Not Allowed']);
-            return;
-        }
+        $handler = new ChatbotHandler($this->grav, $config);
+        $response = $handler->handleRequest();
 
-        $rawInput = file_get_contents('php://input');
-        $data = json_decode($rawInput, true) ?? $_POST;
-
-        $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot'));
-        $response = $handler->processRequest($data);
-
-        if (isset($response['http_code']) && $response['http_code'] !== 200) {
-            http_response_code($response['http_code']);
-        }
-
+        http_response_code($response['http_code'] ?? 200);
         echo json_encode($response);
     }
 
     /**
-     * Handles Admin Export calls (CSV / JSON)
+     * Controller method for CSV and JSON Analytics Reports exports.
      */
     protected function handleAnalyticsExport()
     {
-        $reportGen = new AnalyticsReportGenerator($this->grav);
         $format = $_GET['format'] ?? 'csv';
-
-        if ($format === 'json') {
-            header('Content-Type: application/json');
-            header('Content-Disposition: attachment; filename="ai-chatbot-report.json"');
-            echo json_encode($reportGen->generateJsonReport(), JSON_PRETTY_PRINT);
-        } else {
-            header('Content-Type: text/csv');
-            header('Content-Disposition: attachment; filename="ai-chatbot-report.csv"');
-            echo $reportGen->generateCsvReport();
-        }
+        $reportGen = new AnalyticsReportGenerator($this->grav);
+        $reportGen->exportReport($format);
     }
 }
