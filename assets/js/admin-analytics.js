@@ -1,7 +1,6 @@
 (function () {
   document.addEventListener('DOMContentLoaded', function () {
     const data = window.GravChatbotAnalytics || {};
-    if (!data.summary) return;
 
     // Update Summary Cards
     const cardTotal = document.getElementById('card-total-queries');
@@ -9,10 +8,12 @@
     const cardAi = document.getElementById('card-ai-hits');
     const cardTokens = document.getElementById('card-total-tokens');
 
-    if (cardTotal) cardTotal.textContent = data.summary.total_queries || 0;
-    if (cardFaq) cardFaq.textContent = data.summary.faq_hits || 0;
-    if (cardAi) cardAi.textContent = data.summary.ai_hits || 0;
-    if (cardTokens) cardTokens.textContent = (data.summary.total_tokens || 0).toLocaleString();
+    if (data.summary) {
+      if (cardTotal) cardTotal.textContent = data.summary.total_queries || 0;
+      if (cardFaq) cardFaq.textContent = data.summary.faq_hits || 0;
+      if (cardAi) cardAi.textContent = data.summary.ai_hits || 0;
+      if (cardTokens) cardTokens.textContent = (data.summary.total_tokens || 0).toLocaleString();
+    }
 
     // Render Daily Volume Chart
     const dailyChartContainer = document.getElementById('chart-daily-volume');
@@ -74,6 +75,87 @@
           tbody.appendChild(tr);
         });
       }
+    }
+
+    // Test AI API Connection Button Event Listener
+    const testApiBtn = document.getElementById('grav-chatbot-test-api-btn');
+    const testApiResult = document.getElementById('grav-chatbot-test-api-result');
+
+    if (testApiBtn) {
+      testApiBtn.addEventListener('click', async function (e) {
+        e.preventDefault();
+
+        // Query input fields from Grav Admin plugin settings form
+        const providerEl = document.querySelector('[name*="[provider]"]');
+        const apiKeyEl = document.querySelector('[name*="[api_key]"]');
+        const modelEl = document.querySelector('[name*="[model]"]');
+        const customEndpointEl = document.querySelector('[name*="[custom_endpoint]"]');
+
+        const provider = providerEl ? providerEl.value : 'gemini';
+        const apiKey = apiKeyEl ? apiKeyEl.value : '';
+        const model = modelEl ? modelEl.value : 'gemini-1.5-flash';
+        const customEndpoint = customEndpointEl ? customEndpointEl.value : '';
+
+        testApiBtn.disabled = true;
+        testApiBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Testing AI Connection...';
+
+        if (testApiResult) {
+          testApiResult.style.display = 'block';
+          testApiResult.className = 'notice info';
+          testApiResult.innerHTML = '<p><i class="fa fa-circle-o-notch fa-spin"></i> Connecting to AI provider API endpoint...</p>';
+        }
+
+        try {
+          const res = await fetch('/chatbot-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'test_connection',
+              provider: provider,
+              api_key: apiKey,
+              model: model,
+              custom_endpoint: customEndpoint
+            })
+          });
+
+          const resData = await res.json();
+          testApiBtn.disabled = false;
+          testApiBtn.innerHTML = '<i class="fa fa-plug"></i> Test AI Connection';
+
+          if (testApiResult) {
+            if (resData.success) {
+              testApiResult.className = 'notice success';
+              testApiResult.style.background = '#d1fae5';
+              testApiResult.style.color = '#065f46';
+              testApiResult.style.padding = '10px 14px';
+              testApiResult.style.borderRadius = '6px';
+              testApiResult.style.border = '1px solid #10b981';
+              testApiResult.innerHTML = '<p style="margin:0;"><strong>✅ Success:</strong> ' + escapeHtml(resData.message) + '</p>';
+            } else {
+              testApiResult.className = 'notice error alert';
+              testApiResult.style.background = '#fee2e2';
+              testApiResult.style.color = '#991b1b';
+              testApiResult.style.padding = '10px 14px';
+              testApiResult.style.borderRadius = '6px';
+              testApiResult.style.border = '1px solid #ef4444';
+              testApiResult.innerHTML = '<p style="margin:0;"><strong>❌ Connection Failed:</strong> ' + escapeHtml(resData.message) + '</p>';
+            }
+          }
+        } catch (err) {
+          testApiBtn.disabled = false;
+          testApiBtn.innerHTML = '<i class="fa fa-plug"></i> Test AI Connection';
+
+          if (testApiResult) {
+            testApiResult.className = 'notice error alert';
+            testApiResult.style.background = '#fee2e2';
+            testApiResult.style.color = '#991b1b';
+            testApiResult.style.padding = '10px 14px';
+            testApiResult.style.borderRadius = '6px';
+            testApiResult.style.border = '1px solid #ef4444';
+            testApiResult.innerHTML = '<p style="margin:0;"><strong>❌ Connection Error:</strong> Could not reach the chatbot API endpoint.</p>';
+          }
+        }
+      });
     }
 
     function escapeHtml(str) {

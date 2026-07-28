@@ -12,6 +12,8 @@ en:
     MODEL_HELP: E.g., gemini-1.5-flash, google/gemini-flash-1.5, gpt-4o-mini
     CUSTOM_ENDPOINT: Custom Base Endpoint URL
     CUSTOM_ENDPOINT_HELP: E.g. https://openrouter.ai/api/v1 (only required for Custom provider)
+    TEST_CONNECTION: Test AI API Connection
+    TEST_CONNECTION_HELP: Test your API key and provider model configuration live before saving settings
     FAQ_SETTINGS: FAQ Pre-Matching Settings
     FAQ_ENABLED: Enable FAQ Pre-Matching
     FAQ_ENABLED_HELP: Answers matching questions from the FAQ page directly without using AI API keys
@@ -58,9 +60,21 @@ en:
 es:
   PLUGIN_AI_CHATBOT:
     ENABLED: Habilitado
-    PROVIDER_SETTINGS: Configuración del proveedor de IA
-    AI_ENABLED: Habilitar respaldo de API de IA
-    FAQ_SETTINGS: Configuración de coincidencias de FAQ
-    ENABLE_MULTILINGUAL_FAQ: Coincidencia de FAQ multilingüe
-    UI_SETTINGS: Temas y widget de chatbot
-    WELCOME_MESSAGE: Mensaje de bienvenida
+    PROVIDER_SETTINGS: Configuración de Proveedor IA
+    AI_ENABLED: Habilitar API de IA
+    AI_ENABLED_HELP: Cuando se deshabilita, el chatbot responde estrictamente con las FAQ locales sin llamar a la API de IA.
+    PROVIDER: Motor Proveedor de IA
+    PROVIDER_HELP: Seleccione su motor preferido (Google Gemini, OpenRouter, OpenAI, o Personalizado)
+    API_KEY: Clave de API
+    API_KEY_HELP: Ingrese su clave de API de forma segura
+    MODEL: Identificador de Modelo
+    MODEL_HELP: Ej., gemini-1.5-flash, google/gemini-flash-1.5, gpt-4o-mini
+    CUSTOM_ENDPOINT: URL Endpoint Personalizado
+    CUSTOM_ENDPOINT_HELP: Ej. https://openrouter.ai/api/v1 (solo requerido para proveedor personalizado)
+    TEST_CONNECTION: Probar Conexión de IA
+    TEST_CONNECTION_HELP: Pruebe su clave API y configuración de modelo en vivo
+    FAQ_SETTINGS: Configuración de Preguntas Frecuentes (FAQ)
+    FAQ_ENABLED: Habilitar Coincidencia FAQ
+    FAQ_ENABLED_HELP: Responde preguntas coincidentes directamente desde la página FAQ sin usar credenciales de IA
+    ENABLE_MULTILINGUAL_FAQ: Coincidencia Multilingüe FAQ
+    ENABLE_MULTILINGUAL_FAQ_HELP: Utiliza automáticamente el idioma del visitante para buscar en páginas FAQ localizadas

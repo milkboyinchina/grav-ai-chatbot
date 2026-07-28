@@ -2,13 +2,13 @@ name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
 version: 1.1.0
-description: AI-powered chatbot plugin for Grav CMS with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, and analytics reporting.
+description: AI-powered chatbot plugin for Grav CMS with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, live API connection testing, and analytics reporting.
 icon: robot
 author:
   name: milkboyinchina
   email: milkboyinchina@users.noreply.github.com
 homepage: https://github.com/milkboyinchina/grav-ai-chatbot
-keywords: grav, plugin, ai, chatbot, gemini, openrouter, openai, faq, rag, themes, session
+keywords: grav, plugin, ai, chatbot, gemini, openrouter, openai, faq, rag, themes, session, test-connection
 bugs: https://github.com/milkboyinchina/grav-ai-chatbot/issues
 docs: https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/README.md
 license: GPL-3.0-or-later
@@ -77,6 +77,13 @@ form:
           help: PLUGIN_AI_CHATBOT.CUSTOM_ENDPOINT_HELP
           default: ''
 
+        test_api_button:
+          type: display
+          label: PLUGIN_AI_CHATBOT.TEST_CONNECTION
+          help: PLUGIN_AI_CHATBOT.TEST_CONNECTION_HELP
+          markdown: true
+          content: '<div class="button-bar" style="margin-top: 15px;"><button type="button" id="grav-chatbot-test-api-btn" class="button btn btn-outline-primary"><i class="fa fa-plug"></i> Test AI Connection</button></div><div id="grav-chatbot-test-api-result" style="margin-top:12px; display:none;"></div>'
+
     section_faq:
       type: section
       title: PLUGIN_AI_CHATBOT.FAQ_SETTINGS
@@ -103,6 +110,8 @@ form:
           options:
             1: PLUGIN_ADMIN.ENABLED
             0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
 
         faq_route:
           type: text
@@ -111,13 +120,14 @@ form:
           default: /faq
 
         faq_similarity_threshold:
-          type: number
+          type: range
           label: PLUGIN_AI_CHATBOT.FAQ_SIMILARITY
           help: PLUGIN_AI_CHATBOT.FAQ_SIMILARITY_HELP
           default: 70
           validate:
             min: 50
             max: 100
+            step: 5
 
     section_contact:
       type: section
@@ -139,82 +149,14 @@ form:
           options:
             1: PLUGIN_ADMIN.ENABLED
             0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
 
         hidden_contact_route:
           type: text
           label: PLUGIN_AI_CHATBOT.HIDDEN_CONTACT_ROUTE
           help: PLUGIN_AI_CHATBOT.HIDDEN_CONTACT_ROUTE_HELP
           default: /hidden-contacts
-
-    section_security:
-      type: section
-      title: PLUGIN_AI_CHATBOT.SECURITY_SETTINGS
-      underline: true
-      fields:
-        rate_limit_enabled:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_ENABLED
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-
-        rate_limit_max_requests:
-          type: number
-          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_MAX
-          default: 10
-
-        rate_limit_window_seconds:
-          type: number
-          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_WINDOW
-          default: 60
-
-        strict_site_scope:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.STRICT_SITE_SCOPE
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-
-    section_session:
-      type: section
-      title: PLUGIN_AI_CHATBOT.SESSION_SETTINGS
-      underline: true
-      fields:
-        session_retention_days:
-          type: number
-          label: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS
-          help: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS_HELP
-          default: 7
-          validate:
-            min: 0
-            max: 365
-
-    section_logging:
-      type: section
-      title: PLUGIN_AI_CHATBOT.LOGGING_SETTINGS
-      underline: true
-      fields:
-        logging_enabled:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.LOGGING_ENABLED
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-
-        log_api_usage:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.LOG_API_USAGE
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
 
     section_ui:
       type: section
@@ -227,10 +169,10 @@ form:
           help: PLUGIN_AI_CHATBOT.THEME_PRESET_HELP
           default: glass_blue
           options:
-            glass_blue: Glassmorphic Indigo / Blue
+            glass_blue: Modern Glassmorphic Blue
             emerald_dark: Emerald Dark Mode
-            purple_haze: Neon Purple & Violet
-            sunset_orange: Warm Sunset Orange
+            purple_haze: Purple Haze Glass
+            sunset_orange: Sunset Orange Vibrant
             custom: Custom Color Picker
 
         position:
@@ -249,19 +191,18 @@ form:
           options:
             all: All Pages
             selected_only: Only Selected Pages
-            exclude_selected: All Pages Except Selected
+            exclude_selected: Exclude Selected Pages
 
         display_pages:
           type: textarea
           label: PLUGIN_AI_CHATBOT.DISPLAY_PAGES
           help: PLUGIN_AI_CHATBOT.DISPLAY_PAGES_HELP
           default: "/\n/contact\n/faq"
-          rows: 3
 
         welcome_message:
           type: text
           label: PLUGIN_AI_CHATBOT.WELCOME_MESSAGE
-          default: Hello! How can I help you with this website today?
+          default: 'Hello! How can I help you with this website today?'
 
         accent_color:
           type: colorpicker
@@ -278,13 +219,90 @@ form:
           options:
             1: PLUGIN_ADMIN.ENABLED
             0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
 
         notification_text:
           type: text
           label: PLUGIN_AI_CHATBOT.NOTIFICATION_TEXT
-          default: 👋 Hi there! Need help finding anything on our website?
+          default: '👋 Hi there! Need help finding anything on our website?'
 
         notification_delay_seconds:
-          type: number
+          type: text
           label: PLUGIN_AI_CHATBOT.NOTIFICATION_DELAY
           default: 4
+
+    section_session:
+      type: section
+      title: PLUGIN_AI_CHATBOT.SESSION_SETTINGS
+      underline: true
+      fields:
+        session_retention_days:
+          type: text
+          label: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS
+          help: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS_HELP
+          default: 7
+
+    section_security:
+      type: section
+      title: PLUGIN_AI_CHATBOT.SECURITY_SETTINGS
+      underline: true
+      fields:
+        rate_limit_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_ENABLED
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        rate_limit_max_requests:
+          type: text
+          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_MAX
+          default: 10
+
+        rate_limit_window_seconds:
+          type: text
+          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_WINDOW
+          default: 60
+
+        strict_site_scope:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.STRICT_SITE_SCOPE
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+    section_logging:
+      type: section
+      title: PLUGIN_AI_CHATBOT.LOGGING_SETTINGS
+      underline: true
+      fields:
+        logging_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.LOGGING_ENABLED
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        log_api_usage:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.LOG_API_USAGE
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool

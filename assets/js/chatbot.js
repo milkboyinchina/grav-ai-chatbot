@@ -1,5 +1,7 @@
 (function () {
-  document.addEventListener('DOMContentLoaded', function () {
+  let isInitialized = false;
+
+  function initChatbot() {
     const config = window.GravChatbotConfig || {};
     const apiEndpoint = config.apiEndpoint || '/chatbot-api';
     const retentionDays = parseInt(config.sessionRetentionDays, 10) || 7;
@@ -16,10 +18,18 @@
     const iconChat = toggleBtn ? toggleBtn.querySelector('.grav-chatbot-icon-chat') : null;
     const iconClose = toggleBtn ? toggleBtn.querySelector('.grav-chatbot-icon-close') : null;
 
+    if (!toggleBtn || !windowBox) {
+      // Retry initialization if widget elements are rendered dynamically
+      if (!isInitialized) {
+        setTimeout(initChatbot, 150);
+      }
+      return;
+    }
+
+    isInitialized = true;
+
     let history = [];
     let isOpen = false;
-
-    if (!toggleBtn || !windowBox) return;
 
     loadSession();
 
@@ -50,7 +60,7 @@
     }
 
     function toggleChat(show) {
-      isOpen = show !== undefined ? show : windowBox.style.display === 'none';
+      isOpen = show !== undefined ? show : windowBox.style.display === 'none' || windowBox.style.display === '';
       windowBox.style.display = isOpen ? 'flex' : 'none';
 
       if (iconChat && iconClose) {
@@ -66,17 +76,29 @@
       saveSession();
     }
 
-    toggleBtn.addEventListener('click', function () {
+    // Attach Click Event Directly to Toggle Button
+    toggleBtn.addEventListener('click', function (e) {
+      e.preventDefault();
       toggleChat();
     });
 
     if (closeBtn) {
-      closeBtn.addEventListener('click', function () {
+      closeBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         toggleChat(false);
       });
     }
 
+    // Global Document Click Delegation Fallback for Chat Launcher
+    document.addEventListener('click', function (e) {
+      const target = e.target.closest('#grav-chatbot-toggle, .grav-chatbot-launcher');
+      if (target && !e.defaultPrevented) {
+        toggleChat();
+      }
+    });
+
     function appendMessage(role, text, source, skipSave) {
+      if (!messagesFeed) return;
       const msgDiv = document.createElement('div');
       msgDiv.className = 'grav-chatbot-msg ' + role;
 
@@ -99,38 +121,31 @@
       if (source === 'faq_match' && !skipSave) {
         const confirmBox = document.createElement('div');
         confirmBox.className = 'grav-chatbot-confirm-box';
-        confirmBox.innerHTML = '<span class="grav-chatbot-confirm-label">Is this answer what you were looking for?</span>' +
-          '<div class="grav-chatbot-confirm-buttons">' +
-          '<button class="grav-chatbot-confirm-btn yes">👍 Yes</button>' +
-          '<button class="grav-chatbot-confirm-btn no">👎 No, ask AI</button>' +
-          '</div>';
 
-        const yesBtn = confirmBox.querySelector('.yes');
-        const noBtn = confirmBox.querySelector('.no');
+        const promptText = document.createElement('div');
+        promptText.className = 'grav-chatbot-confirm-prompt';
+        promptText.textContent = 'Is this what you were looking for?';
 
-        yesBtn.addEventListener('click', function () {
-          yesBtn.disabled = true;
-          noBtn.disabled = true;
-          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-label" style="color:#10b981; font-weight:600;">✓ Great! Glad I could help.</span>';
+        const btnYes = document.createElement('button');
+        btnYes.type = 'button';
+        btnYes.className = 'grav-chatbot-btn-confirm yes';
+        btnYes.innerHTML = '👍 Yes';
+        btnYes.addEventListener('click', function () {
+          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-thankyou">Great! Glad we could help. 😊</span>';
         });
 
-        noBtn.addEventListener('click', function () {
-          yesBtn.disabled = true;
-          noBtn.disabled = true;
-          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-label" style="color:#6b7280;">Asking AI model...</span>';
-          
-          let lastUserQ = '';
-          for (let i = history.length - 1; i >= 0; i--) {
-            if (history[i].role === 'user') {
-              lastUserQ = history[i].content;
-              break;
-            }
-          }
-          if (lastUserQ) {
-            sendQuery(lastUserQ, 'force_ai');
-          }
+        const btnNo = document.createElement('button');
+        btnNo.type = 'button';
+        btnNo.className = 'grav-chatbot-btn-confirm no';
+        btnNo.innerHTML = '👎 No, ask AI';
+        btnNo.addEventListener('click', function () {
+          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-escalating">Connecting to AI Assistant...</span>';
+          sendQuestion(text, 'force_ai');
         });
 
+        confirmBox.appendChild(promptText);
+        confirmBox.appendChild(btnYes);
+        confirmBox.appendChild(btnNo);
         bubbleDiv.appendChild(confirmBox);
       }
 
@@ -138,143 +153,147 @@
       messagesFeed.appendChild(msgDiv);
       messagesFeed.scrollTop = messagesFeed.scrollHeight;
 
-      history.push({ role: role, content: text, source: source });
-
       if (!skipSave) {
+        history.push({ role, text, source, timestamp: Date.now() });
         saveSession();
       }
     }
 
     function showTypingIndicator() {
-      const typingDiv = document.createElement('div');
-      typingDiv.id = 'grav-chatbot-typing';
-      typingDiv.className = 'grav-chatbot-msg assistant';
-      typingDiv.innerHTML = '<div class="grav-chatbot-bubble"><em>Assistant is thinking...</em></div>';
-      messagesFeed.appendChild(typingDiv);
+      if (!messagesFeed) return null;
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'grav-chatbot-msg assistant typing-msg';
+      msgDiv.innerHTML = `
+        <div class="grav-chatbot-bubble">
+          <div class="grav-chatbot-typing">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      `;
+      messagesFeed.appendChild(msgDiv);
       messagesFeed.scrollTop = messagesFeed.scrollHeight;
+      return msgDiv;
     }
 
-    function removeTypingIndicator() {
-      const indicator = document.getElementById('grav-chatbot-typing');
-      if (indicator) indicator.remove();
+    function removeTypingIndicator(element) {
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
     }
 
-    function sendQuery(questionText, action) {
-      if (!questionText && action !== 'summarize_page') return;
+    function saveSession() {
+      try {
+        const payload = {
+          isOpen,
+          history,
+          expiry: Date.now() + (retentionDays * 86400 * 1000)
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.warn('GravChatbot: localStorage error', e);
+      }
+    }
 
-      if (action !== 'summarize_page' && action !== 'force_ai') {
-        appendMessage('user', questionText);
-        if (inputField) inputField.value = '';
-      } else if (action === 'summarize_page') {
-        appendMessage('user', '📝 Summarize current page');
+    function loadSession() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+
+        if (data.expiry && Date.now() > data.expiry) {
+          localStorage.removeItem(STORAGE_KEY);
+          return;
+        }
+
+        if (data.isOpen) {
+          toggleChat(true);
+        }
+
+        if (Array.isArray(data.history)) {
+          history = data.history;
+          if (messagesFeed) messagesFeed.innerHTML = '';
+          history.forEach(item => {
+            appendMessage(item.role, item.text, item.source, true);
+          });
+        }
+      } catch (e) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+
+    async function sendQuestion(customQuestion, action) {
+      const q = customQuestion || (inputField ? inputField.value.trim() : '');
+      if (!q) return;
+
+      if (!customQuestion && inputField) {
+        inputField.value = '';
       }
 
-      showTypingIndicator();
+      if (action !== 'force_ai') {
+        appendMessage('user', q);
+      }
 
-      fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: questionText,
-          action: action || 'query',
-          current_route: config.currentRoute || window.location.pathname,
-          history: history.slice(-6)
-        })
-      })
-        .then(function (res) {
-          return res.json();
-        })
-        .then(function (data) {
-          removeTypingIndicator();
-          if (data.answer) {
-            appendMessage('assistant', data.answer, data.source);
-          } else {
-            appendMessage('assistant', 'Sorry, I encountered an unexpected error.');
-          }
-        })
-        .catch(function (err) {
-          removeTypingIndicator();
-          appendMessage('assistant', 'Connection error. Please try again later.');
+      const typingEl = showTypingIndicator();
+
+      try {
+        const res = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: q,
+            action: action || 'query',
+            history: history.slice(-6),
+            current_route: config.currentRoute || '/'
+          })
         });
+
+        const data = await res.json();
+        removeTypingIndicator(typingEl);
+
+        if (data.answer) {
+          appendMessage('assistant', data.answer, data.source);
+        } else {
+          appendMessage('assistant', 'Sorry, I could not process your request at this time.');
+        }
+      } catch (err) {
+        removeTypingIndicator(typingEl);
+        appendMessage('assistant', 'An unexpected connection error occurred. Please try again later.');
+      }
     }
 
     if (inputForm) {
       inputForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        const val = inputField.value.trim();
-        if (val) sendQuery(val, 'query');
+        sendQuestion();
       });
-    }
-
-    // Quick Action Pills
-    document.addEventListener('click', function (e) {
-      if (e.target && e.target.classList.contains('grav-chatbot-pill')) {
-        const action = e.target.getAttribute('data-action');
-        const prompt = e.target.getAttribute('data-prompt');
-
-        if (action === 'summarize_page') {
-          sendQuery('', 'summarize_page');
-        } else if (action === 'contact') {
-          sendQuery('How can I contact the website owner or engineering team?', 'query');
-        } else if (prompt) {
-          sendQuery(prompt, 'query');
-        }
-      }
-    });
-
-    function saveSession() {
-      if (retentionDays <= 0) {
-        localStorage.removeItem(STORAGE_KEY);
-        return;
-      }
-
-      const expiryMs = Date.now() + (retentionDays * 86400000);
-      const sessionData = {
-        expiry: expiryMs,
-        isOpen: isOpen,
-        history: history
-      };
-
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionData));
-      } catch (err) {}
-    }
-
-    function loadSession() {
-      if (retentionDays <= 0) return;
-
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-
-        const session = JSON.parse(raw);
-        if (session && session.expiry && Date.now() < session.expiry) {
-          if (Array.isArray(session.history) && session.history.length > 0) {
-            messagesFeed.innerHTML = '';
-            history = [];
-            session.history.forEach(function (msg) {
-              appendMessage(msg.role, msg.content, msg.source, true);
-            });
-          }
-          if (session.isOpen) {
-            toggleChat(true);
-          }
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
-      } catch (err) {}
     }
 
     function escapeAndFormatMarkdown(str) {
       if (!str) return '';
-      let safe = str
+      let escaped = str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      
-      safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      safe = safe.replace(/\n/g, '<br/>');
-      return safe;
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+      // Markdown links: [title](url)
+      escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="grav-chatbot-link" target="_blank" rel="noopener">$1</a>');
+
+      // Bold text: **text**
+      escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+      // Headers: ### Header
+      escaped = escaped.replace(/^### (.*$)/gim, '<h4 class="grav-chatbot-h4">$1</h4>');
+
+      // Newlines to <br>
+      return escaped.replace(/\n/g, '<br>');
     }
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChatbot);
+  } else {
+    initChatbot();
+  }
 })();

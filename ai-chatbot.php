@@ -1,7 +1,9 @@
 <?php
-namespace Grav\Plugin\AiChatbot;
+namespace Grav\Plugin;
 
 use Grav\Common\Plugin;
+use Grav\Plugin\AiChatbot\ChatbotHandler;
+use Grav\Plugin\AiChatbot\AnalyticsReportGenerator;
 
 // Register PSR-4 Autoloader for Plugin Classes
 spl_autoload_register(function ($class) {
@@ -32,10 +34,11 @@ class AiChatbotPlugin extends Plugin
     /**
      * @return array
      */
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'onPluginsInitialized' => ['onPluginsInitialized', 0],
+            'onPageNotFound' => ['onPageNotFound', 0],
             'onPageInitialized' => ['onPageInitialized', 0],
             'onAdminMenu' => ['onAdminMenu', 0],
         ];
@@ -60,39 +63,61 @@ class AiChatbotPlugin extends Plugin
      */
     public function onPluginsInitialized()
     {
-        // Don't proceed if plugin is disabled
-        if (!$this->config->get('plugins.ai-chatbot.enabled')) {
+        $enabled = $this->config->get('plugins.ai-chatbot.enabled', true);
+        if (!$enabled) {
             return;
-        }
-
-        // Handle Analytics Exports (CSV / JSON)
-        $rawUrl = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($rawUrl, '/chatbot-export') !== false) {
-            $this->handleAnalyticsExport();
-            exit();
         }
 
         if ($this->isAdmin()) {
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
                 'onTwigSiteVariables' => ['onAdminTwigSiteVariables', 0],
+                'onPageInitialized' => ['onPageInitialized', 0],
+                'onPageNotFound' => ['onPageNotFound', 0],
+                'onAdminMenu' => ['onAdminMenu', 0],
             ]);
         } else {
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
                 'onTwigSiteVariables' => ['onTwigSiteVariables', 0],
+                'onPageInitialized' => ['onPageInitialized', 0],
+                'onPageNotFound' => ['onPageNotFound', 0],
             ]);
         }
     }
 
     /**
-     * Intercept API calls after Grav Pages object is fully loaded.
+     * Intercept custom routes if standard page lookup returns Page Not Found.
+     */
+    public function onPageNotFound()
+    {
+        $this->routeCheck();
+    }
+
+    /**
+     * Intercept API & Export calls after Grav Pages object is fully loaded.
      */
     public function onPageInitialized()
     {
+        $this->routeCheck();
+    }
+
+    protected function routeCheck()
+    {
         $rawUrl = $_SERVER['REQUEST_URI'] ?? '';
-        if (strpos($rawUrl, '/api/chatbot/query') !== false || strpos($rawUrl, '/chatbot-api') !== false) {
-            $this->handleChatbotQueryApi();
+        $redirectUrl = $_SERVER['REDIRECT_URL'] ?? '';
+
+        if (
+            strpos($rawUrl, 'chatbot-api') !== false || 
+            strpos($rawUrl, 'chatbot-export') !== false ||
+            strpos($redirectUrl, 'chatbot-api') !== false ||
+            strpos($redirectUrl, 'chatbot-export') !== false
+        ) {
+            if (strpos($rawUrl, 'chatbot-export') !== false || strpos($redirectUrl, 'chatbot-export') !== false) {
+                $this->handleAnalyticsExport();
+            } else {
+                $this->handleChatbotQueryApi();
+            }
             exit();
         }
     }
@@ -110,17 +135,17 @@ class AiChatbotPlugin extends Plugin
      */
     public function onTwigSiteVariables()
     {
-        $config = $this->config->get('plugins.ai-chatbot');
-        if (empty($config['enabled'])) {
+        $enabled = $this->config->get('plugins.ai-chatbot.enabled', true);
+        if (!$enabled) {
             return;
         }
 
         // Page Display Visibility Rules (all, selected_only, exclude_selected)
         $currentRoute = $this->grav['uri']->path() ?: '/';
-        $displayMode = $config['display_mode'] ?? 'all';
+        $displayMode = $this->config->get('plugins.ai-chatbot.display_mode', 'all');
 
         if ($displayMode !== 'all') {
-            $rawPages = $config['display_pages'] ?? '';
+            $rawPages = $this->config->get('plugins.ai-chatbot.display_pages', '');
             $pagesList = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawPages))));
 
             $isListed = in_array($currentRoute, $pagesList, true);
@@ -140,14 +165,14 @@ class AiChatbotPlugin extends Plugin
         // Pass configuration data to JavaScript
         $jsConfig = json_encode([
             'apiEndpoint' => '/chatbot-api',
-            'position' => $config['position'] ?? 'bottom-right',
-            'welcomeMessage' => $config['welcome_message'] ?? 'Hello! How can I help you with this website today?',
-            'accentColor' => $config['accent_color'] ?? '#3b82f6',
-            'themePreset' => $config['theme_preset'] ?? 'glass_blue',
-            'sessionRetentionDays' => (int)($config['session_retention_days'] ?? 7),
-            'notificationEnabled' => !empty($config['notification_enabled']),
-            'notificationText' => $config['notification_text'] ?? '👋 Hi there! Need help finding anything on our website?',
-            'notificationDelaySeconds' => (int)($config['notification_delay_seconds'] ?? 4),
+            'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
+            'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
+            'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
+            'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
+            'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
+            'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
+            'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', '👋 Hi there! Need help finding anything on our website?'),
+            'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
             'currentRoute' => $currentRoute,
         ]);
 
@@ -172,13 +197,23 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Inject Admin Analytics Dashboard CSS & JS.
+     * Inject Admin Analytics Dashboard CSS & JS and register admin sidebar menu link.
      */
     public function onAdminTwigSiteVariables()
     {
         $assets = $this->grav['assets'];
         $assets->addCss('plugin://ai-chatbot/assets/css/admin-analytics.css');
         $assets->addJs('plugin://ai-chatbot/assets/js/admin-analytics.js', ['group' => 'bottom']);
+
+        if (isset($this->grav['twig']->plugins_hook['nav'])) {
+            $this->grav['twig']->plugins_hook['nav']['ai-chatbot'] = [
+                'route' => 'plugins/ai-chatbot',
+                'icon' => 'fa-robot',
+                'title' => 'AI Chatbot',
+                'authorize' => 'admin.plugins',
+                'priority' => 10
+            ];
+        }
     }
 
     /**
@@ -187,13 +222,17 @@ class AiChatbotPlugin extends Plugin
     protected function handleChatbotQueryApi()
     {
         header('Content-Type: application/json');
-        $config = $this->config->get('plugins.ai-chatbot');
+        $config = (array)$this->config->get('plugins.ai-chatbot');
+
+        $rawInput = file_get_contents('php://input');
+        $data = json_decode($rawInput, true) ?: $_POST ?: $_GET;
 
         $handler = new ChatbotHandler($this->grav, $config);
-        $response = $handler->handleRequest();
+        $response = $handler->processRequest($data);
 
         http_response_code($response['http_code'] ?? 200);
         echo json_encode($response);
+        exit();
     }
 
     /**

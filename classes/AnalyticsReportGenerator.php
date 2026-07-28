@@ -21,6 +21,24 @@ class AnalyticsReportGenerator
     }
 
     /**
+     * Download or output report according to format (csv or json).
+     */
+    public function exportReport(string $format = 'csv'): void
+    {
+        if ($format === 'json') {
+            header('Content-Type: application/json');
+            header('Content-Disposition: attachment; filename="ai-chatbot-analytics-' . date('Y-m-d') . '.json"');
+            echo json_encode($this->generateJsonReport(), JSON_PRETTY_PRINT);
+            exit();
+        }
+
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="ai-chatbot-analytics-' . date('Y-m-d') . '.csv"');
+        echo $this->generateCsvReport();
+        exit();
+    }
+
+    /**
      * Get pre-processed data structure for Admin Dashboard graphs.
      */
     public function getDashboardAnalyticsData(): array
@@ -35,7 +53,6 @@ class AnalyticsReportGenerator
         $totalEstCost = 0.0;
 
         $dailyVolume = [];
-        $topicsCount = [];
 
         foreach ($logs as $log) {
             $src = $log['source'] ?? 'ai_api';

@@ -36,6 +36,10 @@ class ChatbotHandler
         $messagesHistory = $data['history'] ?? [];
         $currentRoute = $data['current_route'] ?? '/';
 
+        if ($action === 'test_connection') {
+            return $this->testAiConnection($data);
+        }
+
         if (empty($question) && $action !== 'summarize_page') {
             return [
                 'http_code' => 400,
@@ -59,56 +63,38 @@ class ChatbotHandler
                         'question' => $question,
                         'answer' => $errMsg,
                         'source' => 'rate_limit',
-                        'provider' => $this->config['provider'] ?? 'gemini'
+                        'provider' => 'none'
                     ]);
                 }
 
                 return [
                     'http_code' => 429,
                     'success' => false,
+                    'source' => 'rate_limit',
                     'answer' => $errMsg
                 ];
             }
         }
 
-        // 2. Strict Scope & External URL Guardrail Check
-        if (!empty($this->config['strict_site_scope']) && !empty($question)) {
-            if (preg_match('/https?:\/\/(?!' . preg_quote($_SERVER['HTTP_HOST'] ?? '', '/') . ')[^\s]+/i', $question)) {
-                $guardrailMsg = "I can only process content from this website. I cannot fetch or analyze external URLs.";
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'source' => 'guardrail',
-                    'answer' => $guardrailMsg
-                ];
-            }
-        }
-
-        // 3. Page Summarization Action
+        // 2. Handle Page Summarization Action
         if ($action === 'summarize_page') {
-            return $this->handlePageSummarize($currentRoute);
+            return $this->handlePageSummarization($currentRoute);
         }
 
-        // 4. Local FAQ Pre-Matching (0 API calls) - skipped if visitor clicked "No" on previous FAQ match
-        if (!empty($this->config['faq_enabled']) && !empty($question) && $action !== 'force_ai') {
-            $faqRoute = $this->config['faq_route'] ?? '/faq';
+        // 3. FAQ Pre-Matching Stage (If action != 'force_ai')
+        if ($action !== 'force_ai' && !empty($this->config['faq_enabled'])) {
+            $faqResolver = new FaqResolver($this->grav, $this->config);
             $threshold = (int)($this->config['faq_similarity_threshold'] ?? 70);
-            $enableMulti = !empty($this->config['enable_multilingual_faq']);
+            
+            $faqMatch = $faqResolver->findMatch($question, $threshold);
 
-            $faqResolver = new FaqResolver($this->grav, $faqRoute, $threshold, $enableMulti);
-            $faqMatch = $faqResolver->matchQuestion($question);
-
-            if ($faqMatch !== null) {
-                $faqAnswer = $faqMatch['answer'];
-
+            if ($faqMatch) {
                 if (!empty($this->config['logging_enabled'])) {
                     $this->logger->logInteraction([
                         'question' => $question,
-                        'answer' => $faqAnswer,
+                        'answer' => $faqMatch['answer'],
                         'source' => 'faq_match',
-                        'provider' => 'local_faq',
-                        'prompt_tokens' => 0,
-                        'completion_tokens' => 0
+                        'provider' => 'local_faq'
                     ]);
                 }
 
@@ -116,109 +102,82 @@ class ChatbotHandler
                     'http_code' => 200,
                     'success' => true,
                     'source' => 'faq_match',
-                    'matched_question' => $faqMatch['question'],
+                    'matched_question' => $faqMatch['matched_question'],
                     'similarity' => $faqMatch['similarity'],
-                    'answer' => $faqAnswer
+                    'answer' => $faqMatch['answer']
                 ];
             }
         }
 
-        // 5. Check if AI API calls are enabled
-        $aiEnabled = isset($this->config['ai_enabled']) ? (bool)$this->config['ai_enabled'] : true;
-
+        // 4. Contact Resolution Fallback Check (If AI is disabled or unavailable)
+        $aiEnabled = !empty($this->config['ai_enabled']);
         if (!$aiEnabled) {
-            $contactRoute = $this->config['contact_route'] ?? '/contact';
-            $hiddenRoute = $this->config['hidden_contact_route'] ?? '/hidden-contacts';
-            $enableHidden = !empty($this->config['enable_hidden_contacts']);
+            $contactResolver = new ContactPageResolver($this->grav, $this->config);
+            $contactInfo = $contactResolver->resolveContactDetails($question);
 
-            $contactResolver = new ContactPageResolver($this->grav, $contactRoute, $hiddenRoute, $enableHidden);
-            $contactDetails = $contactResolver->getContactInformation($question);
+            $contactFallbackMsg = "I couldn't find an exact answer in our FAQ, and AI generation is currently disabled. Please contact our team directly for assistance:\n\n" . $contactInfo;
 
-            $faqOnlyMsg = "I couldn't find a matching answer in our FAQ. Please contact our team directly for assistance:\n\n" . $contactDetails;
-            
             if (!empty($this->config['logging_enabled'])) {
                 $this->logger->logInteraction([
                     'question' => $question,
-                    'answer' => $faqOnlyMsg,
-                    'source' => 'faq_only',
-                    'provider' => 'none'
+                    'answer' => $contactFallbackMsg,
+                    'source' => 'contact_fallback',
+                    'provider' => 'contact_resolver'
                 ]);
             }
 
             return [
                 'http_code' => 200,
-                'success' => true,
-                'source' => 'faq_only',
-                'answer' => $faqOnlyMsg
+                'success' => false,
+                'source' => 'contact_fallback',
+                'answer' => $contactFallbackMsg
             ];
         }
 
-        // 6. Contact Query Intent Check
-        $contactKeywords = '/(contact|phone|email|address|office|reach|speak|talk|engineer|support)/i';
-        $contactInfoSnippet = '';
-        if (preg_match($contactKeywords, $question)) {
-            $contactRoute = $this->config['contact_route'] ?? '/contact';
-            $hiddenRoute = $this->config['hidden_contact_route'] ?? '/hidden-contacts';
-            $enableHidden = !empty($this->config['enable_hidden_contacts']);
+        // 5. Context Indexing & RAG Construction
+        $indexer = new ContextIndexer($this->grav, $this->config);
+        $contextChunks = $indexer->searchContext($question, 3);
+        $siteContextStr = implode("\n---\n", $contextChunks);
 
-            $contactResolver = new ContactPageResolver($this->grav, $contactRoute, $hiddenRoute, $enableHidden);
-            $contactInfoSnippet = $contactResolver->getContactInformation($question);
-        }
+        // 6. Build AI Prompt with RAG Context & Site Constraints
+        $siteName = $this->grav['config']->get('site.title', 'this website');
 
-        // 6. Build Site Context Index
-        $indexer = new ContextIndexer($this->grav);
-        $siteContext = $indexer->buildSiteContext([$this->config['contact_route'] ?? '/contact']);
+        $systemPrompt = "You are a helpful, professional AI Assistant representing {$siteName}.\n"
+            . "Answer visitor questions based ON THE PROVIDED WEBSITE CONTEXT below.\n"
+            . "If the context does not contain enough information, politely say so and recommend contacting support.\n"
+            . "Do NOT invent facts, URLs, or products outside of {$siteName}.\n\n"
+            . "=== WEBSITE CONTEXT ===\n{$siteContextStr}\n=======================";
 
-        // 7. System Prompt Construction with Strict Scope Enforcement
-        $systemPrompt = "You are a helpful, courteous AI Assistant specifically representing this website.\n";
-        $systemPrompt .= "STRICT GUARDRAILS:\n";
-        $systemPrompt .= "- Answer user inquiries using ONLY the provided website context and contact information below.\n";
-        $systemPrompt .= "- If the answer is not contained in the website content, politely state that you can only answer questions regarding this website.\n";
-        $systemPrompt .= "- NEVER analyze or attempt to browse external URLs or off-topic general knowledge subjects.\n\n";
-
-        if (!empty($contactInfoSnippet)) {
-            $systemPrompt .= "WEBSITE CONTACT DETAILS:\n{$contactInfoSnippet}\n\n";
-        }
-
-        if (!empty($siteContext)) {
-            $systemPrompt .= "INDEXED WEBSITE CONTENT:\n{$siteContext}\n\n";
-        }
-
-        // 9. Invoke AI Engine via Factory
-        $aiClient = AiClientFactory::create($this->config);
-        
+        // Build Conversation Messages Payload
         $messages = [];
-        if (!empty($messagesHistory) && is_array($messagesHistory)) {
-            foreach (array_slice($messagesHistory, -4) as $h) {
-                if (!empty($h['role']) && !empty($h['content'])) {
-                    $messages[] = ['role' => $h['role'], 'content' => $h['content']];
-                }
+        foreach ($messagesHistory as $msg) {
+            if (!empty($msg['role']) && !empty($msg['text'])) {
+                $messages[] = [
+                    'role' => ($msg['role'] === 'user') ? 'user' : 'assistant',
+                    'content' => $msg['text']
+                ];
             }
         }
         $messages[] = ['role' => 'user', 'content' => $question];
 
+        // 7. Dispatch Request to AI Client Factory (Gemini, OpenRouter, OpenAI, Custom)
+        $aiClient = AiClientFactory::create($this->config);
         $aiResult = $aiClient->generateResponse($systemPrompt, $messages);
 
-        // 10. Handle AI API Failure / Timeout / Error
-        if (!$aiResult['success']) {
-            $contactResolver = new ContactPageResolver(
-                $this->grav,
-                $this->config['contact_route'] ?? '/contact',
-                $this->config['hidden_contact_route'] ?? '/hidden-contacts',
-                !empty($this->config['enable_hidden_contacts'])
-            );
-            $contactDetails = $contactResolver->getContactInformation($question);
-
-            $fallbackMsg = "The AI Assistant is currently unavailable. Please contact our team directly for assistance:\n\n" . $contactDetails;
+        // If AI call failed, log error and return polite Contact Fallback
+        if (!$aiResult['success'] || !empty($aiResult['error'])) {
+            $contactResolver = new ContactPageResolver($this->grav, $this->config);
+            $contactInfo = $contactResolver->resolveContactDetails($question);
+            
+            $errorAnswerMsg = "The AI Assistant is currently unavailable. Please contact our team directly for assistance:\n\n" . $contactInfo;
 
             if (!empty($this->config['logging_enabled'])) {
                 $this->logger->logInteraction([
                     'question' => $question,
-                    'answer' => "AI Error [{$aiResult['error']}]: " . $aiResult['answer'],
+                    'answer' => $errorAnswerMsg,
                     'source' => 'ai_error',
-                    'provider' => $this->config['provider'] ?? 'gemini',
-                    'prompt_tokens' => 0,
-                    'completion_tokens' => 0
+                    'error_detail' => $aiResult['error'] ?? 'API Error',
+                    'provider' => $this->config['provider'] ?? 'gemini'
                 ]);
             }
 
@@ -226,12 +185,12 @@ class ChatbotHandler
                 'http_code' => 200,
                 'success' => false,
                 'source' => 'ai_error',
-                'error_detail' => $aiResult['error'],
-                'answer' => $fallbackMsg
+                'error_detail' => $aiResult['error'] ?? 'API Error',
+                'answer' => $errorAnswerMsg
             ];
         }
 
-        // 11. Log Successful Interaction
+        // 8. Log Success Interaction & Token Cost Metrics
         if (!empty($this->config['logging_enabled'])) {
             $this->logger->logInteraction([
                 'question' => $question,
@@ -247,46 +206,84 @@ class ChatbotHandler
             'http_code' => 200,
             'success' => true,
             'source' => 'ai_api',
+            'provider' => $this->config['provider'] ?? 'gemini',
             'answer' => $aiResult['answer']
         ];
     }
 
     /**
-     * Handle page summarization request for current route.
+     * Test AI Provider API connection with provided key & model.
      */
-    protected function handlePageSummarize(string $route): array
+    protected function testAiConnection(array $data): array
+    {
+        $provider = trim($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
+        $model = trim($data['model'] ?? $this->config['model'] ?? 'gemini-1.5-flash');
+        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+
+        if (empty($apiKey) && $provider !== 'custom') {
+            return [
+                'http_code' => 400,
+                'success' => false,
+                'message' => 'API Key is missing. Please enter a valid API key in the configuration field.'
+            ];
+        }
+
+        $testPrompt = "Test connection request from Grav CMS AI Chatbot.";
+        $testConfig = array_merge($this->config, [
+            'provider' => $provider,
+            'api_key' => $apiKey,
+            'model' => $model,
+            'custom_endpoint' => $customEndpoint
+        ]);
+
+        $aiClient = AiClientFactory::create($testConfig);
+        $result = $aiClient->generateResponse("You are a system health checker. Respond with 'Connection verified successfully.'", [
+            ['role' => 'user', 'content' => $testPrompt]
+        ]);
+
+        if (!$result['success'] || !empty($result['error'])) {
+            return [
+                'http_code' => 400,
+                'success' => false,
+                'message' => "Connection Failed ({$provider}): " . ($result['error'] ?? $result['answer'] ?? 'Invalid response')
+            ];
+        }
+
+        return [
+            'http_code' => 200,
+            'success' => true,
+            'message' => "Connection Successful! Verified with provider '{$provider}' using model '{$model}'."
+        ];
+    }
+
+    /**
+     * Handle Page Summarization Action
+     */
+    protected function handlePageSummarization(string $route): array
     {
         $pages = $this->grav['pages'];
         $page = $pages->find($route);
 
-        if (!$page || !$page->exists()) {
+        if (!$page) {
             return [
                 'http_code' => 404,
                 'success' => false,
-                'answer' => 'Unable to locate current page content for summarization.'
+                'answer' => 'Page not found for summarization.'
             ];
         }
 
-        $title = $page->title();
         $rawText = strip_tags($page->content());
-        $cleanText = trim(preg_replace('/\s+/', ' ', $rawText));
+        $cleanText = preg_replace('/\s+/', ' ', $rawText);
+        $cleanText = substr($cleanText, 0, 3000);
+        $title = $page->title();
 
-        if (empty($cleanText)) {
-            return [
-                'http_code' => 200,
-                'success' => true,
-                'source' => 'summarize',
-                'answer' => "The page '{$title}' does not contain sufficient text content to summarize."
-            ];
-        }
-
-        $aiEnabled = isset($this->config['ai_enabled']) ? (bool)$this->config['ai_enabled'] : true;
+        $aiEnabled = !empty($this->config['ai_enabled']);
         if (!$aiEnabled) {
             return [
                 'http_code' => 200,
-                'success' => true,
-                'source' => 'faq_only',
-                'answer' => 'AI Page Summarization is disabled when AI API Fallback is turned off.'
+                'success' => false,
+                'answer' => "Page Title: {$title}\nSummary feature requires AI API enablement."
             ];
         }
 
