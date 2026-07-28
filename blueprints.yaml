@@ -1,0 +1,204 @@
+name: Grav AI Chatbot
+slug: ai-chatbot
+type: plugin
+version: 1.0.0
+description: AI-powered chatbot plugin for Grav CMS with local FAQ pre-matching, multi-tier contact resolution, page summarization, rate-limiting, and analytics reporting.
+icon: robot
+author:
+  name: milkboyinchina
+  email: milkboyinchina@users.noreply.github.com
+homepage: https://github.com/milkboyinchina/grav-ai-chatbot
+keywords: grav, plugin, ai, chatbot, gemini, openrouter, openai, faq, rag
+bugs: https://github.com/milkboyinchina/grav-ai-chatbot/issues
+docs: https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/README.md
+license: GPL-3.0-or-later
+
+dependencies:
+  - { name: grav, version: '>=1.7.0' }
+
+form:
+  validation: loose
+  fields:
+    enabled:
+      type: toggle
+      label: PLUGIN_AI_CHATBOT.ENABLED
+      highlight: 1
+      default: 1
+      options:
+        1: PLUGIN_ADMIN.ENABLED
+        0: PLUGIN_ADMIN.DISABLED
+      validate:
+        type: bool
+
+    section_provider:
+      type: section
+      title: PLUGIN_AI_CHATBOT.PROVIDER_SETTINGS
+      underline: true
+      fields:
+        provider:
+          type: select
+          label: PLUGIN_AI_CHATBOT.PROVIDER
+          help: PLUGIN_AI_CHATBOT.PROVIDER_HELP
+          default: gemini
+          options:
+            gemini: Google Gemini API
+            openrouter: OpenRouter API
+            openai: OpenAI API
+            custom: Custom OpenAI-Compatible Endpoint
+
+        api_key:
+          type: password
+          label: PLUGIN_AI_CHATBOT.API_KEY
+          help: PLUGIN_AI_CHATBOT.API_KEY_HELP
+          validate:
+            required: false
+
+        model:
+          type: text
+          label: PLUGIN_AI_CHATBOT.MODEL
+          help: PLUGIN_AI_CHATBOT.MODEL_HELP
+          default: gemini-1.5-flash
+
+        custom_endpoint:
+          type: text
+          label: PLUGIN_AI_CHATBOT.CUSTOM_ENDPOINT
+          help: PLUGIN_AI_CHATBOT.CUSTOM_ENDPOINT_HELP
+          default: ''
+
+    section_faq:
+      type: section
+      title: PLUGIN_AI_CHATBOT.FAQ_SETTINGS
+      underline: true
+      fields:
+        faq_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.FAQ_ENABLED
+          help: PLUGIN_AI_CHATBOT.FAQ_ENABLED_HELP
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        faq_route:
+          type: text
+          label: PLUGIN_AI_CHATBOT.FAQ_ROUTE
+          help: PLUGIN_AI_CHATBOT.FAQ_ROUTE_HELP
+          default: /faq
+
+        faq_similarity_threshold:
+          type: number
+          label: PLUGIN_AI_CHATBOT.FAQ_SIMILARITY
+          help: PLUGIN_AI_CHATBOT.FAQ_SIMILARITY_HELP
+          default: 70
+          validate:
+            min: 50
+            max: 100
+
+    section_contact:
+      type: section
+      title: PLUGIN_AI_CHATBOT.CONTACT_SETTINGS
+      underline: true
+      fields:
+        contact_route:
+          type: text
+          label: PLUGIN_AI_CHATBOT.CONTACT_ROUTE
+          help: PLUGIN_AI_CHATBOT.CONTACT_ROUTE_HELP
+          default: /contact
+
+        enable_hidden_contacts:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.ENABLE_HIDDEN_CONTACTS
+          help: PLUGIN_AI_CHATBOT.ENABLE_HIDDEN_CONTACTS_HELP
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+
+        hidden_contact_route:
+          type: text
+          label: PLUGIN_AI_CHATBOT.HIDDEN_CONTACT_ROUTE
+          help: PLUGIN_AI_CHATBOT.HIDDEN_CONTACT_ROUTE_HELP
+          default: /hidden-contacts
+
+    section_security:
+      type: section
+      title: PLUGIN_AI_CHATBOT.SECURITY_SETTINGS
+      underline: true
+      fields:
+        rate_limit_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_ENABLED
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+
+        rate_limit_max_requests:
+          type: number
+          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_MAX
+          default: 10
+
+        rate_limit_window_seconds:
+          type: number
+          label: PLUGIN_AI_CHATBOT.RATE_LIMIT_WINDOW
+          default: 60
+
+        strict_site_scope:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.STRICT_SITE_SCOPE
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+
+    section_logging:
+      type: section
+      title: PLUGIN_AI_CHATBOT.LOGGING_SETTINGS
+      underline: true
+      fields:
+        logging_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.LOGGING_ENABLED
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+
+        log_api_usage:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.LOG_API_USAGE
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+
+    section_ui:
+      type: section
+      title: PLUGIN_AI_CHATBOT.UI_SETTINGS
+      underline: true
+      fields:
+        position:
+          type: select
+          label: PLUGIN_AI_CHATBOT.WIDGET_POSITION
+          default: bottom-right
+          options:
+            bottom-right: Bottom Right
+            bottom-left: Bottom Left
+
+        welcome_message:
+          type: text
+          label: PLUGIN_AI_CHATBOT.WELCOME_MESSAGE
+          default: Hello! How can I help you with this website today?
+
+        accent_color:
+          type: colorpicker
+          label: PLUGIN_AI_CHATBOT.ACCENT_COLOR
+          default: '#3b82f6'

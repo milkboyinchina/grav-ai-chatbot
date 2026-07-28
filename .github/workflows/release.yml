@@ -1,0 +1,27 @@
+name: Build & Release Grav Plugin Zip
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Clean Grav Plugin Package Zip
+        run: |
+          mkdir -p build/ai-chatbot
+          rsync -av --exclude='build' --exclude='.git' --exclude='.github' . build/ai-chatbot/
+          cd build
+          zip -r ai-chatbot.zip ai-chatbot
+
+      - name: Create GitHub Release & Upload Package
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/ai-chatbot.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

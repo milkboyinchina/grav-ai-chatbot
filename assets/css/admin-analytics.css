@@ -1,0 +1,112 @@
+/* Grav Admin Analytics Dashboard Styling */
+.grav-chatbot-analytics-dashboard {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.grav-analytics-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.grav-card {
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border-left: 4px solid #64748b;
+}
+
+.grav-card.green { border-left-color: #10b981; }
+.grav-card.blue { border-left-color: #3b82f6; }
+.grav-card.orange { border-left-color: #f59e0b; }
+
+.grav-card-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.grav-card-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 6px;
+}
+
+.grav-analytics-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.grav-analytics-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 900px) {
+  .grav-analytics-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grav-chart-container {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.grav-svg-chart {
+  min-height: 200px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  padding-top: 20px;
+}
+
+.grav-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.grav-bar {
+  width: 28px;
+  background: #3b82f6;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+}
+
+.grav-bar-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.grav-analytics-recommendations table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.grav-analytics-recommendations th,
+.grav-analytics-recommendations td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  font-size: 13px;
+}
+
+.grav-analytics-recommendations th {
+  background: #f1f5f9;
+  font-weight: 600;
+}

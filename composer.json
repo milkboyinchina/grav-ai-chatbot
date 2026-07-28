@@ -1,0 +1,22 @@
+{
+  "name": "milkboyinchina/grav-plugin-ai-chatbot",
+  "type": "grav-plugin",
+  "description": "Grav CMS AI-powered chatbot plugin supporting Gemini & OpenAI API models, local FAQ pre-matching, multi-tier contact resolution, rate limiting, and analytics dashboard.",
+  "keywords": ["grav", "plugin", "ai", "chatbot", "gemini", "openrouter", "openai", "faq", "rag"],
+  "homepage": "https://github.com/milkboyinchina/grav-ai-chatbot",
+  "license": "GPL-3.0-or-later",
+  "authors": [
+    {
+      "name": "milkboyinchina",
+      "homepage": "https://github.com/milkboyinchina"
+    }
+  ],
+  "require": {
+    "php": ">=7.4.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Grav\\Plugin\\AiChatbot\\": "classes/"
+    }
+  }
+}

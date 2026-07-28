@@ -1,0 +1,25 @@
+enabled: true
+provider: gemini
+api_key: ''
+model: gemini-1.5-flash
+custom_endpoint: ''
+
+faq_enabled: true
+faq_route: /faq
+faq_similarity_threshold: 70
+
+contact_route: /contact
+enable_hidden_contacts: true
+hidden_contact_route: /hidden-contacts
+
+rate_limit_enabled: true
+rate_limit_max_requests: 10
+rate_limit_window_seconds: 60
+strict_site_scope: true
+
+logging_enabled: true
+log_api_usage: true
+
+position: bottom-right
+welcome_message: 'Hello! How can I help you with this website today?'
+accent_color: '#3b82f6'

@@ -1,0 +1,38 @@
+en:
+  PLUGIN_AI_CHATBOT:
+    ENABLED: Enabled
+    PROVIDER_SETTINGS: AI Provider Settings
+    PROVIDER: AI Provider Engine
+    PROVIDER_HELP: Select your preferred AI provider model (Google Gemini, OpenRouter, OpenAI, or Custom)
+    API_KEY: API Key
+    API_KEY_HELP: Enter your provider API Key securely
+    MODEL: Model Identifier
+    MODEL_HELP: E.g., gemini-1.5-flash, google/gemini-flash-1.5, gpt-4o-mini
+    CUSTOM_ENDPOINT: Custom Base Endpoint URL
+    CUSTOM_ENDPOINT_HELP: E.g. https://openrouter.ai/api/v1 (only required for Custom provider)
+    FAQ_SETTINGS: FAQ Pre-Matching Settings
+    FAQ_ENABLED: Enable FAQ Pre-Matching
+    FAQ_ENABLED_HELP: Answers matching questions from the FAQ page directly without using AI API keys
+    FAQ_ROUTE: FAQ Page Route
+    FAQ_ROUTE_HELP: Route to your website FAQ page (e.g. /faq)
+    FAQ_SIMILARITY: FAQ Match Sensitivity (%)
+    FAQ_SIMILARITY_HELP: Similarity threshold score (50-100%) to match user questions with FAQ items
+    CONTACT_SETTINGS: Contact Page Resolution Settings
+    CONTACT_ROUTE: Public Contact Page Route
+    CONTACT_ROUTE_HELP: Route to public contact page (e.g. /contact)
+    ENABLE_HIDDEN_CONTACTS: Enable Hidden Contact Page
+    ENABLE_HIDDEN_CONTACTS_HELP: Reads unpublished/hidden contact page for specialized requests (engineers, leads)
+    HIDDEN_CONTACT_ROUTE: Hidden Contact Page Route
+    HIDDEN_CONTACT_ROUTE_HELP: Route to hidden contact page (e.g. /hidden-contacts)
+    SECURITY_SETTINGS: Security & Rate Limiting
+    RATE_LIMIT_ENABLED: Enable IP Rate Limiting
+    RATE_LIMIT_MAX: Max Requests Per Window
+    RATE_LIMIT_WINDOW: Window Duration (Seconds)
+    STRICT_SITE_SCOPE: Strict Site Scope
+    LOGGING_SETTINGS: Logging & FAQ Analytics
+    LOGGING_ENABLED: Enable Interaction Logging
+    LOG_API_USAGE: Track Token Usage & Estimated Cost
+    UI_SETTINGS: Chatbot Widget UI Settings
+    WIDGET_POSITION: Floating Widget Position
+    WELCOME_MESSAGE: Welcome Greeting
+    ACCENT_COLOR: Widget Accent Color
