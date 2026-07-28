@@ -127,7 +127,14 @@ class ChatbotHandler
         $aiEnabled = isset($this->config['ai_enabled']) ? (bool)$this->config['ai_enabled'] : true;
 
         if (!$aiEnabled) {
-            $faqOnlyMsg = "AI Assistant features are currently turned off. I can only answer questions that are listed in our website FAQ. Please visit our FAQ page or contact us directly for assistance.";
+            $contactRoute = $this->config['contact_route'] ?? '/contact';
+            $hiddenRoute = $this->config['hidden_contact_route'] ?? '/hidden-contacts';
+            $enableHidden = !empty($this->config['enable_hidden_contacts']);
+
+            $contactResolver = new ContactPageResolver($this->grav, $contactRoute, $hiddenRoute, $enableHidden);
+            $contactDetails = $contactResolver->getContactInformation($question);
+
+            $faqOnlyMsg = "I couldn't find a matching answer in our FAQ. Please contact our team directly for assistance:\n\n" . $contactDetails;
             
             if (!empty($this->config['logging_enabled'])) {
                 $this->logger->logInteraction([
