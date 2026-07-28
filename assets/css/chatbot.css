@@ -39,13 +39,8 @@
   cursor: pointer;
 }
 
-.grav-chatbot-container.bottom-right .grav-chatbot-toast {
-  right: 0;
-}
-
-.grav-chatbot-container.bottom-left .grav-chatbot-toast {
-  left: 0;
-}
+.grav-chatbot-container.bottom-right .grav-chatbot-toast { right: 0; }
+.grav-chatbot-container.bottom-left .grav-chatbot-toast { left: 0; }
 
 @keyframes gravToastFade {
   from { opacity: 0; transform: translateY(8px); }
@@ -62,9 +57,7 @@
   line-height: 1;
 }
 
-.grav-chatbot-toast-close:hover {
-  color: #4b5563;
-}
+.grav-chatbot-toast-close:hover { color: #4b5563; }
 
 /* Launcher Button */
 .grav-chatbot-launcher {
@@ -197,6 +190,54 @@
   color: #065f46;
 }
 
+/* FAQ Confirmation Box */
+.grav-chatbot-confirm-box {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(209, 213, 219, 0.8);
+  font-size: 12px;
+}
+
+.grav-chatbot-confirm-label {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.grav-chatbot-confirm-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.grav-chatbot-confirm-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.grav-chatbot-confirm-btn.yes:hover {
+  background: #d1fae5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.grav-chatbot-confirm-btn.no:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.grav-chatbot-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .grav-chatbot-quick-actions {
   padding: 8px 12px;
   display: flex;
@@ -252,11 +293,7 @@
   cursor: pointer;
 }
 
-/* ==========================================================================
-   THEME PRESETS
-   ========================================================================== */
-
-/* Theme: Emerald Dark */
+/* Theme Presets */
 .theme-emerald_dark .grav-chatbot-launcher,
 .theme-emerald_dark .grav-chatbot-header,
 .theme-emerald_dark .grav-chatbot-msg.user .grav-chatbot-bubble,
@@ -286,7 +323,6 @@
   border-color: #334155;
 }
 
-/* Theme: Purple Haze */
 .theme-purple_haze .grav-chatbot-launcher,
 .theme-purple_haze .grav-chatbot-header,
 .theme-purple_haze .grav-chatbot-msg.user .grav-chatbot-bubble,
@@ -294,7 +330,6 @@
   background: #8b5cf6 !important;
 }
 
-/* Theme: Sunset Orange */
 .theme-sunset_orange .grav-chatbot-launcher,
 .theme-sunset_orange .grav-chatbot-header,
 .theme-sunset_orange .grav-chatbot-msg.user .grav-chatbot-bubble,

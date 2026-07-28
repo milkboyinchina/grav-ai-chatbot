@@ -89,8 +89,8 @@ class ChatbotHandler
             return $this->handlePageSummarize($currentRoute);
         }
 
-        // 4. Local FAQ Pre-Matching (0 API calls)
-        if (!empty($this->config['faq_enabled']) && !empty($question)) {
+        // 4. Local FAQ Pre-Matching (0 API calls) - skipped if visitor clicked "No" on previous FAQ match
+        if (!empty($this->config['faq_enabled']) && !empty($question) && $action !== 'force_ai') {
             $faqRoute = $this->config['faq_route'] ?? '/faq';
             $threshold = (int)($this->config['faq_similarity_threshold'] ?? 70);
             $enableMulti = !empty($this->config['enable_multilingual_faq']);

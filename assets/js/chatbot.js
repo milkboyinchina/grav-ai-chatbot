@@ -21,10 +21,8 @@
 
     if (!toggleBtn || !windowBox) return;
 
-    // Load persistent session from localStorage
     loadSession();
 
-    // Proactive Toast Notification Timer
     if (config.notificationEnabled && toastBox) {
       const delayMs = (parseInt(config.notificationDelaySeconds, 10) || 4) * 1000;
       setTimeout(function () {
@@ -97,6 +95,45 @@
       textNode.innerHTML = escapeAndFormatMarkdown(text);
       bubbleDiv.appendChild(textNode);
 
+      // Add Yes/No confirmation buttons if source is faq_match
+      if (source === 'faq_match' && !skipSave) {
+        const confirmBox = document.createElement('div');
+        confirmBox.className = 'grav-chatbot-confirm-box';
+        confirmBox.innerHTML = '<span class="grav-chatbot-confirm-label">Is this answer what you were looking for?</span>' +
+          '<div class="grav-chatbot-confirm-buttons">' +
+          '<button class="grav-chatbot-confirm-btn yes">👍 Yes</button>' +
+          '<button class="grav-chatbot-confirm-btn no">👎 No, ask AI</button>' +
+          '</div>';
+
+        const yesBtn = confirmBox.querySelector('.yes');
+        const noBtn = confirmBox.querySelector('.no');
+
+        yesBtn.addEventListener('click', function () {
+          yesBtn.disabled = true;
+          noBtn.disabled = true;
+          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-label" style="color:#10b981; font-weight:600;">✓ Great! Glad I could help.</span>';
+        });
+
+        noBtn.addEventListener('click', function () {
+          yesBtn.disabled = true;
+          noBtn.disabled = true;
+          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-label" style="color:#6b7280;">Asking AI model...</span>';
+          
+          let lastUserQ = '';
+          for (let i = history.length - 1; i >= 0; i--) {
+            if (history[i].role === 'user') {
+              lastUserQ = history[i].content;
+              break;
+            }
+          }
+          if (lastUserQ) {
+            sendQuery(lastUserQ, 'force_ai');
+          }
+        });
+
+        bubbleDiv.appendChild(confirmBox);
+      }
+
       msgDiv.appendChild(bubbleDiv);
       messagesFeed.appendChild(msgDiv);
       messagesFeed.scrollTop = messagesFeed.scrollHeight;
@@ -125,10 +162,10 @@
     function sendQuery(questionText, action) {
       if (!questionText && action !== 'summarize_page') return;
 
-      if (action !== 'summarize_page') {
+      if (action !== 'summarize_page' && action !== 'force_ai') {
         appendMessage('user', questionText);
         if (inputField) inputField.value = '';
-      } else {
+      } else if (action === 'summarize_page') {
         appendMessage('user', '📝 Summarize current page');
       }
 
@@ -185,7 +222,6 @@
       }
     });
 
-    // Session Persistence Handlers
     function saveSession() {
       if (retentionDays <= 0) {
         localStorage.removeItem(STORAGE_KEY);
