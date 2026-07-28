@@ -43,6 +43,21 @@ class AiChatbotPlugin extends Plugin
         return [
             'onPluginsInitialized' => ['onPluginsInitialized', 0],
             'onPageInitialized' => ['onPageInitialized', 0],
+            'onAdminMenu' => ['onAdminMenu', 0],
+        ];
+    }
+
+    /**
+     * Add AI Chatbot entry to Grav Admin sidebar navigation menu.
+     */
+    public function onAdminMenu()
+    {
+        $this->grav['twig']->plugins_hook['nav']['ai-chatbot'] = [
+            'route' => 'plugins/ai-chatbot',
+            'icon' => 'fa-robot',
+            'title' => 'AI Chatbot',
+            'authorize' => 'admin.plugins',
+            'priority' => 10
         ];
     }
 
