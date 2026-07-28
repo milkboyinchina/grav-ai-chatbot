@@ -1,6 +1,25 @@
 <?php
 namespace Grav\Plugin;
 
+// Autoload plugin classes
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+} else {
+    spl_autoload_register(function ($class) {
+        $prefix = 'Grav\\Plugin\\AiChatbot\\';
+        $baseDir = __DIR__ . '/classes/';
+        $len = strlen($prefix);
+        if (strncmp($prefix, $class, $len) !== 0) {
+            return;
+        }
+        $relativeClass = substr($class, $len);
+        $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require $file;
+        }
+    });
+}
+
 use Grav\Common\Plugin;
 use Grav\Common\Uri;
 use Grav\Plugin\AiChatbot\ChatbotHandler;
@@ -22,12 +41,13 @@ class AiChatbotPlugin extends Plugin
     public static function getSubscribedEvents()
     {
         return [
-            'onPluginsInitialized' => ['onPluginsInitialized', 0]
+            'onPluginsInitialized' => ['onPluginsInitialized', 0],
+            'onPageInitialized' => ['onPageInitialized', 0],
         ];
     }
 
     /**
-     * Initialize plugin configuration and route listeners.
+     * Initialize plugin configuration and asset injectors.
      */
     public function onPluginsInitialized()
     {
@@ -36,17 +56,9 @@ class AiChatbotPlugin extends Plugin
             return;
         }
 
-        /** @var Uri $uri */
-        $uri = $this->grav['uri'];
-
-        // Handle AJAX API endpoint call /api/chatbot/query or /chatbot-api
-        if ($uri->path() === '/api/chatbot/query') {
-            $this->handleChatbotQueryApi();
-            exit();
-        }
-
-        // Handle Admin Analytics Exports (CSV / JSON)
-        if ($this->isAdmin() && $uri->path() === '/admin/ai-chatbot/export') {
+        // Handle Analytics Exports (CSV / JSON)
+        $rawUrl = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($rawUrl, '/chatbot-export') !== false) {
             $this->handleAnalyticsExport();
             exit();
         }
@@ -61,6 +73,18 @@ class AiChatbotPlugin extends Plugin
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
                 'onTwigSiteVariables' => ['onTwigSiteVariables', 0],
             ]);
+        }
+    }
+
+    /**
+     * Intercept API calls after Grav Pages object is fully loaded.
+     */
+    public function onPageInitialized()
+    {
+        $rawUrl = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($rawUrl, '/api/chatbot/query') !== false || strpos($rawUrl, '/chatbot-api') !== false) {
+            $this->handleChatbotQueryApi();
+            exit();
         }
     }
 
@@ -126,7 +150,7 @@ class AiChatbotPlugin extends Plugin
             return;
         }
 
-        $rawInput = file_get_contents('php_input') ?: file_get_contents('php://input');
+        $rawInput = file_get_contents('php://input');
         $data = json_decode($rawInput, true) ?? $_POST;
 
         $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot'));
