@@ -1,4 +1,5 @@
 enabled: true
+ai_enabled: true
 provider: gemini
 api_key: ''
 model: gemini-1.5-flash

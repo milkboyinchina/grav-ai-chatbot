@@ -122,7 +122,30 @@ class ChatbotHandler
             }
         }
 
-        // 5. Contact Query Intent Check
+        // 5. Check if AI API calls are enabled
+        $aiEnabled = isset($this->config['ai_enabled']) ? (bool)$this->config['ai_enabled'] : true;
+
+        if (!$aiEnabled) {
+            $faqOnlyMsg = "AI Assistant features are currently turned off. I can only answer questions that are listed in our website FAQ. Please visit our FAQ page or contact us directly for assistance.";
+            
+            if (!empty($this->config['logging_enabled'])) {
+                $this->logger->logInteraction([
+                    'question' => $question,
+                    'answer' => $faqOnlyMsg,
+                    'source' => 'faq_only',
+                    'provider' => 'none'
+                ]);
+            }
+
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'source' => 'faq_only',
+                'answer' => $faqOnlyMsg
+            ];
+        }
+
+        // 6. Contact Query Intent Check
         $contactKeywords = '/(contact|phone|email|address|office|reach|speak|talk|engineer|support)/i';
         $contactInfoSnippet = '';
         if (preg_match($contactKeywords, $question)) {
@@ -214,6 +237,16 @@ class ChatbotHandler
                 'success' => true,
                 'source' => 'summarize',
                 'answer' => "The page '{$title}' does not contain sufficient text content to summarize."
+            ];
+        }
+
+        $aiEnabled = isset($this->config['ai_enabled']) ? (bool)$this->config['ai_enabled'] : true;
+        if (!$aiEnabled) {
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'source' => 'faq_only',
+                'answer' => 'AI Page Summarization is disabled when AI API Fallback is turned off.'
             ];
         }
 

@@ -35,6 +35,18 @@ form:
       title: PLUGIN_AI_CHATBOT.PROVIDER_SETTINGS
       underline: true
       fields:
+        ai_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.AI_ENABLED
+          help: PLUGIN_AI_CHATBOT.AI_ENABLED_HELP
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
         provider:
           type: select
           label: PLUGIN_AI_CHATBOT.PROVIDER

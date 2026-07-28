@@ -2,6 +2,8 @@ en:
   PLUGIN_AI_CHATBOT:
     ENABLED: Enabled
     PROVIDER_SETTINGS: AI Provider Settings
+    AI_ENABLED: Enable AI API Fallback
+    AI_ENABLED_HELP: When disabled, chatbot strictly uses local FAQ page answers and will not make AI API calls.
     PROVIDER: AI Provider Engine
     PROVIDER_HELP: Select your preferred AI provider model (Google Gemini, OpenRouter, OpenAI, or Custom)
     API_KEY: API Key
