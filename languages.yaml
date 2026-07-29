@@ -4,6 +4,8 @@ en:
     PROVIDER_SETTINGS: AI Provider Settings
     AI_ENABLED: Enable AI API Fallback
     AI_ENABLED_HELP: When disabled, chatbot strictly uses local FAQ page answers and will not make AI API calls.
+    AI_DISABLED_RESPONSE_TEXT: AI Disabled Response Message
+    AI_DISABLED_RESPONSE_TEXT_HELP: Custom reply message sent to visitor when no local FAQ answer match is found and AI API fallback is disabled.
     PROVIDER: AI Provider Engine
     PROVIDER_HELP: Select your preferred AI provider model (Groq, Google Gemini, OpenRouter, OpenAI, or Custom)
     API_KEY: API Key

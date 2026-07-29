@@ -47,6 +47,13 @@ form:
           validate:
             type: bool
 
+        ai_disabled_response_text:
+          type: textarea
+          label: PLUGIN_AI_CHATBOT.AI_DISABLED_RESPONSE_TEXT
+          help: PLUGIN_AI_CHATBOT.AI_DISABLED_RESPONSE_TEXT_HELP
+          rows: 2
+          default: 'AI assistant is currently disabled. Please search our FAQ or contact site support for assistance.'
+
         provider:
           type: select
           label: PLUGIN_AI_CHATBOT.PROVIDER

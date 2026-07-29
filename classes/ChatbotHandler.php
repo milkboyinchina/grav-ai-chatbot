@@ -191,11 +191,22 @@ class ChatbotHandler
 
             // TIER 3: AI Model Call (Groq, Gemini, OpenRouter, OpenAI, Custom)
             if (!($this->config['ai_enabled'] ?? true)) {
+                $aiDisabledReply = $this->config['ai_disabled_response_text'] ?? "AI assistant is currently disabled. Please search our FAQ or contact site support for assistance.";
+                $logger = new Logger($this->grav);
+                $logger->logInteraction([
+                    'question' => $question,
+                    'answer' => $aiDisabledReply,
+                    'source' => 'ai_disabled',
+                    'provider' => 'system',
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0
+                ]);
+
                 return [
                     'http_code' => 200,
                     'success' => true,
-                    'answer' => "I'm currently operating in offline mode. I couldn't find an exact match in our FAQ or Contact pages.",
-                    'source' => 'offline_fallback'
+                    'answer' => $aiDisabledReply,
+                    'source' => 'ai_disabled'
                 ];
             }
 
@@ -354,6 +365,16 @@ class ChatbotHandler
                 'success' => true,
                 'answer' => 'This page does not contain enough text content to summarize.',
                 'source' => 'summarize_page'
+            ];
+        }
+
+        if (!($this->config['ai_enabled'] ?? true)) {
+            $aiDisabledReply = $this->config['ai_disabled_response_text'] ?? "AI assistant is currently disabled. Please search our FAQ or contact site support for assistance.";
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'answer' => $aiDisabledReply,
+                'source' => 'ai_disabled'
             ];
         }
 
