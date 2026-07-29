@@ -1,21 +1,15 @@
 (function () {
   'use strict';
 
-  let hasAutoFetched = false;
-
   function initAdminAnalytics() {
     attachRegenerateListener();
     attachTestApiListener();
-
-    if (!hasAutoFetched) {
-      hasAutoFetched = true;
-      fetchLiveDashboardData();
-    }
+    fetchLiveDashboardData();
   }
 
   async function fetchLiveDashboardData() {
     try {
-      const res = await fetch('/chatbot-api', {
+      const res = await fetch('/chatbot-api?t=' + Date.now(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'analytics_report' })
@@ -49,7 +43,7 @@
         }
 
         try {
-          const res = await fetch('/chatbot-api', {
+          const res = await fetch('/chatbot-api?t=' + Date.now(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'analytics_report' })
@@ -96,7 +90,7 @@
     const recsTextarea = document.querySelector('[name*="[analytics_recommendations_text]"]');
     const errorLogTextarea = document.querySelector('[name*="[ai_chatbot_error_log_display]"]');
 
-    if (errorLogTextarea && data.error_logs) {
+    if (errorLogTextarea && typeof data.error_logs === 'string') {
       errorLogTextarea.value = data.error_logs;
     }
 
@@ -119,7 +113,7 @@
 
       let lines = ['📈 DAILY INTERACTION VOLUME:'];
       if (labels.length === 0) {
-        lines.push('  (No interaction data logged)');
+        lines.push('  (No interaction data logged yet)');
       } else {
         const slicedL = labels.length > 25 ? labels.slice(labels.length - 25) : labels;
         const slicedV = values.length > 25 ? values.slice(values.length - 25) : values;
@@ -196,7 +190,7 @@
         }
 
         try {
-          const res = await fetch('/chatbot-api', {
+          const res = await fetch('/chatbot-api?t=' + Date.now(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -260,5 +254,5 @@
     initAdminAnalytics();
   }
 
-  setInterval(initAdminAnalytics, 1000);
+  setInterval(initAdminAnalytics, 2500);
 })();

@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.3.4
+version: 1.4.0
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, blacklisted word safety guardrails, page visibility rules, and analytics reporting.
 icon: robot
 author:
@@ -70,7 +70,7 @@ form:
           type: text
           label: PLUGIN_AI_CHATBOT.MODEL
           help: PLUGIN_AI_CHATBOT.MODEL_HELP
-          default: llama-3.3-70b-versatile
+          default: gemini-2.0-flash
 
         custom_endpoint:
           type: text
@@ -406,6 +406,7 @@ form:
           default: "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: $0.15 per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: $0.60 per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × $0.15) + (Completion Tokens / 1,000,000 × $0.60).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements."
           rows: 7
           readonly: true
+          ignore: true
 
         ai_chatbot_error_log_display:
           type: textarea
@@ -414,6 +415,7 @@ form:
           default: "No error logs recorded. Plugin operating normally."
           rows: 8
           readonly: true
+          ignore: true
 
         ai_chatbot_error_log_location:
           type: textarea
@@ -422,6 +424,7 @@ form:
           default: "📁 Log File Path: user/data/ai-chatbot/error.log\nAbsolute Path: /var/www/html/user/data/ai-chatbot/error.log\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur."
           rows: 5
           readonly: true
+          ignore: true
 
     section_analytics:
       type: section
@@ -440,6 +443,7 @@ form:
           label: 📊 Interaction Summary Metrics
           default: "Total Queries: 0 | FAQ Matches: 0 (0% Saved) | AI Calls: 0 | Total Tokens: 0 | Est. Cost: $0.0000"
           readonly: true
+          ignore: true
 
         analytics_chart_display:
           type: textarea
@@ -448,6 +452,7 @@ form:
           default: "📈 DAILY INTERACTION VOLUME:\n  (No interaction data logged yet)\n\n📊 QUERY SOURCE DISTRIBUTION RATIO:\n  ⚡ FAQ Matches (Free) : 0 (0%)\n  🤖 AI Model Calls     : 0 (0%)\n  🛡️ Rate Limit Shield  : 0 (0%)"
           rows: 9
           readonly: true
+          ignore: true
 
         download_csv_link:
           type: text
@@ -455,6 +460,7 @@ form:
           default: http://localhost/chatbot-export?format=csv
           help: Full absolute URL to download CSV spreadsheet report.
           readonly: true
+          ignore: true
 
         download_json_link:
           type: text
@@ -462,6 +468,7 @@ form:
           default: http://localhost/chatbot-export?format=json
           help: Full absolute URL to download JSON telemetry dataset.
           readonly: true
+          ignore: true
 
         download_raw_link:
           type: text
@@ -469,6 +476,7 @@ form:
           default: http://localhost/chatbot-export?format=raw_interactions
           help: Full absolute URL to download complete raw interaction entries.
           readonly: true
+          ignore: true
 
         analytics_data_file_location:
           type: textarea
@@ -477,6 +485,7 @@ form:
           default: "📁 Log File Path: user/data/ai-chatbot/interactions.json\nAbsolute Path: /var/www/html/user/data/ai-chatbot/interactions.json\n\n📝 Manual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query."
           rows: 5
           readonly: true
+          ignore: true
 
         analytics_recommendations_text:
           type: textarea
@@ -485,3 +494,4 @@ form:
           default: "No candidate FAQ recommendations at this time."
           rows: 5
           readonly: true
+          ignore: true
