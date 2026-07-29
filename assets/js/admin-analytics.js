@@ -1,10 +1,123 @@
 (function () {
   'use strict';
 
-  function initAdminAnalytics() {
-    attachRegenerateListener();
-    attachTestApiListener();
-    fetchLiveDashboardData();
+  function findTargetElement(keywords, elementType) {
+    if (!Array.isArray(keywords)) keywords = [keywords];
+    const typeSelector = elementType || '*';
+
+    // 1. Check name attribute
+    for (let kw of keywords) {
+      let el = document.querySelector(`${typeSelector}[name*="${kw}"]`);
+      if (el) return el;
+    }
+
+    // 2. Check id attribute
+    for (let kw of keywords) {
+      let el = document.querySelector(`${typeSelector}[id*="${kw}"]`);
+      if (el) return el;
+    }
+
+    // 3. Search all elements of type matching label parent text
+    const candidates = Array.from(document.querySelectorAll(typeSelector));
+    for (let candidate of candidates) {
+      const parentBlock = candidate.closest('.form-field, .form-group, fieldset, tr, td, div');
+      if (parentBlock) {
+        const text = parentBlock.innerText || parentBlock.textContent || '';
+        for (let kw of keywords) {
+          if (text.toLowerCase().includes(kw.toLowerCase())) {
+            return candidate;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function updateFormFields(data) {
+    if (!data) return;
+
+    // 1. Error Log Textarea
+    const errorLogTextarea = findTargetElement(['ai_chatbot_error_log_display', 'error_log_display', 'live error log'], 'textarea');
+    if (errorLogTextarea && typeof data.error_logs === 'string') {
+      errorLogTextarea.value = data.error_logs;
+      // Trigger input/change event for reactive SPA frameworks
+      errorLogTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+      errorLogTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // 2. Summary Input
+    const summaryInput = findTargetElement(['analytics_summary_text', 'summary_text', 'summary metrics'], 'input') || findTargetElement(['analytics_summary_text', 'summary_text'], 'textarea');
+    if (summaryInput && data.summary) {
+      const s = data.summary;
+      const totalQueries = s.total_queries || 0;
+      const faqHits = s.faq_hits || 0;
+      const aiHits = s.ai_hits || 0;
+      const totalTokens = (s.total_tokens || 0).toLocaleString();
+      const totalCost = (s.total_cost_usd || 0).toFixed(4);
+      const faqPct = totalQueries > 0 ? Math.round((faqHits / totalQueries) * 100) : 0;
+
+      summaryInput.value = `Total Queries: ${totalQueries} | FAQ Matches: ${faqHits} (${faqPct}% Saved) | AI Calls: ${aiHits} | Total Tokens: ${totalTokens} | Est. Cost: $${totalCost}`;
+      summaryInput.dispatchEvent(new Event('input', { bubbles: true }));
+      summaryInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // 3. Chart Textarea
+    const chartTextarea = findTargetElement(['analytics_chart_display', 'chart_display', 'source distribution chart'], 'textarea');
+    if (chartTextarea && data.daily_chart) {
+      const labels = data.daily_chart.labels || [];
+      const values = data.daily_chart.values || [];
+      const maxVal = Math.max(1, ...values);
+
+      let lines = ['📈 DAILY INTERACTION VOLUME:'];
+      if (labels.length === 0) {
+        lines.push('  (No interaction data logged yet)');
+      } else {
+        const slicedL = labels.length > 25 ? labels.slice(labels.length - 25) : labels;
+        const slicedV = values.length > 25 ? values.slice(values.length - 25) : values;
+
+        slicedL.forEach(function (l, idx) {
+          const v = slicedV[idx];
+          const len = Math.max(1, Math.round((v / maxVal) * 20));
+          lines.push(`  ${l} : ${'█'.repeat(len)} (${v} queries)`);
+        });
+      }
+
+      if (data.ratio_chart) {
+        const f = data.ratio_chart.faq_hits || 0;
+        const a = data.ratio_chart.ai_hits || 0;
+        const r = data.ratio_chart.rate_limit_hits || 0;
+        const tot = f + a + r || 1;
+        const fp = Math.round((f / tot) * 100);
+        const ap = Math.round((a / tot) * 100);
+        const rp = Math.round((r / tot) * 100);
+
+        lines.push('');
+        lines.push('📊 QUERY SOURCE DISTRIBUTION RATIO:');
+        lines.push(`  ⚡ FAQ Matches (Free) : ${'█'.repeat(Math.max(0, Math.round((fp / 100) * 20)))} ${f} (${fp}%)`);
+        lines.push(`  🤖 AI Model Calls     : ${'█'.repeat(Math.max(0, Math.round((ap / 100) * 20)))} ${a} (${ap}%)`);
+        lines.push(`  🛡️ Rate Limit Shield  : ${'█'.repeat(Math.max(0, Math.round((rp / 100) * 20)))} ${r} (${rp}%)`);
+      }
+      chartTextarea.value = lines.join('\n');
+      chartTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+      chartTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // 4. Recommendations Textarea
+    const recsTextarea = findTargetElement(['analytics_recommendations_text', 'recommendations_text', 'candidate faq'], 'textarea');
+    if (recsTextarea && data.recommendations) {
+      const recs = data.recommendations || [];
+      if (recs.length === 0) {
+        recsTextarea.value = 'No candidate FAQ recommendations at this time. All interactions logged in user/data/ai-chatbot/interactions.json.';
+      } else {
+        const recLines = recs.map(function (rec) {
+          return `• [${rec.count}x asked] Q: ${rec.sample_question} => A: ${rec.suggested_answer.substring(0, 100)}...`;
+        });
+        recsTextarea.value = recLines.join('\n\n');
+      }
+      recsTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+      recsTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   }
 
   async function fetchLiveDashboardData() {
@@ -84,78 +197,6 @@
     }
   }
 
-  function updateFormFields(data) {
-    const summaryInput = document.querySelector('[name*="[analytics_summary_text]"]');
-    const chartTextarea = document.querySelector('[name*="[analytics_chart_display]"]');
-    const recsTextarea = document.querySelector('[name*="[analytics_recommendations_text]"]');
-    const errorLogTextarea = document.querySelector('[name*="[ai_chatbot_error_log_display]"]');
-
-    if (errorLogTextarea && typeof data.error_logs === 'string') {
-      errorLogTextarea.value = data.error_logs;
-    }
-
-    if (summaryInput && data.summary) {
-      const s = data.summary;
-      const totalQueries = s.total_queries || 0;
-      const faqHits = s.faq_hits || 0;
-      const aiHits = s.ai_hits || 0;
-      const totalTokens = (s.total_tokens || 0).toLocaleString();
-      const totalCost = (s.total_cost_usd || 0).toFixed(4);
-      const faqPct = totalQueries > 0 ? Math.round((faqHits / totalQueries) * 100) : 0;
-
-      summaryInput.value = `Total Queries: ${totalQueries} | FAQ Matches: ${faqHits} (${faqPct}% Saved) | AI Calls: ${aiHits} | Total Tokens: ${totalTokens} | Est. Cost: $${totalCost}`;
-    }
-
-    if (chartTextarea && data.daily_chart) {
-      const labels = data.daily_chart.labels || [];
-      const values = data.daily_chart.values || [];
-      const maxVal = Math.max(1, ...values);
-
-      let lines = ['📈 DAILY INTERACTION VOLUME:'];
-      if (labels.length === 0) {
-        lines.push('  (No interaction data logged yet)');
-      } else {
-        const slicedL = labels.length > 25 ? labels.slice(labels.length - 25) : labels;
-        const slicedV = values.length > 25 ? values.slice(values.length - 25) : values;
-
-        slicedL.forEach(function (l, idx) {
-          const v = slicedV[idx];
-          const len = Math.max(1, Math.round((v / maxVal) * 20));
-          lines.push(`  ${l} : ${'█'.repeat(len)} (${v} queries)`);
-        });
-      }
-
-      if (data.ratio_chart) {
-        const f = data.ratio_chart.faq_hits || 0;
-        const a = data.ratio_chart.ai_hits || 0;
-        const r = data.ratio_chart.rate_limit_hits || 0;
-        const tot = f + a + r || 1;
-        const fp = Math.round((f / tot) * 100);
-        const ap = Math.round((a / tot) * 100);
-        const rp = Math.round((r / tot) * 100);
-
-        lines.push('');
-        lines.push('📊 QUERY SOURCE DISTRIBUTION RATIO:');
-        lines.push(`  ⚡ FAQ Matches (Free) : ${'█'.repeat(Math.max(0, Math.round((fp / 100) * 20)))} ${f} (${fp}%)`);
-        lines.push(`  🤖 AI Model Calls     : ${'█'.repeat(Math.max(0, Math.round((ap / 100) * 20)))} ${a} (${ap}%)`);
-        lines.push(`  🛡️ Rate Limit Shield  : ${'█'.repeat(Math.max(0, Math.round((rp / 100) * 20)))} ${r} (${rp}%)`);
-      }
-      chartTextarea.value = lines.join('\n');
-    }
-
-    if (recsTextarea && data.recommendations) {
-      const recs = data.recommendations || [];
-      if (recs.length === 0) {
-        recsTextarea.value = 'No candidate FAQ recommendations at this time. All interactions logged in user/data/ai-chatbot/interactions.json.';
-      } else {
-        const recLines = recs.map(function (rec) {
-          return `• [${rec.count}x asked] Q: ${rec.sample_question} => A: ${rec.suggested_answer.substring(0, 100)}...`;
-        });
-        recsTextarea.value = recLines.join('\n\n');
-      }
-    }
-  }
-
   function attachTestApiListener() {
     const testApiBtn = document.getElementById('grav-chatbot-test-api-btn');
     const testApiResult = document.getElementById('grav-chatbot-test-api-result');
@@ -165,14 +206,14 @@
       testApiBtn.addEventListener('click', async function (e) {
         e.preventDefault();
 
-        const providerEl = document.querySelector('[name*="[provider]"]');
-        const apiKeyEl = document.querySelector('[name*="[api_key]"]');
-        const modelEl = document.querySelector('[name*="[model]"]');
-        const customEndpointEl = document.querySelector('[name*="[custom_endpoint]"]');
+        const providerEl = findTargetElement(['provider'], 'select') || document.querySelector('[name*="[provider]"]');
+        const apiKeyEl = findTargetElement(['api_key'], 'input') || document.querySelector('[name*="[api_key]"]');
+        const modelEl = findTargetElement(['model'], 'input') || document.querySelector('[name*="[model]"]');
+        const customEndpointEl = findTargetElement(['custom_endpoint'], 'input') || document.querySelector('[name*="[custom_endpoint]"]');
 
         const provider = providerEl ? providerEl.value : 'gemini';
         const apiKey = apiKeyEl ? apiKeyEl.value : '';
-        const model = modelEl ? modelEl.value : 'gemini-1.5-flash';
+        const model = modelEl ? modelEl.value : 'gemini-2.0-flash';
         const customEndpoint = customEndpointEl ? customEndpointEl.value : '';
 
         testApiBtn.disabled = true;
@@ -248,11 +289,22 @@
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAdminAnalytics);
-  } else {
-    initAdminAnalytics();
+  function init() {
+    attachRegenerateListener();
+    attachTestApiListener();
+    fetchLiveDashboardData();
   }
 
-  setInterval(initAdminAnalytics, 2500);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Automatic Polling Loop Every 2 Seconds
+  setInterval(function () {
+    attachRegenerateListener();
+    attachTestApiListener();
+    fetchLiveDashboardData();
+  }, 2000);
 })();
