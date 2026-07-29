@@ -45,6 +45,7 @@ class AiChatbotPlugin extends Plugin
             'onPageInitialized' => ['onPageInitialized', 1000],
             'onAdminMenu' => ['onAdminMenu', 0],
             'onBlueprintCreated' => ['onBlueprintCreated', 0],
+            'onAdminSave' => ['onAdminSave', 0],
         ];
     }
 
@@ -166,6 +167,28 @@ class AiChatbotPlugin extends Plugin
                 $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
             } catch (\Throwable $e) {
                 // Ignore gracefully
+            }
+        }
+    }
+
+    /**
+     * Intercept Grav Admin config save to execute Telemetry Data Management actions.
+     */
+    public function onAdminSave($event)
+    {
+        $object = $event['object'] ?? null;
+        if ($object && method_exists($object, 'toArray')) {
+            $data = $object->toArray();
+            $action = $data['analytics_action'] ?? 'none';
+            if ($action === 'generate_demo') {
+                $logger = new Logger($this->grav);
+                $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
+                $handler->generateDemoTelemetryData($logger);
+                $object->set('analytics_action', 'none');
+            } elseif ($action === 'clear_data') {
+                $logger = new Logger($this->grav);
+                $logger->clearLogs();
+                $object->set('analytics_action', 'none');
             }
         }
     }

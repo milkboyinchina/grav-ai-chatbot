@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.2.4
+version: 1.2.5
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -361,12 +361,19 @@ form:
         analytics_action:
           type: select
           label: ⚙️ Telemetry & Data Management Actions
-          help: Select an action e.g. Generate 60 Sample Logs or Clear Data, then click Save to execute.
+          help: Select an action (e.g. Generate 60 Sample Logs or Clear Data), then click 'Apply Action' or 'Save' to execute.
           default: none
           options:
-            none: "-- No Action (Normal) --"
+            none: "-- Select Telemetry Action --"
             generate_demo: "🎲 Generate 60 Sample Demo Interactions (180 Days)"
             clear_data: "🗑️ Clear ALL Interaction Telemetry Logs"
+
+        analytics_action_apply_button:
+          type: display
+          label: Execute Telemetry Action
+          markdown: true
+          content: '<div style="margin-top: 5px;"><button type="button" id="grav-chatbot-apply-action-btn" class="button btn btn-primary" style="background:#3b82f6; color:#fff; font-weight:600; padding:8px 16px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-play"></i> ⚡ Apply Telemetry Action</button></div><div id="grav-chatbot-action-status" style="margin-top:10px; display:none; padding:10px 14px; border-radius:6px; font-weight:600;"></div>'
+          ignore: true
 
         analytics_range:
           type: select

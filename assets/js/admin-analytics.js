@@ -1,5 +1,8 @@
 (function () {
   function initAdminAnalytics() {
+    attachApplyActionListener();
+    attachTestApiListener();
+
     let targetEl = document.getElementById('grav-chatbot-analytics-target');
 
     if (!targetEl) {
@@ -175,8 +178,79 @@
 
       fetchAnalyticsData('all');
     }
+  }
 
-    attachTestApiListener();
+  function attachApplyActionListener() {
+    const applyBtn = document.getElementById('grav-chatbot-apply-action-btn');
+    const statusEl = document.getElementById('grav-chatbot-action-status');
+
+    if (applyBtn && !applyBtn.dataset.bound) {
+      applyBtn.dataset.bound = 'true';
+      applyBtn.addEventListener('click', async function (e) {
+        e.preventDefault();
+
+        const actionSelect = document.querySelector('[name*="[analytics_action]"]');
+        const selectedAction = actionSelect ? actionSelect.value : 'none';
+
+        if (!selectedAction || selectedAction === 'none') {
+          if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#fef3c7';
+            statusEl.style.color = '#92400e';
+            statusEl.style.border = '1px solid #f59e0b';
+            statusEl.innerHTML = '⚠️ Please select a valid action (e.g. Generate 60 Sample Demo Interactions or Clear Data) from the dropdown first.';
+          }
+          return;
+        }
+
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = '⏳ Applying Action...';
+
+        const apiAction = selectedAction === 'generate_demo' ? 'generate_demo_data' : 'clear_analytics';
+
+        try {
+          const res = await fetch('/chatbot-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: apiAction })
+          });
+          const resData = await res.json();
+          applyBtn.disabled = false;
+          applyBtn.innerHTML = '⚡ Apply Telemetry Action';
+
+          if (statusEl) {
+            statusEl.style.display = 'block';
+            if (resData.success) {
+              statusEl.style.background = '#d1fae5';
+              statusEl.style.color = '#065f46';
+              statusEl.style.border = '1px solid #10b981';
+              statusEl.innerHTML = '✅ ' + escapeHtml(resData.message || 'Action executed successfully.');
+              
+              // Reset action select
+              if (actionSelect) actionSelect.value = 'none';
+
+              // Fetch updated analytics
+              fetchAnalyticsData('all');
+            } else {
+              statusEl.style.background = '#fee2e2';
+              statusEl.style.color = '#991b1b';
+              statusEl.style.border = '1px solid #ef4444';
+              statusEl.innerHTML = '❌ ' + escapeHtml(resData.message || 'Could not execute action.');
+            }
+          }
+        } catch (err) {
+          applyBtn.disabled = false;
+          applyBtn.innerHTML = '⚡ Apply Telemetry Action';
+          if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#fee2e2';
+            statusEl.style.color = '#991b1b';
+            statusEl.style.border = '1px solid #ef4444';
+            statusEl.innerHTML = '❌ Connection error executing action.';
+          }
+        }
+      });
+    }
   }
 
   function showStatusBanner(msg, type) {
@@ -230,7 +304,42 @@
       if (cardTokens) cardTokens.textContent = (data.summary.total_tokens || 0).toLocaleString();
     }
 
-    // Daily Volume Chart
+    // Update Textarea Chart Field if present
+    const chartTextarea = document.querySelector('[name*="[analytics_chart_display]"]');
+    if (chartTextarea && data.daily_chart) {
+      const labels = data.daily_chart.labels || [];
+      const values = data.daily_chart.values || [];
+      const maxVal = Math.max(1, ...values);
+
+      let lines = ['📈 DAILY INTERACTION VOLUME:'];
+      if (labels.length === 0) {
+        lines.push('  (No interaction data for selected period)');
+      } else {
+        const slicedL = labels.length > 20 ? labels.slice(labels.length - 20) : labels;
+        const slicedV = values.length > 20 ? values.slice(values.length - 20) : values;
+
+        slicedL.forEach(function (l, idx) {
+          const v = slicedV[idx];
+          const len = Math.max(1, Math.round((v / maxVal) * 20));
+          lines.push(`  ${l} : ${'█'.repeat(len)} (${v} queries)`);
+        });
+      }
+
+      if (data.ratio_chart) {
+        const f = data.ratio_chart.faq_hits || 0;
+        const a = data.ratio_chart.ai_hits || 0;
+        const tot = f + a || 1;
+        const fp = Math.round((f / tot) * 100);
+        const ap = 100 - fp;
+        lines.push('');
+        lines.push('📊 QUERY SOURCE DISTRIBUTION RATIO:');
+        lines.push(`  ⚡ FAQ Matches (Free) : ${'█'.repeat(Math.round((fp / 100) * 20))} ${f} (${fp}%)`);
+        lines.push(`  🤖 AI Model Calls     : ${'█'.repeat(Math.round((ap / 100) * 20))} ${a} (${ap}%)`);
+      }
+      chartTextarea.value = lines.join('\n');
+    }
+
+    // Daily Volume Chart DOM
     const dailyChartContainer = document.getElementById('chart-daily-volume');
     if (dailyChartContainer && data.daily_chart) {
       const labels = data.daily_chart.labels || [];
@@ -241,7 +350,6 @@
       if (labels.length === 0) {
         dailyChartContainer.innerHTML = '<p style="color:#94a3b8; margin:auto;">No interactions logged for selected period.</p>';
       } else {
-        // Limit visible bars to last 30 to fit cleanly
         const slicedLabels = labels.length > 30 ? labels.slice(labels.length - 30) : labels;
         const slicedValues = values.length > 30 ? values.slice(values.length - 30) : values;
 
@@ -265,7 +373,7 @@
       }
     }
 
-    // Ratio Chart
+    // Ratio Chart DOM
     const ratioChartContainer = document.getElementById('chart-ratio');
     if (ratioChartContainer && data.ratio_chart) {
       const faqHits = data.ratio_chart.faq_hits || 0;
@@ -286,7 +394,7 @@
       `;
     }
 
-    // Recommendations Table
+    // Recommendations Table DOM
     const tbody = document.getElementById('recommendations-table-body');
     if (tbody) {
       tbody.innerHTML = '';
