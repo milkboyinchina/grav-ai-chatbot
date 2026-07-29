@@ -12,7 +12,7 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting multi
 
 - ⚡ **Multi-Provider AI Engines**:
   - **Groq API** (Default: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
-  - **Google Gemini API** (`gemini-1.5-flash`, `gemini-1.5-pro`).
+  - **Google Gemini API** (`gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`).
   - **OpenRouter API** (`google/gemini-flash-1.5`, `anthropic/claude-3.5-sonnet`).
   - **OpenAI API** (`gpt-4o-mini`, `gpt-4o`).
   - **Custom Endpoints** (Local Ollama, vLLM, or self-hosted OpenAI-compatible servers).

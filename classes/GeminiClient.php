@@ -31,7 +31,7 @@ class GeminiClient implements AiClientInterface
         }
 
         $targetModel = $this->model;
-        if ($targetModel === 'gemini-1.5-flash' || $targetModel === 'gemini-1.5-flash-latest') {
+        if ($targetModel === 'gemini-1.5-flash' || $targetModel === 'gemini-1.5-flash-latest' || $targetModel === 'gemini-1.5-pro') {
             $targetModel = 'gemini-2.0-flash';
         }
 

@@ -3,7 +3,7 @@ ai_enabled: true
 ai_disabled_response_text: "AI assistant is currently disabled. Please search our FAQ or contact site support for assistance."
 provider: gemini
 api_key: YOUR_API_KEY_HERE
-model: gemini-1.5-flash
+model: gemini-2.0-flash
 custom_endpoint: ''
 
 faq_enabled: true
