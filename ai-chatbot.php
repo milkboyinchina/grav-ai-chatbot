@@ -173,6 +173,8 @@ class AiChatbotPlugin extends Plugin
             'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
             'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', '👋 Hi there! Need help finding anything on our website?'),
             'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
+            'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
+            'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
             'currentRoute' => $currentRoute,
         ]);
 

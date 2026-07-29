@@ -1,14 +1,14 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.1.3
-description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, live API connection testing, and analytics reporting.
+version: 1.1.4
+description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
   name: milkboyinchina
   email: milkboyinchina@users.noreply.github.com
 homepage: https://github.com/milkboyinchina/grav-ai-chatbot
-keywords: grav, plugin, ai, chatbot, groq, gemini, openrouter, openai, faq, rag, themes, session, test-connection
+keywords: grav, plugin, ai, chatbot, groq, gemini, openrouter, openai, faq, rag, themes, session, quick-replies, test-connection
 bugs: https://github.com/milkboyinchina/grav-ai-chatbot/issues
 docs: https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/README.md
 license: GPL-3.0-or-later
@@ -84,6 +84,7 @@ form:
           help: PLUGIN_AI_CHATBOT.TEST_CONNECTION_HELP
           markdown: true
           content: '<div class="button-bar" style="margin-top: 15px;"><button type="button" id="grav-chatbot-test-api-btn" class="button btn btn-outline-primary"><i class="fa fa-plug"></i> Test AI Connection</button></div><div id="grav-chatbot-test-api-result" style="margin-top:12px; display:none;"></div>'
+          ignore: true
 
     section_faq:
       type: section
@@ -210,6 +211,40 @@ form:
           label: PLUGIN_AI_CHATBOT.ACCENT_COLOR
           help: PLUGIN_AI_CHATBOT.ACCENT_COLOR_HELP
           default: '#3b82f6'
+
+        quick_replies_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.QUICK_REPLIES_ENABLED
+          help: PLUGIN_AI_CHATBOT.QUICK_REPLIES_ENABLED_HELP
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        quick_replies:
+          type: list
+          label: PLUGIN_AI_CHATBOT.QUICK_REPLIES
+          help: PLUGIN_AI_CHATBOT.QUICK_REPLIES_HELP
+          style: vertical
+          fields:
+            label:
+              type: text
+              label: Button Label
+              default: '📝 Summarize Page'
+            type:
+              type: select
+              label: Action Type
+              default: action
+              options:
+                action: Internal Action (summarize_page, contact)
+                question: Question / Prompt Query
+            action_or_prompt:
+              type: text
+              label: Action Name or Question Prompt
+              default: 'summarize_page'
 
         notification_enabled:
           type: toggle

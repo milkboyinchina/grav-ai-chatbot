@@ -31,6 +31,18 @@ display_pages: "/\n/contact\n/faq"
 welcome_message: 'Hello! How can I help you with this website today?'
 accent_color: '#3b82f6'
 
+quick_replies_enabled: true
+quick_replies:
+  - label: '📝 Summarize Page'
+    type: action
+    action_or_prompt: summarize_page
+  - label: '📞 Contact Owner'
+    type: action
+    action_or_prompt: contact
+  - label: '❓ Founding Date'
+    type: question
+    action_or_prompt: 'When was this company established?'
+
 notification_enabled: true
 notification_text: '👋 Hi there! Need help finding anything on our website?'
 notification_delay_seconds: 4

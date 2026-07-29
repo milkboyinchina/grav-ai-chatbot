@@ -97,6 +97,28 @@
       }
     });
 
+    // Quick Reply Pill Click Handler
+    document.addEventListener('click', function (e) {
+      const pill = e.target.closest('.grav-chatbot-pill');
+      if (pill && !e.defaultPrevented) {
+        e.preventDefault();
+        const action = pill.getAttribute('data-action');
+        const prompt = pill.getAttribute('data-prompt');
+
+        if (action === 'summarize_page') {
+          sendQuestion(pill.textContent.trim(), 'summarize_page');
+        } else if (action === 'contact') {
+          sendQuestion('How can I contact support or the team?', 'query');
+        } else if (action) {
+          sendQuestion(pill.textContent.trim(), action);
+        } else if (prompt) {
+          sendQuestion(prompt, 'query');
+        } else {
+          sendQuestion(pill.textContent.trim(), 'query');
+        }
+      }
+    });
+
     function appendMessage(role, text, source, skipSave) {
       if (!messagesFeed) return;
       const msgDiv = document.createElement('div');

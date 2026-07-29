@@ -52,6 +52,10 @@ en:
     WELCOME_MESSAGE: Welcome Greeting
     ACCENT_COLOR: Custom Accent Color
     ACCENT_COLOR_HELP: Used when 'Custom Color Picker' theme is selected
+    QUICK_REPLIES_ENABLED: Quick Reply Action Buttons
+    QUICK_REPLIES_ENABLED_HELP: Shows quick reply suggestion pills above the chat input box
+    QUICK_REPLIES: Customizable Quick Reply Buttons
+    QUICK_REPLIES_HELP: Add or customize quick suggestion buttons (e.g. Summarize Page, Contact Owner, or custom question prompts)
     NOTIFICATION_ENABLED: Proactive Notification Toast
     NOTIFICATION_ENABLED_HELP: Shows pop-up message toast above launcher button
     NOTIFICATION_TEXT: Toast Notification Text
@@ -78,3 +82,7 @@ es:
     FAQ_ENABLED_HELP: Responde preguntas coincidentes directamente desde la página FAQ sin usar credenciales de IA
     ENABLE_MULTILINGUAL_FAQ: Coincidencia Multilingüe FAQ
     ENABLE_MULTILINGUAL_FAQ_HELP: Utiliza automáticamente el idioma del visitante para buscar en páginas FAQ localizadas
+    QUICK_REPLIES_ENABLED: Botones de Respuesta Rápida
+    QUICK_REPLIES_ENABLED_HELP: Muestra botones de sugerencias rápidas sobre el cuadro de chat
+    QUICK_REPLIES: Botones Personalizables
+    QUICK_REPLIES_HELP: Agregue o personalice botones de sugerencia rápida
