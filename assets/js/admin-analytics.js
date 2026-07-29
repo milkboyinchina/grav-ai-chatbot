@@ -1,7 +1,32 @@
 (function () {
+  'use strict';
+
+  let hasAutoFetched = false;
+
   function initAdminAnalytics() {
     attachRegenerateListener();
     attachTestApiListener();
+
+    if (!hasAutoFetched) {
+      hasAutoFetched = true;
+      fetchLiveDashboardData();
+    }
+  }
+
+  async function fetchLiveDashboardData() {
+    try {
+      const res = await fetch('/chatbot-api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'analytics_report' })
+      });
+      const resData = await res.json();
+      if (resData.success && resData.analytics) {
+        updateFormFields(resData.analytics);
+      }
+    } catch (err) {
+      // Ignore silently
+    }
   }
 
   function attachRegenerateListener() {
@@ -20,7 +45,7 @@
           statusEl.style.background = '#1e293b';
           statusEl.style.color = '#38bdf8';
           statusEl.style.border = '1px solid #38bdf8';
-          statusEl.innerHTML = 'Reading interaction logs from <code>user/data/ai-chatbot/interactions.json</code>...';
+          statusEl.innerHTML = 'Reading interaction logs from <code>user/data/ai-chatbot/interactions.json</code> and error logs from <code>user/data/ai-chatbot/error.log</code>...';
         }
 
         try {
@@ -41,7 +66,7 @@
               statusEl.style.background = '#d1fae5';
               statusEl.style.color = '#065f46';
               statusEl.style.border = '1px solid #10b981';
-              statusEl.innerHTML = '✅ Dashboard metrics & charts successfully updated with latest live data!';
+              statusEl.innerHTML = '✅ Dashboard metrics, charts & live error logs successfully updated with latest live data!';
             }
           } else {
             if (statusEl) {
@@ -69,6 +94,11 @@
     const summaryInput = document.querySelector('[name*="[analytics_summary_text]"]');
     const chartTextarea = document.querySelector('[name*="[analytics_chart_display]"]');
     const recsTextarea = document.querySelector('[name*="[analytics_recommendations_text]"]');
+    const errorLogTextarea = document.querySelector('[name*="[ai_chatbot_error_log_display]"]');
+
+    if (errorLogTextarea && data.error_logs) {
+      errorLogTextarea.value = data.error_logs;
+    }
 
     if (summaryInput && data.summary) {
       const s = data.summary;

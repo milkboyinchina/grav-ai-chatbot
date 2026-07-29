@@ -125,7 +125,9 @@ class AnalyticsReportGenerator
                 'ai_hits' => $aiHits,
                 'rate_limit_hits' => $rateLimitHits
             ],
-            'recommendations' => $recommendations
+            'recommendations' => $recommendations,
+            'error_logs' => $this->logger->getErrorLogs(),
+            'error_log_location' => $this->logger->getErrorLogFilePath()
         ];
     }
 

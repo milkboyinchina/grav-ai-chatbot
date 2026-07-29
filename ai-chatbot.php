@@ -162,6 +162,8 @@ class AiChatbotPlugin extends Plugin
                 $errLogPath = $logger->getErrorLogFilePath();
                 $errInstStr = "📁 Relative Path: user/data/ai-chatbot/error.log\n📁 Absolute Path: {$errLogPath}\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur.";
 
+                $errorLogs = $logger->getErrorLogs();
+
                 $blueprint->set('form.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_chart_display.default', $chartStr);
                 $blueprint->set('form.fields.section_analytics.fields.download_csv_link.default', $csvUrl);
@@ -170,8 +172,12 @@ class AiChatbotPlugin extends Plugin
                 $blueprint->set('form.fields.section_analytics.fields.analytics_data_file_location.default', $fileInstStr);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
                 $blueprint->set('form.fields.section_logging.fields.cost_estimation_example.default', $exampleDisclaimer);
-                $blueprint->set('form.fields.section_logging.fields.ai_chatbot_error_log_display.default', $logger->getErrorLogs());
+
+                $blueprint->set('form.fields.section_logging.fields.ai_chatbot_error_log_display.default', $errorLogs);
                 $blueprint->set('form.fields.section_logging.fields.ai_chatbot_error_log_location.default', $errInstStr);
+
+                $blueprint->set('form.fields.ai_chatbot_error_log_display.default', $errorLogs);
+                $blueprint->set('form.fields.ai_chatbot_error_log_location.default', $errInstStr);
             } catch (\Throwable $e) {
                 // Ignore gracefully
             }
