@@ -44,12 +44,12 @@ class Logger
 
         $record = [
             'id' => uniqid('log_', true),
-            'timestamp' => date('c'),
+            'timestamp' => $entry['timestamp'] ?? date('c'),
             'ip_hash' => substr(md5($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'), 0, 8),
             'question' => trim($entry['question'] ?? ''),
             'answer' => trim($entry['answer'] ?? ''),
             'source' => $entry['source'] ?? 'ai_api', // 'faq_match', 'ai_api', 'rate_limit', 'guardrail'
-            'provider' => $entry['provider'] ?? 'gemini',
+            'provider' => $entry['provider'] ?? 'groq',
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
             'total_tokens' => $totalTokens,
@@ -63,6 +63,30 @@ class Logger
         }
 
         file_put_contents($logFile, json_encode($logs, JSON_PRETTY_PRINT));
+    }
+
+    /**
+     * Clear all interaction logs.
+     */
+    public function clearLogs(): void
+    {
+        $logFile = $this->getLogFilePath();
+        if (file_exists($logFile)) {
+            file_put_contents($logFile, json_encode([], JSON_PRETTY_PRINT));
+        }
+    }
+
+    /**
+     * Bulk save interaction logs.
+     */
+    public function saveLogs(array $logs): void
+    {
+        $logFile = $this->getLogFilePath();
+        $dir = dirname($logFile);
+        if (!file_exists($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        file_put_contents($logFile, json_encode(array_values($logs), JSON_PRETTY_PRINT));
     }
 
     /**

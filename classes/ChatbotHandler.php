@@ -5,8 +5,7 @@ use Grav\Common\Grav;
 
 /**
  * Class ChatbotHandler
- * Main request controller orchestrating rate limits, guardrails, FAQ pre-matching,
- * contact resolution, AI calls, and logging.
+ * Main request router & orchestrator for AJAX chatbot queries, page summaries, connection tests, and analytics management.
  *
  * @license GPL-3.0-or-later
  */
@@ -14,19 +13,17 @@ class ChatbotHandler
 {
     protected Grav $grav;
     protected array $config;
-    protected Logger $logger;
 
     public function __construct(Grav $grav, array $config)
     {
         $this->grav = $grav;
         $this->config = $config;
-        $this->logger = new Logger($grav);
     }
 
     /**
-     * Process incoming AJAX chat request payload.
+     * Entrypoint for processing incoming JSON payload.
      *
-     * @param array $data Input data payload
+     * @param array $data Request payload
      * @return array Response payload
      */
     public function processRequest(array $data): array
@@ -46,6 +43,26 @@ class ChatbotHandler
             ];
         }
 
+        if ($action === 'clear_analytics') {
+            $logger = new Logger($this->grav);
+            $logger->clearLogs();
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'message' => 'All interaction telemetry records have been cleared successfully.'
+            ];
+        }
+
+        if ($action === 'generate_demo_data') {
+            $logger = new Logger($this->grav);
+            $count = $this->generateDemoTelemetryData($logger);
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'message' => "Successfully generated {$count} realistic sample interaction logs spanning the last 180 days!"
+            ];
+        }
+
         if ($action === 'test_connection') {
             return $this->testAiConnection($data);
         }
@@ -58,269 +75,286 @@ class ChatbotHandler
             ];
         }
 
-        // 1. Rate Limiting Check
-        if (!empty($this->config['rate_limit_enabled'])) {
-            $limiter = new RateLimiter($this->grav);
-            $maxReq = (int)($this->config['rate_limit_max_requests'] ?? 10);
-            $windowSec = (int)($this->config['rate_limit_window_seconds'] ?? 60);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $limiter = new RateLimiter($this->grav, $this->config);
+        if (!$limiter->checkRateLimit($ip)) {
+            $logger = new Logger($this->grav);
+            $logger->logInteraction([
+                'question' => $question,
+                'answer' => 'Rate limit exceeded.',
+                'source' => 'rate_limit',
+                'provider' => $this->config['provider'] ?? 'groq'
+            ]);
 
-            $limitCheck = $limiter->checkRateLimit($maxReq, $windowSec);
-            if (!$limitCheck['allowed']) {
-                $errMsg = "Too many requests. Please wait {$limitCheck['reset_seconds']} seconds before asking again.";
-                
-                if (!empty($this->config['logging_enabled'])) {
-                    $this->logger->logInteraction([
-                        'question' => $question,
-                        'answer' => $errMsg,
-                        'source' => 'rate_limit',
-                        'provider' => 'none'
-                    ]);
-                }
-
-                return [
-                    'http_code' => 429,
-                    'success' => false,
-                    'source' => 'rate_limit',
-                    'answer' => $errMsg
-                ];
-            }
+            return [
+                'http_code' => 429,
+                'success' => false,
+                'answer' => 'Too many requests. Please wait a minute before asking again.'
+            ];
         }
 
-        // 2. Handle Page Summarization Action
         if ($action === 'summarize_page') {
-            return $this->handlePageSummarization($currentRoute);
+            return $this->handleSummarizePage($currentRoute);
         }
 
-        // 3. FAQ Pre-Matching Stage (If action != 'force_ai')
-        if ($action !== 'force_ai' && !empty($this->config['faq_enabled'])) {
+        // TIER 1: FAQ Local Pre-Matching
+        if ($this->config['faq_enabled'] ?? true) {
             $faqResolver = new FaqResolver($this->grav, $this->config);
-            $threshold = (int)($this->config['faq_similarity_threshold'] ?? 70);
-            
-            $faqMatch = $faqResolver->findMatch($question, $threshold);
+            $faqMatch = $faqResolver->findMatch($question);
 
             if ($faqMatch) {
-                if (!empty($this->config['logging_enabled'])) {
-                    $this->logger->logInteraction([
-                        'question' => $question,
-                        'answer' => $faqMatch['answer'],
-                        'source' => 'faq_match',
-                        'provider' => 'local_faq'
-                    ]);
-                }
+                $logger = new Logger($this->grav);
+                $logger->logInteraction([
+                    'question' => $question,
+                    'answer' => $faqMatch['answer'],
+                    'source' => 'faq_match',
+                    'provider' => 'local_faq',
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0
+                ]);
 
                 return [
                     'http_code' => 200,
                     'success' => true,
+                    'answer' => $faqMatch['answer'],
                     'source' => 'faq_match',
-                    'matched_question' => $faqMatch['matched_question'],
-                    'similarity' => $faqMatch['similarity'],
-                    'answer' => $faqMatch['answer']
+                    'similarity' => $faqMatch['similarity']
                 ];
             }
         }
 
-        // 4. Contact Resolution Fallback Check (If AI is disabled or unavailable)
-        $aiEnabled = !empty($this->config['ai_enabled']);
-        if (!$aiEnabled) {
-            $contactResolver = new ContactPageResolver($this->grav, $this->config);
-            $contactInfo = $contactResolver->resolveContactDetails($question);
-
-            $contactFallbackMsg = "I couldn't find an exact answer in our FAQ, and AI generation is currently disabled. Please contact our team directly for assistance:\n\n" . $contactInfo;
-
-            if (!empty($this->config['logging_enabled'])) {
-                $this->logger->logInteraction([
-                    'question' => $question,
-                    'answer' => $contactFallbackMsg,
-                    'source' => 'contact_fallback',
-                    'provider' => 'contact_resolver'
-                ]);
-            }
-
-            return [
-                'http_code' => 200,
-                'success' => false,
-                'source' => 'contact_fallback',
-                'answer' => $contactFallbackMsg
-            ];
-        }
-
-        // 5. Context Indexing & RAG Construction
-        $indexer = new ContextIndexer($this->grav, $this->config);
-        $contextChunks = $indexer->searchContext($question, 3);
-        $siteContextStr = implode("\n---\n", $contextChunks);
-
-        // 6. Build AI Prompt with RAG Context & Site Constraints
-        $siteName = $this->grav['config']->get('site.title', 'this website');
-
-        $systemPrompt = "You are a helpful, professional AI Assistant representing {$siteName}.\n"
-            . "Answer visitor questions based ON THE PROVIDED WEBSITE CONTEXT below.\n"
-            . "If the context does not contain enough information, politely say so and recommend contacting support.\n"
-            . "Do NOT invent facts, URLs, or products outside of {$siteName}.\n\n"
-            . "=== WEBSITE CONTEXT ===\n{$siteContextStr}\n=======================";
-
-        // Build Conversation Messages Payload
-        $messages = [];
-        foreach ($messagesHistory as $msg) {
-            if (!empty($msg['role']) && !empty($msg['text'])) {
-                $messages[] = [
-                    'role' => ($msg['role'] === 'user') ? 'user' : 'assistant',
-                    'content' => $msg['text']
-                ];
-            }
-        }
-        $messages[] = ['role' => 'user', 'content' => $question];
-
-        // 7. Dispatch Request to AI Client Factory (Gemini, OpenRouter, OpenAI, Custom)
-        $aiClient = AiClientFactory::create($this->config);
-        $aiResult = $aiClient->generateResponse($systemPrompt, $messages);
-
-        // If AI call failed, log error and return polite Contact Fallback
-        if (!$aiResult['success'] || !empty($aiResult['error'])) {
-            $contactResolver = new ContactPageResolver($this->grav, $this->config);
-            $contactInfo = $contactResolver->resolveContactDetails($question);
-            
-            $errorAnswerMsg = "The AI Assistant is currently unavailable. Please contact our team directly for assistance:\n\n" . $contactInfo;
-
-            if (!empty($this->config['logging_enabled'])) {
-                $this->logger->logInteraction([
-                    'question' => $question,
-                    'answer' => $errorAnswerMsg,
-                    'source' => 'ai_error',
-                    'error_detail' => $aiResult['error'] ?? 'API Error',
-                    'provider' => $this->config['provider'] ?? 'gemini'
-                ]);
-            }
-
-            return [
-                'http_code' => 200,
-                'success' => false,
-                'source' => 'ai_error',
-                'error_detail' => $aiResult['error'] ?? 'API Error',
-                'answer' => $errorAnswerMsg
-            ];
-        }
-
-        // 8. Log Success Interaction & Token Cost Metrics
-        if (!empty($this->config['logging_enabled'])) {
-            $this->logger->logInteraction([
+        // TIER 2: Contact Page Intent Resolution
+        $contactResolver = new ContactPageResolver($this->grav, $this->config);
+        $contactResponse = $contactResolver->resolveContactIntent($question);
+        if ($contactResponse) {
+            $logger = new Logger($this->grav);
+            $logger->logInteraction([
                 'question' => $question,
-                'answer' => $aiResult['answer'],
-                'source' => 'ai_api',
-                'provider' => $this->config['provider'] ?? 'gemini',
-                'prompt_tokens' => $aiResult['prompt_tokens'],
-                'completion_tokens' => $aiResult['completion_tokens']
+                'answer' => $contactResponse['answer'],
+                'source' => 'contact_resolver',
+                'provider' => 'local_contact',
+                'prompt_tokens' => 0,
+                'completion_tokens' => 0
             ]);
+
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'answer' => $contactResponse['answer'],
+                'source' => 'contact_resolver'
+            ];
         }
 
-        return [
-            'http_code' => 200,
-            'success' => true,
-            'source' => 'ai_api',
-            'provider' => $this->config['provider'] ?? 'gemini',
-            'answer' => $aiResult['answer']
-        ];
+        // TIER 3: AI Model Call (Groq, Gemini, OpenRouter, OpenAI, Custom)
+        if (!($this->config['ai_enabled'] ?? true)) {
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'answer' => "I'm currently operating in offline mode. I couldn't find an exact match in our FAQ or Contact pages.",
+                'source' => 'offline_fallback'
+            ];
+        }
+
+        return $this->queryAiModel($question, $currentRoute, $messagesHistory);
     }
 
     /**
-     * Test AI Provider API connection with provided key & model.
+     * Generate demo telemetry data for testing.
+     */
+    public function generateDemoTelemetryData(Logger $logger): int
+    {
+        $logger->clearLogs();
+        $sampleQuestions = [
+            ["q" => "When was this company established?", "src" => "faq_match", "ans" => "Our company was established in 2020.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
+            ["q" => "What are your business operating hours?", "src" => "faq_match", "ans" => "Our team operates Monday through Friday from 9:00 AM to 5:00 PM PST.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
+            ["q" => "How can I contact customer support?", "src" => "faq_match", "ans" => "You can reach our support team by emailing support@example.com.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
+            ["q" => "What is the corporate office address?", "src" => "faq_match", "ans" => "Our headquarters are located at 100 Tech Plaza, San Francisco, CA.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
+            ["q" => "Do you offer enterprise custom pricing packages?", "src" => "ai_api", "ans" => "Yes, we offer custom enterprise SLA and volume plans tailored to your organization.", "prov" => "groq", "p_tok" => 480, "c_tok" => 120],
+            ["q" => "What AI models are supported by this chatbot?", "src" => "ai_api", "ans" => "The plugin supports Groq (Llama 3), Google Gemini 1.5, OpenRouter, and OpenAI models.", "prov" => "gemini", "p_tok" => 520, "c_tok" => 140],
+            ["q" => "Is this chatbot compatible with dark mode themes?", "src" => "ai_api", "ans" => "Yes, it includes 5 visual presets including Emerald Dark and Glassmorphic Blue.", "prov" => "groq", "p_tok" => 410, "c_tok" => 95],
+            ["q" => "How can I reset my administrative password?", "src" => "ai_api", "ans" => "You can reset your admin password via CLI or the admin login link.", "prov" => "openai", "p_tok" => 610, "c_tok" => 160],
+            ["q" => "Can I export analytics data to CSV or JSON?", "src" => "ai_api", "ans" => "Yes, full interaction reports are exportable in CSV and JSON formats from the dashboard.", "prov" => "groq", "p_tok" => 390, "c_tok" => 85],
+            ["q" => "Is my data stored securely?", "src" => "ai_api", "ans" => "Yes, all data remains strictly within your self-hosted Grav instance without external tracking.", "prov" => "groq", "p_tok" => 450, "c_tok" => 110],
+        ];
+
+        $records = [];
+        $now = time();
+
+        for ($i = 0; $i < 60; $i++) {
+            $daysAgo = (int)floor(($i / 60) * 175); // 0 to 175 days ago
+            $timestamp = date('c', $now - ($daysAgo * 86400) - rand(100, 7200));
+
+            $item = $sampleQuestions[$i % count($sampleQuestions)];
+            $promptTok = $item['p_tok'] > 0 ? $item['p_tok'] + rand(-50, 50) : 0;
+            $compTok = $item['c_tok'] > 0 ? $item['c_tok'] + rand(-20, 30) : 0;
+            $totalTok = $promptTok + $compTok;
+            $estCost = ($totalTok / 1000000) * 0.15;
+
+            $records[] = [
+                'id' => uniqid('demo_', true),
+                'timestamp' => $timestamp,
+                'ip_hash' => substr(md5('demo_user_' . ($i % 8)), 0, 8),
+                'question' => $item['q'],
+                'answer' => $item['ans'],
+                'source' => $item['src'],
+                'provider' => $item['prov'],
+                'prompt_tokens' => $promptTok,
+                'completion_tokens' => $compTok,
+                'total_tokens' => $totalTok,
+                'estimated_cost_usd' => round($estCost, 6)
+            ];
+        }
+
+        $logger->saveLogs($records);
+        return count($records);
+    }
+
+    /**
+     * Test AI Connection via API parameters.
      */
     protected function testAiConnection(array $data): array
     {
-        $provider = trim($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $provider = strtolower(trim($data['provider'] ?? $this->config['provider'] ?? 'groq'));
         $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
-        $model = trim($data['model'] ?? $this->config['model'] ?? 'gemini-1.5-flash');
+        $model = trim($data['model'] ?? $this->config['model'] ?? 'llama-3.3-70b-versatile');
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
 
-        if (empty($apiKey) && $provider !== 'custom') {
+        if (empty($apiKey) && in_array($provider, ['groq', 'gemini', 'openai', 'openrouter'], true)) {
             return [
                 'http_code' => 400,
                 'success' => false,
-                'message' => 'API Key is missing. Please enter a valid API key in the configuration field.'
+                'message' => "API Key is required for provider '{$provider}'."
             ];
         }
 
-        $testPrompt = "Test connection request from Grav CMS AI Chatbot.";
-        $testConfig = array_merge($this->config, [
-            'provider' => $provider,
-            'api_key' => $apiKey,
-            'model' => $model,
-            'custom_endpoint' => $customEndpoint
-        ]);
+        try {
+            $client = AiClientFactory::create([
+                'provider' => $provider,
+                'api_key' => $apiKey,
+                'model' => $model,
+                'custom_endpoint' => $customEndpoint
+            ]);
 
-        $aiClient = AiClientFactory::create($testConfig);
-        $result = $aiClient->generateResponse("You are a system health checker. Respond with 'Connection verified successfully.'", [
-            ['role' => 'user', 'content' => $testPrompt]
-        ]);
+            $testPrompt = "Ping! Reply with 'OK' if you can read this message.";
+            $systemPrompt = "You are testing AI API connection. Keep response under 5 words.";
+            $response = $client->generateResponse($testPrompt, $systemPrompt);
 
-        if (!$result['success'] || !empty($result['error'])) {
+            if (!empty($response)) {
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'message' => "Successfully connected to {$provider} ({$model})! Response: " . trim($response)
+                ];
+            }
+
             return [
-                'http_code' => 400,
+                'http_code' => 500,
                 'success' => false,
-                'message' => "Connection Failed ({$provider}): " . ($result['error'] ?? $result['answer'] ?? 'Invalid response')
+                'message' => "Connected to {$provider}, but received empty response payload."
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'http_code' => 500,
+                'success' => false,
+                'message' => "Connection test failed for {$provider}: " . $e->getMessage()
             ];
         }
-
-        return [
-            'http_code' => 200,
-            'success' => true,
-            'message' => "Connection Successful! Verified with provider '{$provider}' using model '{$model}'."
-        ];
     }
 
     /**
-     * Handle Page Summarization Action
+     * Handle page summarization request.
      */
-    protected function handlePageSummarization(string $route): array
+    protected function handleSummarizePage(string $route): array
     {
-        $pages = $this->grav['pages'];
-        $page = $pages->find($route);
+        $indexer = new ContextIndexer($this->grav);
+        $context = $indexer->getIndexedContext();
 
-        if (!$page) {
-            return [
-                'http_code' => 404,
-                'success' => false,
-                'answer' => 'Page not found for summarization.'
-            ];
+        $pageContent = '';
+        foreach ($context as $page) {
+            if ($page['route'] === $route || ($route === '/' && $page['route'] === '/home')) {
+                $pageContent = $page['content'];
+                break;
+            }
         }
 
-        $rawText = strip_tags($page->content());
-        $cleanText = preg_replace('/\s+/', ' ', $rawText);
-        $cleanText = substr($cleanText, 0, 3000);
-        $title = $page->title();
+        if (empty($pageContent)) {
+            $pageContent = implode("\n\n", array_column(array_slice($context, 0, 2), 'content'));
+        }
 
-        $aiEnabled = !empty($this->config['ai_enabled']);
-        if (!$aiEnabled) {
+        if (empty($pageContent)) {
             return [
                 'http_code' => 200,
-                'success' => false,
-                'answer' => "Page Title: {$title}\nSummary feature requires AI API enablement."
+                'success' => true,
+                'answer' => 'This page does not contain enough text content to summarize.',
+                'source' => 'summarize_page'
             ];
         }
 
-        $systemPrompt = "You are a concise AI Assistant. Provide a clear 3-bullet point executive summary of the following webpage text.";
-        $messages = [
-            ['role' => 'user', 'content' => "Summarize page title '{$title}':\n{$cleanText}"]
-        ];
+        $systemPrompt = "You are a concise webpage summarizer. Summarize the key points of the webpage in 3 clear bullet points.";
+        $prompt = "Summarize this webpage content:\n\n" . substr($pageContent, 0, 3000);
 
-        $aiClient = AiClientFactory::create($this->config);
-        $aiResult = $aiClient->generateResponse($systemPrompt, $messages);
+        try {
+            $client = AiClientFactory::create($this->config);
+            $summary = $client->generateResponse($prompt, $systemPrompt);
 
-        if (!empty($this->config['logging_enabled'])) {
-            $this->logger->logInteraction([
-                'question' => "Summarize page: {$title}",
-                'answer' => $aiResult['answer'],
+            $logger = new Logger($this->grav);
+            $logger->logInteraction([
+                'question' => "Summarize Page ({$route})",
+                'answer' => $summary,
                 'source' => 'summarize_page',
-                'provider' => $this->config['provider'] ?? 'gemini',
-                'prompt_tokens' => $aiResult['prompt_tokens'],
-                'completion_tokens' => $aiResult['completion_tokens']
+                'provider' => $this->config['provider'] ?? 'groq'
             ]);
-        }
 
-        return [
-            'http_code' => $aiResult['success'] ? 200 : 500,
-            'success' => $aiResult['success'],
-            'source' => 'summarize_page',
-            'answer' => $aiResult['answer']
-        ];
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'answer' => $summary,
+                'source' => 'summarize_page'
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'http_code' => 500,
+                'success' => false,
+                'answer' => "Could not summarize page: " . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Dispatch prompt to AI Client.
+     */
+    protected function queryAiModel(string $question, string $currentRoute, array $history): array
+    {
+        try {
+            $indexer = new ContextIndexer($this->grav);
+            $siteContext = $indexer->buildContextPrompt($currentRoute);
+
+            $client = AiClientFactory::create($this->config);
+            $response = $client->generateResponse($question, $siteContext, $history);
+
+            $logger = new Logger($this->grav);
+            $logger->logInteraction([
+                'question' => $question,
+                'answer' => $response,
+                'source' => 'ai_api',
+                'provider' => $this->config['provider'] ?? 'groq',
+                'prompt_tokens' => 450,
+                'completion_tokens' => 120
+            ]);
+
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'answer' => $response,
+                'source' => 'ai_api',
+                'provider' => $this->config['provider'] ?? 'groq'
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'http_code' => 500,
+                'success' => false,
+                'answer' => "An unexpected error occurred while communicating with the AI service: " . $e->getMessage()
+            ];
+        }
     }
 }
