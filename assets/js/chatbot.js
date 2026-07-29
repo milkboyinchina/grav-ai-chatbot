@@ -23,22 +23,22 @@
     const widgetRoot = document.getElementById('grav-ai-chatbot-root');
     if (!widgetRoot) return;
 
-    // Apply Position & Theme
-    widgetRoot.className = 'grav-chatbot-root pos-' + position + ' theme-' + themePreset;
+    // Apply Position & Theme (preserve grav-chatbot-container)
+    widgetRoot.className = 'grav-chatbot-container ' + position + ' theme-' + themePreset;
     if (accentColor && themePreset === 'custom') {
       widgetRoot.style.setProperty('--grav-chatbot-accent', accentColor);
     }
 
-    const toggleBtn = widgetRoot.querySelector('#grav-chatbot-toggle-btn');
+    const toggleBtn = widgetRoot.querySelector('#grav-chatbot-toggle');
     const windowEl = widgetRoot.querySelector('#grav-chatbot-window');
-    const closeBtn = widgetRoot.querySelector('#grav-chatbot-close-btn');
+    const closeBtn = widgetRoot.querySelector('#grav-chatbot-close');
     const messagesFeed = widgetRoot.querySelector('#grav-chatbot-messages');
     const inputForm = widgetRoot.querySelector('#grav-chatbot-form');
     const inputField = widgetRoot.querySelector('#grav-chatbot-input');
     const toastEl = widgetRoot.querySelector('#grav-chatbot-toast');
     const toastText = widgetRoot.querySelector('#grav-chatbot-toast-text');
     const toastClose = widgetRoot.querySelector('#grav-chatbot-toast-close');
-    const quickRepliesContainer = widgetRoot.querySelector('#grav-chatbot-quick-replies');
+    const quickRepliesContainer = widgetRoot.querySelector('.grav-chatbot-quick-actions');
 
     // Render Quick Replies
     if (quickRepliesContainer && quickRepliesEnabled && Array.isArray(quickReplies) && quickReplies.length > 0) {
@@ -46,7 +46,7 @@
       quickReplies.forEach(qr => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'grav-chatbot-quick-reply-btn';
+        btn.className = 'grav-chatbot-pill';
         btn.textContent = qr.label || qr.action_or_prompt;
         btn.addEventListener('click', function () {
           if (qr.type === 'action') {
@@ -63,16 +63,25 @@
     function toggleChat(forceState) {
       isOpen = typeof forceState === 'boolean' ? forceState : !isOpen;
       if (isOpen) {
-        windowEl.classList.add('active');
-        toggleBtn.classList.add('active');
-        if (toastEl) toastEl.classList.remove('active');
+        if (windowEl) {
+          windowEl.style.display = 'flex';
+          windowEl.classList.add('active');
+        }
+        if (toggleBtn) toggleBtn.classList.add('active');
+        if (toastEl) {
+          toastEl.style.display = 'none';
+          toastEl.classList.remove('active');
+        }
         if (messagesFeed && messagesFeed.children.length === 0) {
           appendMessage('assistant', welcomeMessage, null, true);
         }
         if (inputField) inputField.focus();
       } else {
-        windowEl.classList.remove('active');
-        toggleBtn.classList.remove('active');
+        if (windowEl) {
+          windowEl.style.display = 'none';
+          windowEl.classList.remove('active');
+        }
+        if (toggleBtn) toggleBtn.classList.remove('active');
       }
       saveSession();
     }
@@ -85,6 +94,7 @@
       toastText.textContent = notificationText;
       setTimeout(() => {
         if (!isOpen && !localStorage.getItem('grav_chatbot_toast_dismissed')) {
+          toastEl.style.display = 'flex';
           toastEl.classList.add('active');
         }
       }, notificationDelaySeconds * 1000);
@@ -92,12 +102,14 @@
       if (toastClose) {
         toastClose.addEventListener('click', (e) => {
           e.stopPropagation();
+          toastEl.style.display = 'none';
           toastEl.classList.remove('active');
           localStorage.setItem('grav_chatbot_toast_dismissed', 'true');
         });
       }
 
       toastEl.addEventListener('click', () => {
+        toastEl.style.display = 'none';
         toastEl.classList.remove('active');
         toggleChat(true);
       });

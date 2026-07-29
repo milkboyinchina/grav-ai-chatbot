@@ -31,12 +31,16 @@
   font-size: 13px;
   color: #1f2937;
   line-height: 1.4;
-  display: flex;
+  display: none;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   animation: gravToastFade 0.3s ease;
   cursor: pointer;
+}
+
+.grav-chatbot-toast.active {
+  display: flex !important;
 }
 
 .grav-chatbot-container.bottom-right .grav-chatbot-toast { right: 0; }
@@ -94,10 +98,14 @@
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 18px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
-  display: flex;
+  display: none;
   flex-direction: column;
   overflow: hidden;
   animation: gravChatbotSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grav-chatbot-window.active {
+  display: flex !important;
 }
 
 .grav-chatbot-container.bottom-right .grav-chatbot-window { right: 0; }
