@@ -46,7 +46,6 @@ class AiChatbotPlugin extends Plugin
             'onPageInitialized' => ['onPageInitialized', 1000],
             'onAdminMenu' => ['onAdminMenu', 0],
             'onBlueprintCreated' => ['onBlueprintCreated', 0],
-            'onAdminSave' => ['onAdminSave', 0],
         ];
     }
 
@@ -82,32 +81,8 @@ class AiChatbotPlugin extends Plugin
         $blueprint = $event['blueprint'];
         if ($blueprint->getFilename() === 'ai-chatbot') {
             try {
-                $logger = new Logger($this->grav);
-
-                // Read user saved config file user/config/plugins/ai-chatbot.yaml directly
-                $userConfigPath = $this->grav['locator']->findResource('user://config/plugins/ai-chatbot.yaml');
-                $userYamlData = (file_exists($userConfigPath)) ? (CompiledYamlFile::instance($userConfigPath)->content() ?: []) : [];
-
-                $action = $_POST['data']['analytics_action'] ?? $_POST['analytics_action'] ?? $userYamlData['analytics_action'] ?? $this->config->get('plugins.ai-chatbot.analytics_action', 'none');
-                $range = $_POST['data']['analytics_range'] ?? $_POST['analytics_range'] ?? $_GET['range'] ?? $userYamlData['analytics_range'] ?? $this->config->get('plugins.ai-chatbot.analytics_range', 'all');
-
-                if ($action === 'generate_demo') {
-                    $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
-                    $handler->generateDemoTelemetryData($logger);
-                    if (file_exists($userConfigPath)) {
-                        $userYamlData['analytics_action'] = 'none';
-                        CompiledYamlFile::instance($userConfigPath)->save($userYamlData);
-                    }
-                } elseif ($action === 'clear_data') {
-                    $logger->clearLogs();
-                    if (file_exists($userConfigPath)) {
-                        $userYamlData['analytics_action'] = 'none';
-                        CompiledYamlFile::instance($userConfigPath)->save($userYamlData);
-                    }
-                }
-
                 $generator = new AnalyticsReportGenerator($this->grav);
-                $data = $generator->getDashboardAnalyticsData($range);
+                $data = $generator->getDashboardAnalyticsData();
 
                 $summary = $data['summary'] ?? [];
                 $totalQueries = $summary['total_queries'] ?? 0;
@@ -124,13 +99,13 @@ class AiChatbotPlugin extends Plugin
                 $summaryStr = "Total Queries: {$totalQueries} | FAQ Matches: {$faqHits} ({$faqPct}% Saved) | AI Calls: {$aiHits} | Total Tokens: {$totalTokens} | Est. Cost: \${$totalCost}";
 
                 // Build Visual ASCII/Unicode Bar Chart
-                $chartLines = ["📈 DAILY INTERACTION VOLUME ({$range}):"];
+                $chartLines = ["📈 DAILY INTERACTION VOLUME:"];
                 $dailyLabels = $data['daily_chart']['labels'] ?? [];
                 $dailyValues = $data['daily_chart']['values'] ?? [];
                 $maxDaily = max(1, ...($dailyValues ?: [1]));
 
                 if (empty($dailyLabels)) {
-                    $chartLines[] = "  (No interaction data logged for range '{$range}')";
+                    $chartLines[] = "  (No interaction data logged)";
                 } else {
                     $slicedLabels = count($dailyLabels) > 25 ? array_slice($dailyLabels, -25) : $dailyLabels;
                     $slicedValues = count($dailyValues) > 25 ? array_slice($dailyValues, -25) : $dailyValues;
@@ -157,9 +132,14 @@ class AiChatbotPlugin extends Plugin
                     $siteUrl = 'http://localhost';
                 }
 
-                $csvUrl = "{$siteUrl}/chatbot-export?format=csv&range=" . urlencode($range);
-                $jsonUrl = "{$siteUrl}/chatbot-export?format=json&range=" . urlencode($range);
-                $rawUrl = "{$siteUrl}/chatbot-export?format=raw_interactions&range=" . urlencode($range);
+                $csvUrl = "{$siteUrl}/chatbot-export?format=csv";
+                $jsonUrl = "{$siteUrl}/chatbot-export?format=json";
+                $rawUrl = "{$siteUrl}/chatbot-export?format=raw_interactions";
+
+                // Log file location instructions
+                $locator = $this->grav['locator'];
+                $absLogPath = $locator->findResource('user://data') . '/ai-chatbot/interactions.json';
+                $fileInstStr = "📁 Relative Path: user/data/ai-chatbot/interactions.json\n📁 Absolute Path: {$absLogPath}\n\n📝 Manual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query.";
 
                 // Recommendations
                 $recs = $data['recommendations'] ?? [];
@@ -170,45 +150,24 @@ class AiChatbotPlugin extends Plugin
                     }
                     $recStr = implode("\n\n", $recLines);
                 } else {
-                    $recStr = "No candidate FAQ recommendations for range '{$range}'. All interactions logged in user/data/ai-chatbot/interactions.json.";
+                    $recStr = "No candidate FAQ recommendations at this time. All interactions logged in user/data/ai-chatbot/interactions.json.";
                 }
 
-                $inPrice = $userYamlData['cost_input_token_price_per_m'] ?? $this->config->get('plugins.ai-chatbot.cost_input_token_price_per_m', '0.15');
-                $outPrice = $userYamlData['cost_output_token_price_per_m'] ?? $this->config->get('plugins.ai-chatbot.cost_output_token_price_per_m', '0.60');
+                $inPrice = $this->config->get('plugins.ai-chatbot.cost_input_token_price_per_m', '0.15');
+                $outPrice = $this->config->get('plugins.ai-chatbot.cost_output_token_price_per_m', '0.60');
 
-                $exampleDisclaimer = "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
+                $exampleDisclaimer = "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
 
                 $blueprint->set('form.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_chart_display.default', $chartStr);
                 $blueprint->set('form.fields.section_analytics.fields.download_csv_link.default', $csvUrl);
                 $blueprint->set('form.fields.section_analytics.fields.download_json_link.default', $jsonUrl);
                 $blueprint->set('form.fields.section_analytics.fields.download_raw_link.default', $rawUrl);
+                $blueprint->set('form.fields.section_analytics.fields.analytics_data_file_location.default', $fileInstStr);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
                 $blueprint->set('form.fields.section_logging.fields.cost_estimation_example.default', $exampleDisclaimer);
             } catch (\Throwable $e) {
                 // Ignore gracefully
-            }
-        }
-    }
-
-    /**
-     * Intercept Grav Admin config save to execute Telemetry Data Management actions.
-     */
-    public function onAdminSave($event)
-    {
-        $object = $event['object'] ?? null;
-        if ($object && method_exists($object, 'toArray')) {
-            $data = $object->toArray();
-            $action = $data['analytics_action'] ?? 'none';
-            if ($action === 'generate_demo') {
-                $logger = new Logger($this->grav);
-                $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
-                $handler->generateDemoTelemetryData($logger);
-                $object->set('analytics_action', 'none');
-            } elseif ($action === 'clear_data') {
-                $logger = new Logger($this->grav);
-                $logger->clearLogs();
-                $object->set('analytics_action', 'none');
             }
         }
     }
@@ -400,9 +359,8 @@ class AiChatbotPlugin extends Plugin
         }
 
         $format = $_GET['format'] ?? 'csv';
-        $range = $_GET['range'] ?? 'all';
         $generator = new AnalyticsReportGenerator($this->grav);
-        $generator->exportReport($format, $range);
+        $generator->exportReport($format);
         exit();
     }
 

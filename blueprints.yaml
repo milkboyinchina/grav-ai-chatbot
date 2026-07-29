@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.2.6
+version: 1.2.8
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -356,13 +356,13 @@ form:
 
         cost_input_token_price_per_m:
           type: text
-          label: 💵 Input Token Price per 1 Million (USD)
+          label: Input Token Price(USD) per 1 Million Token
           help: Price in USD per 1,000,000 Input / Prompt Tokens (e.g. Google Gemini 1.5 Flash = $0.15 per 1M)
           default: '0.15'
 
         cost_output_token_price_per_m:
           type: text
-          label: 💵 Output Token Price per 1 Million (USD)
+          label: Output Token Price(USD) per 1 Million Token
           help: Price in USD per 1,000,000 Output / Completion Tokens (e.g. Google Gemini 1.5 Flash = $0.60 per 1M)
           default: '0.60'
 
@@ -370,7 +370,7 @@ form:
           type: textarea
           label: 💡 Provider Token Pricing Example & Estimation Disclaimer
           help: Pricing formula guide and provider accuracy warning
-          default: "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: $0.15 per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: $0.60 per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × Input Price) + (Completion Tokens / 1,000,000 × Output Price).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements."
+          default: "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: $0.15 per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: $0.60 per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × $0.15) + (Completion Tokens / 1,000,000 × $0.60).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements."
           rows: 7
           readonly: true
 
@@ -379,29 +379,6 @@ form:
       title: AI Analytics & Performance Dashboard
       underline: true
       fields:
-        analytics_action:
-          type: select
-          label: ⚙️ Telemetry & Data Management Actions
-          help: Select an action (e.g. Generate 60 Sample Logs or Clear Data), then click Save to execute.
-          default: none
-          options:
-            none: "-- Select Telemetry Action --"
-            generate_demo: "🎲 Generate 60 Sample Demo Interactions (180 Days)"
-            clear_data: "🗑️ Clear ALL Interaction Telemetry Logs"
-
-        analytics_range:
-          type: select
-          label: 📅 Date Range Filter
-          help: Select date range filter (e.g. Last 7 Days, 1 Month, 3 Months, 6 Months, 12 Months, All Time) then click Save to update charts
-          default: all
-          options:
-            7d: Last 7 Days
-            1m: Last 1 Month (30 Days)
-            3m: Last 3 Months (90 Days)
-            6m: Last 6 Months (180 Days)
-            12m: Last 12 Months (1 Year)
-            all: All Time
-
         analytics_summary_text:
           type: text
           label: 📊 Interaction Summary Metrics
@@ -419,22 +396,30 @@ form:
         download_csv_link:
           type: text
           label: 📥 Full CSV Report Download URL
-          default: http://localhost/chatbot-export?format=csv&range=all
+          default: http://localhost/chatbot-export?format=csv
           help: Full absolute URL to download CSV spreadsheet report.
           readonly: true
 
         download_json_link:
           type: text
           label: 📄 Full JSON Analytics Dataset Download URL
-          default: http://localhost/chatbot-export?format=json&range=all
+          default: http://localhost/chatbot-export?format=json
           help: Full absolute URL to download JSON telemetry dataset.
           readonly: true
 
         download_raw_link:
           type: text
           label: 💾 Full Raw Interactions Log Download URL
-          default: http://localhost/chatbot-export?format=raw_interactions&range=all
+          default: http://localhost/chatbot-export?format=raw_interactions
           help: Full absolute URL to download complete raw interaction entries.
+          readonly: true
+
+        analytics_data_file_location:
+          type: textarea
+          label: 📁 Telemetry Log File Location & Editing Instructions
+          help: Information on where interaction log files are stored and how to edit or delete data.
+          default: "📁 Log File Path: user/data/ai-chatbot/interactions.json\nAbsolute Path: /var/www/html/user/data/ai-chatbot/interactions.json\n\n📝 Manual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query."
+          rows: 5
           readonly: true
 
         analytics_recommendations_text:

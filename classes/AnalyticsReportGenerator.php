@@ -5,7 +5,7 @@ use Grav\Common\Grav;
 
 /**
  * Class AnalyticsReportGenerator
- * Aggregates interaction metrics with date range filtering (7d, 1m, 3m, 6m, 12m, all),
+ * Aggregates interaction metrics using configured Input/Output token pricing,
  * generates chart data for the Admin dashboard, and formats CSV, JSON, and raw interaction exports.
  *
  * @license GPL-3.0-or-later
@@ -22,47 +22,47 @@ class AnalyticsReportGenerator
     }
 
     /**
-     * Download or output report according to format (csv, json, or raw_interactions) and date range.
+     * Download or output report according to format (csv, json, or raw_interactions).
      *
      * @param string $format Export format: 'csv', 'json', or 'raw_interactions'
-     * @param string $range Date range: '7d', '1m', '3m', '6m', '12m', 'all'
      */
-    public function exportReport(string $format = 'csv', string $range = 'all'): void
+    public function exportReport(string $format = 'csv'): void
     {
         $dateStr = date('Y-m-d');
-        $rangeSlug = preg_replace('/[^\w\-]/', '', $range ?: 'all');
 
         if ($format === 'raw_interactions') {
             header('Content-Type: application/json');
-            header("Content-Disposition: attachment; filename=\"ai-chatbot-interactions-{$rangeSlug}-{$dateStr}.json\"");
-            $logs = $this->filterLogsByRange($this->logger->getLogs(), $range);
+            header("Content-Disposition: attachment; filename=\"ai-chatbot-interactions-{$dateStr}.json\"");
+            $logs = $this->logger->getLogs();
             echo json_encode(array_values($logs), JSON_PRETTY_PRINT);
             exit();
         }
 
         if ($format === 'json') {
             header('Content-Type: application/json');
-            header("Content-Disposition: attachment; filename=\"ai-chatbot-analytics-{$rangeSlug}-{$dateStr}.json\"");
-            echo json_encode($this->generateJsonReport($range), JSON_PRETTY_PRINT);
+            header("Content-Disposition: attachment; filename=\"ai-chatbot-analytics-{$dateStr}.json\"");
+            echo json_encode($this->generateJsonReport(), JSON_PRETTY_PRINT);
             exit();
         }
 
         header('Content-Type: text/csv');
-        header("Content-Disposition: attachment; filename=\"ai-chatbot-analytics-{$rangeSlug}-{$dateStr}.csv\"");
-        echo $this->generateCsvReport($range);
+        header("Content-Disposition: attachment; filename=\"ai-chatbot-analytics-{$dateStr}.csv\"");
+        echo $this->generateCsvReport();
         exit();
     }
 
     /**
-     * Get pre-processed data structure for Admin Dashboard graphs filtered by date range.
+     * Get pre-processed data structure for Admin Dashboard graphs using configured token prices.
      *
-     * @param string $range Date range: '7d', '1m', '3m', '6m', '12m', 'all'
      * @return array
      */
-    public function getDashboardAnalyticsData(string $range = 'all'): array
+    public function getDashboardAnalyticsData(): array
     {
-        $rawLogs = $this->logger->getLogs();
-        $logs = $this->filterLogsByRange($rawLogs, $range);
+        $logs = $this->logger->getLogs();
+
+        $config = $this->grav['config']->get('plugins.ai-chatbot', []);
+        $inputPricePerM = (float)($config['cost_input_token_price_per_m'] ?? 0.15);
+        $outputPricePerM = (float)($config['cost_output_token_price_per_m'] ?? 0.60);
 
         $totalQueries = count($logs);
         $faqHits = 0;
@@ -83,8 +83,19 @@ class AnalyticsReportGenerator
                 $rateLimitHits++;
             }
 
-            $totalTokens += ($log['total_tokens'] ?? 0);
-            $totalEstCost += ($log['estimated_cost_usd'] ?? 0.0);
+            $pTok = (int)($log['prompt_tokens'] ?? 0);
+            $cTok = (int)($log['completion_tokens'] ?? 0);
+            $totTok = (int)($log['total_tokens'] ?? ($pTok + $cTok));
+
+            $totalTokens += $totTok;
+
+            // Recalculate cost using user's configured per-million input/output token pricing
+            if ($pTok > 0 || $cTok > 0) {
+                $entryCost = (($pTok / 1000000) * $inputPricePerM) + (($cTok / 1000000) * $outputPricePerM);
+            } else {
+                $entryCost = (float)($log['estimated_cost_usd'] ?? 0.0);
+            }
+            $totalEstCost += $entryCost;
 
             // Daily chart grouping
             $dateKey = !empty($log['timestamp']) ? substr($log['timestamp'], 0, 10) : date('Y-m-d');
@@ -96,7 +107,6 @@ class AnalyticsReportGenerator
         $recommendations = FaqRecommender::getRecommendations($logs, 2);
 
         return [
-            'range' => $range,
             'summary' => [
                 'total_queries' => $totalQueries,
                 'faq_hits' => $faqHits,
@@ -120,42 +130,11 @@ class AnalyticsReportGenerator
     }
 
     /**
-     * Filter log records according to date range string.
+     * Generate CSV export string.
      */
-    protected function filterLogsByRange(array $logs, string $range = 'all'): array
+    public function generateCsvReport(): string
     {
-        if (empty($range) || $range === 'all') {
-            return $logs;
-        }
-
-        $daysMap = [
-            '7d' => 7,
-            '1m' => 30,
-            '3m' => 90,
-            '6m' => 180,
-            '12m' => 365,
-        ];
-
-        $days = $daysMap[$range] ?? 0;
-        if ($days <= 0) {
-            return $logs;
-        }
-
-        $cutoff = strtotime("-{$days} days");
-        $filtered = array_filter($logs, function ($log) use ($cutoff) {
-            $ts = strtotime($log['timestamp'] ?? '');
-            return $ts !== false && $ts >= $cutoff;
-        });
-
-        return array_values($filtered);
-    }
-
-    /**
-     * Generate CSV export string for given date range.
-     */
-    public function generateCsvReport(string $range = 'all'): string
-    {
-        $logs = $this->filterLogsByRange($this->logger->getLogs(), $range);
+        $logs = $this->logger->getLogs();
 
         $output = fopen('php://temp', 'r+');
         fputcsv($output, ['ID', 'Timestamp', 'IP Hash', 'Question', 'Answer', 'Source', 'Provider', 'Prompt Tokens', 'Completion Tokens', 'Total Tokens', 'Est Cost (USD)']);
@@ -184,15 +163,14 @@ class AnalyticsReportGenerator
     }
 
     /**
-     * Generate JSON export structure for given date range.
+     * Generate JSON export structure.
      */
-    public function generateJsonReport(string $range = 'all'): array
+    public function generateJsonReport(): array
     {
         return [
             'generated_at' => date('c'),
-            'range' => $range,
-            'analytics' => $this->getDashboardAnalyticsData($range),
-            'logs' => $this->filterLogsByRange($this->logger->getLogs(), $range)
+            'analytics' => $this->getDashboardAnalyticsData(),
+            'logs' => $this->logger->getLogs()
         ];
     }
 }
