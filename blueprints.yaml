@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.1.9
+version: 1.2.1
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -340,30 +340,58 @@ form:
       title: AI Analytics & Performance Dashboard
       underline: true
       fields:
+        analytics_range:
+          type: select
+          label: 📅 Date Range Filter
+          help: Filter interaction telemetry metrics and charts by date range
+          default: all
+          options:
+            7d: Last 7 Days
+            1m: Last 1 Month (30 Days)
+            3m: Last 3 Months (90 Days)
+            6m: Last 6 Months (180 Days)
+            12m: Last 12 Months (1 Year)
+            all: All Time
+
         analytics_summary_text:
           type: text
-          label: Total Queries & FAQ Matches Summary
+          label: 📊 Interaction Summary Metrics
           default: "Total Queries: 46 | FAQ Matches: 23 (50% Saved) | AI Calls: 6 | Total Tokens: 4,951 | Est. Cost: $0.0007"
           readonly: true
 
-        analytics_export_csv:
-          type: text
-          label: CSV Export Link
-          default: /chatbot-export?format=csv
-          help: Click or copy this URL to download full CSV interaction telemetry report.
+        analytics_chart_display:
+          type: textarea
+          label: 📈 Visual Interaction Volume & Source Distribution Chart
+          help: Visual bar graphs of daily interaction volume and FAQ vs AI hit ratios
+          default: "Loading charts..."
+          rows: 9
           readonly: true
 
-        analytics_export_json:
+        download_csv_link:
           type: text
-          label: JSON Data Export Link
-          default: /chatbot-export?format=json
-          help: Click or copy this URL to download raw JSON telemetry dataset.
+          label: 📥 Download CSV Report URL
+          default: /chatbot-export?format=csv&range=all
+          help: Open or copy this URL in your browser to download CSV spreadsheet report.
+          readonly: true
+
+        download_json_link:
+          type: text
+          label: 📄 Download JSON Analytics Dataset URL
+          default: /chatbot-export?format=json&range=all
+          help: Open or copy this URL in your browser to download JSON telemetry dataset.
+          readonly: true
+
+        download_raw_link:
+          type: text
+          label: 💾 Download Raw Interactions Log URL
+          default: /chatbot-export?format=raw_interactions&range=all
+          help: Open or copy this URL in your browser to download complete raw interaction entries.
           readonly: true
 
         analytics_recommendations_text:
           type: textarea
-          label: Candidate FAQ Recommendations & Telemetry Logs
+          label: 💡 Candidate FAQ Recommendations & Telemetry Logs
           help: Frequently asked visitor queries handled by AI API. Adding them to /faq page saves future API costs.
-          default: "No additional FAQ recommendations available at this time. All 46 visitor interactions are logged in user/data/ai-chatbot/interactions.json."
+          default: "No candidate FAQ recommendations at this time."
           rows: 5
           readonly: true

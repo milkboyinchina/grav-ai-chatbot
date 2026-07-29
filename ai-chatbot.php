@@ -72,27 +72,62 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Populate blueprint fields dynamically with live analytics metrics.
+     * Populate blueprint fields dynamically with live analytics metrics, visual bar charts, and export URLs.
      */
     public function onBlueprintCreated($event)
     {
         $blueprint = $event['blueprint'];
         if ($blueprint->getFilename() === 'ai-chatbot') {
             try {
+                $range = $this->config->get('plugins.ai-chatbot.analytics_range', 'all');
                 $generator = new AnalyticsReportGenerator($this->grav);
-                $data = $generator->getDashboardAnalyticsData();
+                $data = $generator->getDashboardAnalyticsData($range);
 
                 $summary = $data['summary'] ?? [];
                 $totalQueries = $summary['total_queries'] ?? 0;
                 $faqHits = $summary['faq_hits'] ?? 0;
                 $aiHits = $summary['ai_hits'] ?? 0;
+                $rateHits = $summary['rate_limit_hits'] ?? 0;
                 $totalTokens = number_format($summary['total_tokens'] ?? 0);
                 $totalCost = number_format($summary['total_cost_usd'] ?? 0, 4);
 
                 $faqPct = $totalQueries > 0 ? round(($faqHits / $totalQueries) * 100) : 0;
+                $aiPct = $totalQueries > 0 ? round(($aiHits / $totalQueries) * 100) : 0;
+                $ratePct = $totalQueries > 0 ? round(($rateHits / $totalQueries) * 100) : 0;
 
                 $summaryStr = "Total Queries: {$totalQueries} | FAQ Matches: {$faqHits} ({$faqPct}% Saved) | AI Calls: {$aiHits} | Total Tokens: {$totalTokens} | Est. Cost: \${$totalCost}";
 
+                // Build Visual ASCII/Unicode Bar Chart
+                $chartLines = ["📈 DAILY INTERACTION VOLUME:"];
+                $dailyLabels = $data['daily_chart']['labels'] ?? [];
+                $dailyValues = $data['daily_chart']['values'] ?? [];
+                $maxDaily = max(1, ...($dailyValues ?: [1]));
+
+                if (empty($dailyLabels)) {
+                    $chartLines[] = "  (No interaction data for selected period)";
+                } else {
+                    foreach ($dailyLabels as $idx => $lbl) {
+                        $val = $dailyValues[$idx] ?? 0;
+                        $barLen = (int)round(($val / $maxDaily) * 25);
+                        $barStr = str_repeat('█', max(1, $barLen));
+                        $chartLines[] = sprintf("  %s : %s (%d queries)", $lbl, $barStr, $val);
+                    }
+                }
+
+                $chartLines[] = "";
+                $chartLines[] = "📊 QUERY SOURCE DISTRIBUTION RATIO:";
+                $chartLines[] = sprintf("  ⚡ FAQ Matches (Free) : %s %d (%d%%)", str_repeat('█', (int)round(($faqPct / 100) * 20)), $faqHits, $faqPct);
+                $chartLines[] = sprintf("  🤖 AI Model Calls     : %s %d (%d%%)", str_repeat('█', (int)round(($aiPct / 100) * 20)), $aiHits, $aiPct);
+                $chartLines[] = sprintf("  🛡️ Rate Limit Shield  : %s %d (%d%%)", str_repeat('█', (int)round(($ratePct / 100) * 20)), $rateHits, $ratePct);
+
+                $chartStr = implode("\n", $chartLines);
+
+                // Export URLs
+                $csvUrl = "/chatbot-export?format=csv&range=" . urlencode($range);
+                $jsonUrl = "/chatbot-export?format=json&range=" . urlencode($range);
+                $rawUrl = "/chatbot-export?format=raw_interactions&range=" . urlencode($range);
+
+                // Recommendations
                 $recs = $data['recommendations'] ?? [];
                 $recLines = [];
                 if (!empty($recs)) {
@@ -101,10 +136,14 @@ class AiChatbotPlugin extends Plugin
                     }
                     $recStr = implode("\n\n", $recLines);
                 } else {
-                    $recStr = "No candidate FAQ recommendations at this time. Logged interactions are stored in user/data/ai-chatbot/interactions.json.";
+                    $recStr = "No candidate FAQ recommendations for selected period. All interactions logged in user/data/ai-chatbot/interactions.json.";
                 }
 
                 $blueprint->set('form.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
+                $blueprint->set('form.fields.section_analytics.fields.analytics_chart_display.default', $chartStr);
+                $blueprint->set('form.fields.section_analytics.fields.download_csv_link.default', $csvUrl);
+                $blueprint->set('form.fields.section_analytics.fields.download_json_link.default', $jsonUrl);
+                $blueprint->set('form.fields.section_analytics.fields.download_raw_link.default', $rawUrl);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
             } catch (\Throwable $e) {
                 // Ignore gracefully
