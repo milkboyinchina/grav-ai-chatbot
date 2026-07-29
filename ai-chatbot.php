@@ -36,6 +36,21 @@ spl_autoload_register(function ($class) {
 class AiChatbotPlugin extends Plugin
 {
     /**
+     * Helper to reliably resolve plugin enabled state across boolean and array configs.
+     */
+    protected function isPluginEnabled(): bool
+    {
+        $pluginConfig = $this->config->get('plugins.ai-chatbot');
+        if ($pluginConfig === false) {
+            return false;
+        }
+        if (is_array($pluginConfig) && isset($pluginConfig['enabled'])) {
+            return (bool)$pluginConfig['enabled'];
+        }
+        return true;
+    }
+
+    /**
      * @return array
      */
     public static function getSubscribedEvents(): array
@@ -44,6 +59,7 @@ class AiChatbotPlugin extends Plugin
             'onPluginsInitialized' => ['onPluginsInitialized', 1000],
             'onPageNotFound' => ['onPageNotFound', 1000],
             'onPageInitialized' => ['onPageInitialized', 1000],
+            'onOutputGenerated' => ['onOutputGenerated', 0],
             'onAdminMenu' => ['onAdminMenu', 0],
             'onBlueprintCreated' => ['onBlueprintCreated', 0],
         ];
@@ -100,7 +116,7 @@ class AiChatbotPlugin extends Plugin
                 $summaryStr = "Total Queries: {$totalQueries} | FAQ Matches: {$faqHits} ({$faqPct}% Saved) | AI Calls: {$aiHits} | Total Tokens: {$totalTokens} | Est. Cost: \${$totalCost}";
 
                 // Build Visual ASCII/Unicode Bar Chart
-                $chartLines = ["📈 DAILY INTERACTION VOLUME:"];
+                $chartLines = ["DAILY INTERACTION VOLUME:"];
                 $dailyLabels = $data['daily_chart']['labels'] ?? [];
                 $dailyValues = $data['daily_chart']['values'] ?? [];
                 $maxDaily = max(1, ...($dailyValues ?: [1]));
@@ -120,10 +136,10 @@ class AiChatbotPlugin extends Plugin
                 }
 
                 $chartLines[] = "";
-                $chartLines[] = "📊 QUERY SOURCE DISTRIBUTION RATIO:";
-                $chartLines[] = sprintf("  ⚡ FAQ Matches (Free) : %s %d (%d%%)", str_repeat('█', (int)round(($faqPct / 100) * 20)), $faqHits, $faqPct);
-                $chartLines[] = sprintf("  🤖 AI Model Calls     : %s %d (%d%%)", str_repeat('█', (int)round(($aiPct / 100) * 20)), $aiHits, $aiPct);
-                $chartLines[] = sprintf("  🛡️ Rate Limit Shield  : %s %d (%d%%)", str_repeat('█', (int)round(($ratePct / 100) * 20)), $rateHits, $ratePct);
+                $chartLines[] = "QUERY SOURCE DISTRIBUTION RATIO:";
+                $chartLines[] = sprintf("  FAQ Matches (Free) : %s %d (%d%%)", str_repeat('█', (int)round(($faqPct / 100) * 20)), $faqHits, $faqPct);
+                $chartLines[] = sprintf("  AI Model Calls     : %s %d (%d%%)", str_repeat('█', (int)round(($aiPct / 100) * 20)), $aiHits, $aiPct);
+                $chartLines[] = sprintf("  Rate Limit Shield  : %s %d (%d%%)", str_repeat('█', (int)round(($ratePct / 100) * 20)), $rateHits, $ratePct);
 
                 $chartStr = implode("\n", $chartLines);
 
@@ -140,7 +156,7 @@ class AiChatbotPlugin extends Plugin
                 // Log file location instructions
                 $locator = $this->grav['locator'];
                 $absLogPath = $locator->findResource('user://data') . '/ai-chatbot/interactions.json';
-                $fileInstStr = "📁 Relative Path: user/data/ai-chatbot/interactions.json\n📁 Absolute Path: {$absLogPath}\n\n📝 Manual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query.";
+                $fileInstStr = "Relative Path: user/data/ai-chatbot/interactions.json\nAbsolute Path: {$absLogPath}\n\nManual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query.";
 
                 // Recommendations
                 $recs = $data['recommendations'] ?? [];
@@ -157,10 +173,10 @@ class AiChatbotPlugin extends Plugin
                 $inPrice = $this->config->get('plugins.ai-chatbot.cost_input_token_price_per_m', '0.15');
                 $outPrice = $this->config->get('plugins.ai-chatbot.cost_output_token_price_per_m', '0.60');
 
-                $exampleDisclaimer = "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
+                $exampleDisclaimer = "Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens ($0.00060 / 1k)\n\nToken Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
 
                 $errLogPath = $logger->getErrorLogFilePath();
-                $errInstStr = "📁 Relative Path: user/data/ai-chatbot/error.log\n📁 Absolute Path: {$errLogPath}\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur.";
+                $errInstStr = "Relative Path: user/data/ai-chatbot/error.log\nAbsolute Path: {$errLogPath}\n\nManual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur.";
 
                 $errorLogs = $logger->getErrorLogs();
 
@@ -185,12 +201,35 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
+     * Helper to normalize multilingual routes (e.g. /en, /id, /en/home -> /).
+     */
+    protected function normalizeRoute(string $route): string
+    {
+        $clean = '/' . ltrim(trim($route), '/');
+
+        // Supported languages in Grav system config
+        $supportedLangs = (array)$this->config->get('system.languages.supported', ['en', 'id']);
+        foreach ($supportedLangs as $lang) {
+            $langPrefix = '/' . trim($lang, '/');
+            if ($clean === $langPrefix) {
+                return '/';
+            }
+            if (strpos($clean, $langPrefix . '/') === 0) {
+                $clean = substr($clean, strlen($langPrefix));
+                break;
+            }
+        }
+
+        $clean = '/' . ltrim($clean, '/');
+        return empty($clean) ? '/' : $clean;
+    }
+
+    /**
      * Plugin initialization. Subscribes necessary events.
      */
     public function onPluginsInitialized()
     {
-        $enabled = $this->config->get('plugins.ai-chatbot.enabled', true);
-        if (!$enabled) {
+        if (!$this->isPluginEnabled()) {
             return;
         }
 
@@ -210,8 +249,110 @@ class AiChatbotPlugin extends Plugin
                 'onTwigSiteVariables' => ['onTwigSiteVariables', 0],
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
+                'onOutputGenerated' => ['onOutputGenerated', 0],
             ]);
         }
+    }
+
+    /**
+     * Universal Direct Output HTML Injector.
+     * Guarantees chatbot widget injection across all themes regardless of whether theme calls assets.js() or not.
+     */
+    public function onOutputGenerated()
+    {
+        if ($this->isAdmin()) {
+            return;
+        }
+
+        if (!$this->isPluginEnabled()) {
+            return;
+        }
+
+        $output = $this->grav['output'];
+
+        // Check if output is HTML and body tag exists
+        if (empty($output) || strpos($output, '</body>') === false) {
+            return;
+        }
+
+        // Avoid duplicate injections
+        if (strpos($output, 'grav-ai-chatbot-root') !== false) {
+            return;
+        }
+
+        // Page Display Visibility Rules
+        $rawRoute = $this->grav['uri']->path() ?: '/';
+        $currentRoute = $this->normalizeRoute($rawRoute);
+        $pageRoute = isset($this->grav['page']) ? $this->normalizeRoute($this->grav['page']->route()) : '';
+
+        $displayMode = $this->config->get('plugins.ai-chatbot.display_mode', 'all');
+
+        if ($displayMode !== 'all') {
+            $rawPages = $this->config->get('plugins.ai-chatbot.display_pages', '');
+            $pagesList = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawPages))));
+
+            $isListed = false;
+            foreach ($pagesList as $pRoute) {
+                $cleanP = $this->normalizeRoute($pRoute);
+
+                if (
+                    $currentRoute === $cleanP ||
+                    ($pageRoute && $pageRoute === $cleanP) ||
+                    (($currentRoute === '/' || $currentRoute === '/home' || $pageRoute === '/home' || $pageRoute === '/blog') && ($cleanP === '/' || $cleanP === '/home'))
+                ) {
+                    $isListed = true;
+                    break;
+                }
+            }
+
+            if ($displayMode === 'selected_only' && !$isListed) {
+                return;
+            }
+
+            if ($displayMode === 'exclude_selected' && $isListed) {
+                return;
+            }
+        }
+
+        // Render Widget Twig Partial
+        $twig = $this->grav['twig'];
+        $widgetHtml = '';
+        try {
+            $widgetHtml = $twig->processTemplate('partials/chatbot-widget.html.twig', [
+                'config' => $this->config
+            ]);
+        } catch (\Throwable $t) {}
+
+        $jsConfig = json_encode([
+            'apiEndpoint' => '/chatbot-api',
+            'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
+            'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
+            'customErrorMessage' => $this->config->get('plugins.ai-chatbot.custom_error_message', 'An unexpected connection error occurred. Please try again later.'),
+            'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
+            'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
+            'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
+            'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
+            'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', 'Hi there! Need help finding anything on our website?'),
+            'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
+            'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
+            'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
+            'currentRoute' => $currentRoute,
+        ]);
+
+        $baseUrl = rtrim($this->grav['base_url_relative'] ?? '', '/');
+        $cssUrl = "{$baseUrl}/user/plugins/ai-chatbot/assets/css/chatbot.css";
+        $jsUrl = "{$baseUrl}/user/plugins/ai-chatbot/assets/js/chatbot.js";
+
+        $injection = "
+<!-- AI Chatbot Asset & Widget Container -->
+<link rel=\"stylesheet\" href=\"{$cssUrl}\">
+<script>window.GravChatbotConfig = {$jsConfig};</script>
+<script src=\"{$jsUrl}\" defer></script>
+{$widgetHtml}
+";
+
+        $output = str_replace('</body>', $injection . "\n</body>", $output);
+        $this->grav['output'] = $output;
     }
 
     /**
@@ -400,18 +541,13 @@ class AiChatbotPlugin extends Plugin
      */
     public function onTwigSiteVariables()
     {
-        $enabled = $this->config->get('plugins.ai-chatbot.enabled', true);
-        if (!$enabled) {
+        if (!$this->isPluginEnabled()) {
             return;
         }
 
-        // Page Display Visibility Rules (all, selected_only, exclude_selected)
-        $currentRoute = rtrim($this->grav['uri']->path() ?: '/', '/');
-        if (empty($currentRoute)) {
-            $currentRoute = '/';
-        }
-
-        $pageRoute = isset($this->grav['page']) ? rtrim($this->grav['page']->route(), '/') : '';
+        $rawRoute = $this->grav['uri']->path() ?: '/';
+        $currentRoute = $this->normalizeRoute($rawRoute);
+        $pageRoute = isset($this->grav['page']) ? $this->normalizeRoute($this->grav['page']->route()) : '';
 
         $displayMode = $this->config->get('plugins.ai-chatbot.display_mode', 'all');
 
@@ -421,10 +557,7 @@ class AiChatbotPlugin extends Plugin
 
             $isListed = false;
             foreach ($pagesList as $pRoute) {
-                $cleanP = rtrim($pRoute, '/');
-                if (empty($cleanP)) {
-                    $cleanP = '/';
-                }
+                $cleanP = $this->normalizeRoute($pRoute);
 
                 if (
                     $currentRoute === $cleanP ||
@@ -458,7 +591,7 @@ class AiChatbotPlugin extends Plugin
             'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
             'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
             'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
-            'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', '👋 Hi there! Need help finding anything on our website?'),
+            'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', 'Hi there! Need help finding anything on our website?'),
             'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
             'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
             'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
@@ -470,9 +603,12 @@ class AiChatbotPlugin extends Plugin
 
         // Render Widget Twig Partial into Page Body
         $twig = $this->grav['twig'];
-        $widgetHtml = $twig->processTemplate('partials/chatbot-widget.html.twig', [
-            'config' => $this->config
-        ]);
+        $widgetHtml = '';
+        try {
+            $widgetHtml = $twig->processTemplate('partials/chatbot-widget.html.twig', [
+                'config' => $this->config
+            ]);
+        } catch (\Throwable $t) {}
 
         $this->grav['assets']->addInlineJs("
             (function() {

@@ -121,7 +121,7 @@ class ChatbotHandler
                 }
 
                 if ($matchedWord) {
-                    $blockMsg = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
+                    $blockMsg = $this->config['blacklist_response_text'] ?? "Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
                     $logger = new Logger($this->grav);
                     $logger->logInteraction([
                         'question' => $question,
