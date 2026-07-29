@@ -2,6 +2,7 @@
 namespace Grav\Plugin;
 
 use Grav\Common\Plugin;
+use Grav\Common\File\CompiledYamlFile;
 use Grav\Plugin\AiChatbot\ChatbotHandler;
 use Grav\Plugin\AiChatbot\AnalyticsReportGenerator;
 use Grav\Plugin\AiChatbot\Logger;
@@ -82,16 +83,29 @@ class AiChatbotPlugin extends Plugin
         if ($blueprint->getFilename() === 'ai-chatbot') {
             try {
                 $logger = new Logger($this->grav);
-                $action = $_POST['data']['analytics_action'] ?? $this->config->get('plugins.ai-chatbot.analytics_action', 'none');
+
+                // Read user saved config file user/config/plugins/ai-chatbot.yaml directly
+                $userConfigPath = $this->grav['locator']->findResource('user://config/plugins/ai-chatbot.yaml');
+                $userYamlData = (file_exists($userConfigPath)) ? (CompiledYamlFile::instance($userConfigPath)->content() ?: []) : [];
+
+                $action = $_POST['data']['analytics_action'] ?? $_POST['analytics_action'] ?? $userYamlData['analytics_action'] ?? $this->config->get('plugins.ai-chatbot.analytics_action', 'none');
+                $range = $_POST['data']['analytics_range'] ?? $_POST['analytics_range'] ?? $_GET['range'] ?? $userYamlData['analytics_range'] ?? $this->config->get('plugins.ai-chatbot.analytics_range', 'all');
 
                 if ($action === 'generate_demo') {
                     $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
                     $handler->generateDemoTelemetryData($logger);
+                    if (file_exists($userConfigPath)) {
+                        $userYamlData['analytics_action'] = 'none';
+                        CompiledYamlFile::instance($userConfigPath)->save($userYamlData);
+                    }
                 } elseif ($action === 'clear_data') {
                     $logger->clearLogs();
+                    if (file_exists($userConfigPath)) {
+                        $userYamlData['analytics_action'] = 'none';
+                        CompiledYamlFile::instance($userConfigPath)->save($userYamlData);
+                    }
                 }
 
-                $range = $_POST['data']['analytics_range'] ?? $_GET['range'] ?? $this->config->get('plugins.ai-chatbot.analytics_range', 'all');
                 $generator = new AnalyticsReportGenerator($this->grav);
                 $data = $generator->getDashboardAnalyticsData($range);
 
@@ -110,13 +124,13 @@ class AiChatbotPlugin extends Plugin
                 $summaryStr = "Total Queries: {$totalQueries} | FAQ Matches: {$faqHits} ({$faqPct}% Saved) | AI Calls: {$aiHits} | Total Tokens: {$totalTokens} | Est. Cost: \${$totalCost}";
 
                 // Build Visual ASCII/Unicode Bar Chart
-                $chartLines = ["📈 DAILY INTERACTION VOLUME:"];
+                $chartLines = ["📈 DAILY INTERACTION VOLUME ({$range}):"];
                 $dailyLabels = $data['daily_chart']['labels'] ?? [];
                 $dailyValues = $data['daily_chart']['values'] ?? [];
                 $maxDaily = max(1, ...($dailyValues ?: [1]));
 
                 if (empty($dailyLabels)) {
-                    $chartLines[] = "  (No interaction data for selected period)";
+                    $chartLines[] = "  (No interaction data logged for range '{$range}')";
                 } else {
                     $slicedLabels = count($dailyLabels) > 25 ? array_slice($dailyLabels, -25) : $dailyLabels;
                     $slicedValues = count($dailyValues) > 25 ? array_slice($dailyValues, -25) : $dailyValues;
@@ -156,11 +170,11 @@ class AiChatbotPlugin extends Plugin
                     }
                     $recStr = implode("\n\n", $recLines);
                 } else {
-                    $recStr = "No candidate FAQ recommendations for selected period. All interactions logged in user/data/ai-chatbot/interactions.json.";
+                    $recStr = "No candidate FAQ recommendations for range '{$range}'. All interactions logged in user/data/ai-chatbot/interactions.json.";
                 }
 
-                $inPrice = $this->config->get('plugins.ai-chatbot.cost_input_token_price_per_m', '0.15');
-                $outPrice = $this->config->get('plugins.ai-chatbot.cost_output_token_price_per_m', '0.60');
+                $inPrice = $userYamlData['cost_input_token_price_per_m'] ?? $this->config->get('plugins.ai-chatbot.cost_input_token_price_per_m', '0.15');
+                $outPrice = $userYamlData['cost_output_token_price_per_m'] ?? $this->config->get('plugins.ai-chatbot.cost_output_token_price_per_m', '0.60');
 
                 $exampleDisclaimer = "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
 
