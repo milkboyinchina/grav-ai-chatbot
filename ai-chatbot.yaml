@@ -27,6 +27,7 @@ session_retention_days: 7
 logging_enabled: true
 log_api_usage: true
 
+analytics_action: none
 analytics_range: all
 
 theme_preset: glass_blue

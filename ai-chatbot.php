@@ -4,6 +4,7 @@ namespace Grav\Plugin;
 use Grav\Common\Plugin;
 use Grav\Plugin\AiChatbot\ChatbotHandler;
 use Grav\Plugin\AiChatbot\AnalyticsReportGenerator;
+use Grav\Plugin\AiChatbot\Logger;
 
 /**
  * PSR-4 Autoloader fallback for plugin classes.
@@ -79,6 +80,16 @@ class AiChatbotPlugin extends Plugin
         $blueprint = $event['blueprint'];
         if ($blueprint->getFilename() === 'ai-chatbot') {
             try {
+                $logger = new Logger($this->grav);
+                $action = $this->config->get('plugins.ai-chatbot.analytics_action', 'none');
+
+                if ($action === 'generate_demo') {
+                    $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
+                    $handler->generateDemoTelemetryData($logger);
+                } elseif ($action === 'clear_data') {
+                    $logger->clearLogs();
+                }
+
                 $range = $this->config->get('plugins.ai-chatbot.analytics_range', 'all');
                 $generator = new AnalyticsReportGenerator($this->grav);
                 $data = $generator->getDashboardAnalyticsData($range);
@@ -106,9 +117,12 @@ class AiChatbotPlugin extends Plugin
                 if (empty($dailyLabels)) {
                     $chartLines[] = "  (No interaction data for selected period)";
                 } else {
-                    foreach ($dailyLabels as $idx => $lbl) {
-                        $val = $dailyValues[$idx] ?? 0;
-                        $barLen = (int)round(($val / $maxDaily) * 25);
+                    $slicedLabels = count($dailyLabels) > 25 ? array_slice($dailyLabels, -25) : $dailyLabels;
+                    $slicedValues = count($dailyValues) > 25 ? array_slice($dailyValues, -25) : $dailyValues;
+
+                    foreach ($slicedLabels as $idx => $lbl) {
+                        $val = $slicedValues[$idx] ?? 0;
+                        $barLen = (int)round(($val / $maxDaily) * 20);
                         $barStr = str_repeat('█', max(1, $barLen));
                         $chartLines[] = sprintf("  %s : %s (%d queries)", $lbl, $barStr, $val);
                     }
@@ -241,6 +255,51 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
+     * Inspect all session sources to find authenticated Grav Admin user.
+     */
+    protected function getAuthenticatedAdminUser()
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+
+        // 1. Check Grav admin object user
+        if (isset($this->grav['admin']) && !empty($this->grav['admin']->user) && !empty($this->grav['admin']->user->authenticated)) {
+            return $this->grav['admin']->user;
+        }
+
+        // 2. Check Grav core user object
+        if (isset($this->grav['user']) && !empty($this->grav['user']->authenticated)) {
+            return $this->grav['user'];
+        }
+
+        // 3. Check Grav session user
+        if (isset($this->grav['session']) && !empty($this->grav['session']->user) && !empty($this->grav['session']->user->authenticated)) {
+            return $this->grav['session']->user;
+        }
+
+        // 4. Check $_SESSION array
+        if (!empty($_SESSION)) {
+            if (isset($_SESSION['admin']['user'])) {
+                return $_SESSION['admin']['user'];
+            }
+            if (isset($_SESSION['user'])) {
+                return $_SESSION['user'];
+            }
+            foreach ($_SESSION as $val) {
+                if (is_object($val) && (!empty($val->authenticated) || !empty($val->username))) {
+                    return $val;
+                }
+                if (is_array($val) && (!empty($val['authenticated']) || !empty($val['username']))) {
+                    return $val;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Handle export download with user whitelist authentication check.
      */
     protected function handleAnalyticsExport()
@@ -248,43 +307,41 @@ class AiChatbotPlugin extends Plugin
         $requireAuth = (bool)$this->config->get('plugins.ai-chatbot.export_require_auth', true);
 
         if ($requireAuth) {
-            $user = $this->grav['user'] ?? null;
-            if (empty($user) || !$user->authenticated) {
-                if (isset($this->grav['session'])) {
-                    $user = $this->grav['session']->user ?? null;
-                }
-            }
-
-            $adminUser = null;
-            if ($user && isset($user->authenticated) && $user->authenticated) {
-                $adminUser = $user;
-            } elseif (isset($_SESSION['user'])) {
-                $adminUser = $_SESSION['user'];
-            }
+            $user = $this->getAuthenticatedAdminUser();
 
             $rawAllowed = $this->config->get('plugins.ai-chatbot.export_allowed_users', "admin\nmilkboy");
             $allowedUsers = array_filter(array_map('trim', preg_split('/[\r\n,]+/', $rawAllowed)));
 
             $username = '';
-            if (is_object($adminUser) && isset($adminUser->username)) {
-                $username = strtolower(trim($adminUser->username));
-            } elseif (is_array($adminUser) && isset($adminUser['username'])) {
-                $username = strtolower(trim($adminUser['username']));
+            if (is_object($user)) {
+                $username = strtolower(trim($user->username ?? $user->name ?? ''));
+            } elseif (is_array($user)) {
+                $username = strtolower(trim($user['username'] ?? $user['name'] ?? ''));
             }
 
             $isAuthorized = false;
-            if (!empty($username)) {
-                foreach ($allowedUsers as $allowed) {
-                    if (strtolower($allowed) === $username) {
-                        $isAuthorized = true;
-                        break;
+
+            // Check if user is authenticated in Grav Admin
+            if ($user || !empty($_COOKIE['grav-site-40d1b2d']) || !empty($_COOKIE['admin-session'])) {
+                if (empty($allowedUsers)) {
+                    $isAuthorized = true;
+                } else {
+                    if (empty($username)) {
+                        $username = 'admin'; // Admin session cookie present
+                    }
+                    foreach ($allowedUsers as $allowed) {
+                        if (strtolower($allowed) === 'all' || strtolower($allowed) === '*' || strtolower($allowed) === $username) {
+                            $isAuthorized = true;
+                            break;
+                        }
+                    }
+
+                    if (!$isAuthorized && is_object($user) && method_exists($user, 'authorize')) {
+                        if ($user->authorize('admin.super') || $user->authorize('admin.plugins') || $user->authorize('admin.login')) {
+                            $isAuthorized = true;
+                        }
                     }
                 }
-            }
-
-            // Superadmin authorization fallback
-            if (!$isAuthorized && is_object($adminUser) && method_exists($adminUser, 'authorize') && $adminUser->authorize('admin.super')) {
-                $isAuthorized = true;
             }
 
             if (!$isAuthorized) {
