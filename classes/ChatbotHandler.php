@@ -36,6 +36,15 @@ class ChatbotHandler
         $messagesHistory = $data['history'] ?? [];
         $currentRoute = $data['current_route'] ?? '/';
 
+        if ($action === 'analytics_report') {
+            $generator = new AnalyticsReportGenerator($this->grav);
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'analytics' => $generator->getDashboardAnalyticsData()
+            ];
+        }
+
         if ($action === 'test_connection') {
             return $this->testAiConnection($data);
         }
