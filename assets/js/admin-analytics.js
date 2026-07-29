@@ -1,76 +1,66 @@
 (function () {
   function initAdminAnalytics() {
-    // Find target blueprint section container
-    const sectionHeaders = document.querySelectorAll('.form-section-title, legend, h3, h4');
-    let targetSection = null;
+    let targetEl = document.getElementById('grav-chatbot-analytics-target');
 
-    sectionHeaders.forEach(function (el) {
-      if (el.textContent && el.textContent.includes('AI Analytics & Performance Dashboard')) {
-        targetSection = el.closest('.form-section, fieldset, .form-field, div');
-      }
-    });
-
-    if (!targetSection) {
-      targetSection = document.querySelector('.grav-chatbot-analytics-dashboard') || document.querySelector('[id*="analytics_dashboard_display"]');
+    if (!targetEl) {
+      const allEls = document.querySelectorAll('p, div, span, fieldset, form');
+      allEls.forEach(function (el) {
+        if (!targetEl && el.textContent && el.textContent.includes('Loading real-time interaction metrics...')) {
+          targetEl = el;
+        }
+      });
     }
 
-    if (targetSection) {
-      // Ensure Dashboard HTML structure is rendered
-      let dashboardBox = targetSection.querySelector('.grav-chatbot-analytics-dashboard');
-      if (!dashboardBox) {
-        dashboardBox = document.createElement('div');
-        dashboardBox.className = 'grav-chatbot-analytics-dashboard';
-        dashboardBox.style.marginTop = '15px';
-        dashboardBox.innerHTML = `
-          <p class="teaser" style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 20px;">
-            Track visitor query trends, FAQ pre-matching cost savings, token consumption, and automated FAQ recommendations.
-          </p>
+    if (targetEl && !targetEl.dataset.analyticsMounted) {
+      targetEl.dataset.analyticsMounted = 'true';
 
-          <!-- Summary Metric Cards -->
-          <div class="grav-analytics-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
-            <div class="grav-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
-              <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">Total Queries</div>
-              <div class="grav-card-value" id="card-total-queries" style="font-size: 1.8rem; font-weight: 700; color: #38bdf8; margin-top: 5px;">0</div>
+      targetEl.innerHTML = `
+        <div class="grav-chatbot-analytics-dashboard" style="margin-top: 15px;">
+          <!-- Metric Cards -->
+          <div class="grav-analytics-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; color: #fff;">
+              <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Total Queries</div>
+              <div id="card-total-queries" style="font-size: 1.8rem; font-weight: 700; color: #38bdf8; margin-top: 4px;">...</div>
             </div>
-            <div class="grav-card green" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
-              <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">FAQ Matches (Free Hits)</div>
-              <div class="grav-card-value" id="card-faq-hits" style="font-size: 1.8rem; font-weight: 700; color: #34d399; margin-top: 5px;">0</div>
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; color: #fff;">
+              <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">FAQ Matches (Free Hits)</div>
+              <div id="card-faq-hits" style="font-size: 1.8rem; font-weight: 700; color: #34d399; margin-top: 4px;">...</div>
             </div>
-            <div class="grav-card blue" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
-              <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">AI API Requests</div>
-              <div class="grav-card-value" id="card-ai-hits" style="font-size: 1.8rem; font-weight: 700; color: #818cf8; margin-top: 5px;">0</div>
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; color: #fff;">
+              <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">AI API Requests</div>
+              <div id="card-ai-hits" style="font-size: 1.8rem; font-weight: 700; color: #818cf8; margin-top: 4px;">...</div>
             </div>
-            <div class="grav-card orange" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
-              <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">Est. API Tokens</div>
-              <div class="grav-card-value" id="card-total-tokens" style="font-size: 1.8rem; font-weight: 700; color: #fb923c; margin-top: 5px;">0</div>
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; color: #fff;">
+              <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Est. API Tokens</div>
+              <div id="card-total-tokens" style="font-size: 1.8rem; font-weight: 700; color: #fb923c; margin-top: 4px;">...</div>
             </div>
           </div>
 
-          <!-- Actions & Export Bar -->
-          <div class="grav-analytics-actions" style="margin-bottom: 25px; display: flex; gap: 10px;">
-            <a href="/chatbot-export?format=csv" target="_blank" class="button btn btn-outline-primary" style="padding: 8px 16px; border-radius: 6px; text-decoration: none;">📥 Export CSV Report</a>
-            <a href="/chatbot-export?format=json" target="_blank" class="button btn btn-outline-secondary" style="padding: 8px 16px; border-radius: 6px; text-decoration: none;">📄 Export JSON Data</a>
+          <!-- Actions Bar -->
+          <div style="margin-bottom: 25px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/chatbot-export?format=csv" target="_blank" class="button btn btn-primary" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;">📥 Export CSV Report</a>
+            <a href="/chatbot-export?format=json" target="_blank" class="button btn btn-secondary" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;">📄 Export JSON Data</a>
           </div>
 
           <!-- Charts Grid -->
-          <div class="grav-analytics-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
-            <div class="grav-chart-container" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px;">
-              <h3 style="margin-top:0; font-size: 1.1rem; color: #e2e8f0;">📈 Daily Interaction Volume</h3>
-              <div id="chart-daily-volume" class="grav-svg-chart" style="min-height: 160px; display: flex; align-items: flex-end; gap: 8px; padding-top: 15px;"></div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 25px;">
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px;">
+              <h4 style="margin-top:0; font-size: 1rem; color: #e2e8f0;">📈 Daily Interaction Volume</h4>
+              <div id="chart-daily-volume" style="min-height: 140px; display: flex; align-items: flex-end; gap: 8px; padding-top: 15px;"></div>
             </div>
-            <div class="grav-chart-container" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px;">
-              <h3 style="margin-top:0; font-size: 1.1rem; color: #e2e8f0;">📊 Query Source Distribution Ratio</h3>
-              <div id="chart-ratio" class="grav-svg-chart" style="min-height: 160px; display: flex; align-items: center;"></div>
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px;">
+              <h4 style="margin-top:0; font-size: 1rem; color: #e2e8f0;">📊 Query Source Distribution Ratio</h4>
+              <div id="chart-ratio" style="min-height: 140px; display: flex; align-items: center;"></div>
             </div>
           </div>
 
-          <!-- Candidate Recommendations -->
-          <div class="grav-analytics-recommendations" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px;">
-            <h3 style="margin-top:0; font-size: 1.1rem; color: #e2e8f0;">💡 Candidate FAQ Recommendations</h3>
-            <p style="color: #94a3b8; font-size: 0.9rem;">Visitor questions frequently handled by AI API. Adding them to <code>/faq</code> page will answer future queries for free!</p>
-            <table class="grav-table" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+          <!-- Recommendations Table -->
+          <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px;">
+            <h4 style="margin-top:0; font-size: 1rem; color: #e2e8f0;">💡 Candidate FAQ Recommendations</h4>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 12px;">Visitor questions frequently handled by AI API. Adding them to <code>/faq</code> page will answer future queries for free!</p>
+            <table style="width: 100%; border-collapse: collapse;">
               <thead>
-                <tr style="border-bottom: 1px solid #334155; text-align: left; color: #cbd5e1;">
+                <tr style="border-bottom: 1px solid #334155; text-align: left; color: #cbd5e1; font-size: 0.85rem;">
                   <th style="padding: 8px;">Frequency</th>
                   <th style="padding: 8px;">Sample Visitor Question</th>
                   <th style="padding: 8px;">AI Generated Response</th>
@@ -83,15 +73,12 @@
               </tbody>
             </table>
           </div>
-        `;
-        targetSection.appendChild(dashboardBox);
-      }
+        </div>
+      `;
 
-      // Fetch live analytics payload via AJAX
       fetchAnalyticsData();
     }
 
-    // Attach listener for Test AI Connection Button
     attachTestApiListener();
   }
 
@@ -137,7 +124,7 @@
       } else {
         labels.forEach(function (label, idx) {
           const val = values[idx];
-          const heightPx = Math.max(15, Math.round((val / maxVal) * 120));
+          const heightPx = Math.max(15, Math.round((val / maxVal) * 110));
 
           const group = document.createElement('div');
           group.style.display = 'flex';
@@ -297,5 +284,5 @@
   }
 
   // Polling check for SPA route navigation changes in Grav Admin 2
-  setInterval(initAdminAnalytics, 1500);
+  setInterval(initAdminAnalytics, 1000);
 })();
