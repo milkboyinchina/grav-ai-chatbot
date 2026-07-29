@@ -2,9 +2,9 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Grav CMS](https://img.shields.io/badge/Grav-1.7%2B-orange.svg)](https://getgrav.org)
-[![Version](https://img.shields.io/badge/Version-v1.2.0-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
+[![Version](https://img.shields.io/badge/Version-v1.4.3-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
 
-An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, multi-tier contact resolution, customizable quick replies, date range analytics filtering, and visual telemetry dashboards.
+An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, date range analytics filtering, and visual telemetry dashboards.
 
 ---
 
@@ -16,6 +16,11 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting multi
   - **OpenRouter API** (`google/gemini-flash-1.5`, `anthropic/claude-3.5-sonnet`).
   - **OpenAI API** (`gpt-4o-mini`, `gpt-4o`).
   - **Custom Endpoints** (Local Ollama, vLLM, or self-hosted OpenAI-compatible servers).
+
+- 🛡️ **Configurable AI Disabled Reply & Offline Fallback**:
+  - Toggle AI generation on/off (`ai_enabled`).
+  - Set a custom reply message (`ai_disabled_response_text`) to display when no local FAQ answer match is found and AI fallback is disabled.
+  - **Uninterrupted FAQ Pre-Matching**: Local FAQ answers are always matched and delivered first with 0 AI API calls.
 
 - 🔌 **Live AI Connection Test**:
   - Click **`[ 🔌 Test AI Connection ]`** in Grav Admin settings to test API keys and models live before saving configuration.
@@ -91,7 +96,7 @@ Navigate to **Grav Admin -> Plugins -> Grav AI Chatbot** to configure:
 
 | Setting Group | Configuration Fields |
 | :--- | :--- |
-| **AI Provider Settings** | Provider Select, API Key, Model Identifier, Custom Endpoint, **Live Test AI Connection Button** |
+| **AI Provider Settings** | Enable AI Fallback (`ai_enabled`), **AI Disabled Response Message (`ai_disabled_response_text`)**, Provider Select, API Key, Model Identifier, Custom Endpoint, **Live Test AI Connection Button** |
 | **FAQ Settings** | Enable FAQ Pre-Matching, Multilingual FAQ Matching, FAQ Route (`/faq`), Similarity Sensitivity Threshold (%) |
 | **Contact Resolution** | Public Contact Route (`/contact`), Enable Hidden Contact Page, Hidden Contact Route (`/hidden-contacts`) |
 | **Chatbot Widget UI** | Theme Presets, Floating Position, Page Display Visibility Rules, Welcome Message, Accent Color, **Quick Reply Buttons List** |
