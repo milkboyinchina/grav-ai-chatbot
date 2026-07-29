@@ -11,7 +11,7 @@
     const themePreset = config.themePreset || 'glass_blue';
     const retentionDays = config.sessionRetentionDays || 7;
     const notificationEnabled = config.notificationEnabled !== false;
-    const notificationText = config.notificationText || '👋 Hi there! Need help finding anything on our website?';
+    const notificationText = config.notificationText || 'Hi there! Need help finding anything on our website?';
     const notificationDelaySeconds = config.notificationDelaySeconds || 4;
     const quickRepliesEnabled = config.quickRepliesEnabled !== false;
     const quickReplies = config.quickReplies || [];
@@ -126,7 +126,7 @@
       if (source === 'faq_match') {
         const badge = document.createElement('span');
         badge.className = 'grav-chatbot-badge faq';
-        badge.textContent = '⚡ Instant FAQ Match';
+        badge.textContent = 'Instant FAQ Match';
         bubbleDiv.appendChild(badge);
         bubbleDiv.appendChild(document.createElement('br'));
       }
@@ -147,17 +147,17 @@
         const btnYes = document.createElement('button');
         btnYes.type = 'button';
         btnYes.className = 'grav-chatbot-btn-confirm yes';
-        btnYes.innerHTML = '👍 Yes';
+        btnYes.innerHTML = 'Yes';
         btnYes.addEventListener('click', function () {
-          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-thankyou">Great! Glad we could help. 😊</span>';
+          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-thankyou">Great! Glad we could help.</span>';
         });
 
         const btnNo = document.createElement('button');
         btnNo.type = 'button';
         btnNo.className = 'grav-chatbot-btn-confirm no';
-        btnNo.innerHTML = '👎 No (Ask AI)';
+        btnNo.innerHTML = 'No (Ask AI)';
         btnNo.addEventListener('click', function () {
-          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-thankyou">Routing to AI assistant... 🤖</span>';
+          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-thankyou">Routing to AI assistant...</span>';
           sendQuestion(textNode.textContent, 'force_ai');
         });
 

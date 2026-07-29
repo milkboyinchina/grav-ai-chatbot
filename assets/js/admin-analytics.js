@@ -81,7 +81,7 @@
       var values = data.daily_chart.values || [];
       var maxVal = Math.max(1, Math.max.apply(null, values.length ? values : [1]));
 
-      var lines = ['📈 DAILY INTERACTION VOLUME:'];
+      var lines = ['DAILY INTERACTION VOLUME:'];
       if (labels.length === 0) {
         lines.push('  (No interaction data logged yet)');
       } else {
@@ -105,10 +105,10 @@
         var rp = Math.round((r / tot) * 100);
 
         lines.push('');
-        lines.push('📊 QUERY SOURCE DISTRIBUTION RATIO:');
-        lines.push('  ⚡ FAQ Matches (Free) : ' + '█'.repeat(Math.max(0, Math.round((fp / 100) * 20))) + ' ' + f + ' (' + fp + '%)');
-        lines.push('  🤖 AI Model Calls     : ' + '█'.repeat(Math.max(0, Math.round((ap / 100) * 20))) + ' ' + a + ' (' + ap + '%)');
-        lines.push('  🛡️ Rate Limit Shield  : ' + '█'.repeat(Math.max(0, Math.round((rp / 100) * 20))) + ' ' + r + ' (' + rp + '%)');
+        lines.push('QUERY SOURCE DISTRIBUTION RATIO:');
+        lines.push('  FAQ Matches (Free) : ' + '█'.repeat(Math.max(0, Math.round((fp / 100) * 20))) + ' ' + f + ' (' + fp + '%)');
+        lines.push('  AI Model Calls     : ' + '█'.repeat(Math.max(0, Math.round((ap / 100) * 20))) + ' ' + a + ' (' + ap + '%)');
+        lines.push('  Rate Limit Shield  : ' + '█'.repeat(Math.max(0, Math.round((rp / 100) * 20))) + ' ' + r + ' (' + rp + '%)');
       }
       chartTextarea.value = lines.join('\n');
       chartTextarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -154,7 +154,7 @@
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         btn.disabled = true;
-        btn.innerHTML = '⏳ Regenerating Metrics...';
+        btn.innerHTML = 'Regenerating Metrics...';
 
         if (statusEl) {
           statusEl.style.display = 'block';
@@ -171,7 +171,7 @@
         }).then(function(res) { return res.json(); })
           .then(function(resData) {
             btn.disabled = false;
-            btn.innerHTML = '🔄 Update & Regenerate Chart Metrics';
+            btn.innerHTML = 'Update & Regenerate Chart Metrics';
 
             if (resData.success && resData.analytics) {
               updateFormFields(resData.analytics);
@@ -180,24 +180,24 @@
                 statusEl.style.background = '#d1fae5';
                 statusEl.style.color = '#065f46';
                 statusEl.style.border = '1px solid #10b981';
-                statusEl.innerHTML = '✅ Dashboard metrics, charts & live error logs successfully updated with latest live data!';
+                statusEl.innerHTML = 'Dashboard metrics, charts & live error logs successfully updated with latest live data!';
               }
             } else {
               if (statusEl) {
                 statusEl.style.background = '#fee2e2';
                 statusEl.style.color = '#991b1b';
                 statusEl.style.border = '1px solid #ef4444';
-                statusEl.innerHTML = '❌ Could not retrieve analytics report.';
+                statusEl.innerHTML = 'Could not retrieve analytics report.';
               }
             }
           }).catch(function(err) {
             btn.disabled = false;
-            btn.innerHTML = '🔄 Update & Regenerate Chart Metrics';
+            btn.innerHTML = 'Update & Regenerate Chart Metrics';
             if (statusEl) {
               statusEl.style.background = '#fee2e2';
               statusEl.style.color = '#991b1b';
               statusEl.style.border = '1px solid #ef4444';
-              statusEl.innerHTML = '❌ Connection error fetching analytics report.';
+              statusEl.innerHTML = 'Connection error fetching analytics report.';
             }
           });
       });
@@ -224,7 +224,7 @@
         var customEndpoint = customEndpointEl ? customEndpointEl.value : '';
 
         testApiBtn.disabled = true;
-        testApiBtn.innerHTML = '⏳ Testing AI Connection...';
+        testApiBtn.innerHTML = 'Testing AI Connection...';
 
         if (testApiResult) {
           testApiResult.style.display = 'block';
@@ -250,7 +250,7 @@
         }).then(function(res) { return res.json(); })
           .then(function(resData) {
             testApiBtn.disabled = false;
-            testApiBtn.innerHTML = '🔌 Test AI Connection';
+            testApiBtn.innerHTML = 'Test AI Connection';
 
             if (testApiResult) {
               if (resData.success) {
@@ -260,7 +260,7 @@
                 testApiResult.style.padding = '10px 14px';
                 testApiResult.style.borderRadius = '6px';
                 testApiResult.style.border = '1px solid #10b981';
-                testApiResult.innerHTML = '<p style="margin:0;"><strong>✅ Success:</strong> ' + escapeHtml(resData.message) + '</p>';
+                testApiResult.innerHTML = '<p style="margin:0;"><strong>Success:</strong> ' + escapeHtml(resData.message) + '</p>';
               } else {
                 testApiResult.className = 'notice error alert';
                 testApiResult.style.background = '#fee2e2';
@@ -268,12 +268,12 @@
                 testApiResult.style.padding = '10px 14px';
                 testApiResult.style.borderRadius = '6px';
                 testApiResult.style.border = '1px solid #ef4444';
-                testApiResult.innerHTML = '<p style="margin:0;"><strong>❌ Connection Failed:</strong> ' + escapeHtml(resData.message) + '</p>';
+                testApiResult.innerHTML = '<p style="margin:0;"><strong>Connection Failed:</strong> ' + escapeHtml(resData.message) + '</p>';
               }
             }
           }).catch(function(err) {
             testApiBtn.disabled = false;
-            testApiBtn.innerHTML = '🔌 Test AI Connection';
+            testApiBtn.innerHTML = 'Test AI Connection';
 
             if (testApiResult) {
               testApiResult.className = 'notice error alert';
@@ -282,7 +282,7 @@
               testApiResult.style.padding = '10px 14px';
               testApiResult.style.borderRadius = '6px';
               testApiResult.style.border = '1px solid #ef4444';
-              testApiResult.innerHTML = '<p style="margin:0;"><strong>❌ Connection Error:</strong> Could not reach the chatbot API endpoint.</p>';
+              testApiResult.innerHTML = '<p style="margin:0;"><strong>Connection Error:</strong> Could not reach the chatbot API endpoint.</p>';
             }
           });
       });
