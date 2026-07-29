@@ -191,7 +191,8 @@ class AiChatbotPlugin extends Plugin
         if ($this->isAdmin()) {
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
-                'onTwigSiteVariables' => ['onAdminTwigSiteVariables', 0],
+                'onTwigSiteVariables' => ['onTwigSiteVariables', 0],
+                'onAdminTwigSiteVariables' => ['onAdminTwigSiteVariables', 0],
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
                 'onAdminMenu' => ['onAdminMenu', 0],
@@ -389,14 +390,35 @@ class AiChatbotPlugin extends Plugin
         }
 
         // Page Display Visibility Rules (all, selected_only, exclude_selected)
-        $currentRoute = $this->grav['uri']->path() ?: '/';
+        $currentRoute = rtrim($this->grav['uri']->path() ?: '/', '/');
+        if (empty($currentRoute)) {
+            $currentRoute = '/';
+        }
+
+        $pageRoute = isset($this->grav['page']) ? rtrim($this->grav['page']->route(), '/') : '';
+
         $displayMode = $this->config->get('plugins.ai-chatbot.display_mode', 'all');
 
         if ($displayMode !== 'all') {
             $rawPages = $this->config->get('plugins.ai-chatbot.display_pages', '');
             $pagesList = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawPages))));
 
-            $isListed = in_array($currentRoute, $pagesList, true);
+            $isListed = false;
+            foreach ($pagesList as $pRoute) {
+                $cleanP = rtrim($pRoute, '/');
+                if (empty($cleanP)) {
+                    $cleanP = '/';
+                }
+
+                if (
+                    $currentRoute === $cleanP ||
+                    ($pageRoute && $pageRoute === $cleanP) ||
+                    (($currentRoute === '/' || $currentRoute === '/home' || $pageRoute === '/home' || $pageRoute === '/blog') && ($cleanP === '/' || $cleanP === '/home'))
+                ) {
+                    $isListed = true;
+                    break;
+                }
+            }
 
             if ($displayMode === 'selected_only' && !$isListed) {
                 return; // Hide widget on this page
