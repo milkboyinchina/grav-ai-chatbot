@@ -459,13 +459,22 @@ class AiChatbotPlugin extends Plugin
         ]);
 
         $this->grav['assets']->addInlineJs("
-            document.addEventListener('DOMContentLoaded', function() {
-                if (!document.getElementById('grav-ai-chatbot-root')) {
-                    var div = document.createElement('div');
-                    div.innerHTML = " . json_encode($widgetHtml) . ";
-                    document.body.appendChild(div.firstElementChild);
+            (function() {
+                function injectGravChatbot() {
+                    if (!document.getElementById('grav-ai-chatbot-root')) {
+                        var div = document.createElement('div');
+                        div.innerHTML = " . json_encode($widgetHtml) . ";
+                        if (document.body) {
+                            document.body.appendChild(div.firstElementChild);
+                        }
+                    }
                 }
-            });
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', injectGravChatbot);
+                } else {
+                    injectGravChatbot();
+                }
+            })();
         ");
     }
 
