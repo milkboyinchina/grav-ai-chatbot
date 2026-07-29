@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.2.8
+version: 1.2.9
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -379,6 +379,13 @@ form:
       title: AI Analytics & Performance Dashboard
       underline: true
       fields:
+        regenerate_metrics_button:
+          type: display
+          label: 🔄 Regenerate & Update Dashboard Metrics
+          markdown: true
+          content: '<div style="margin-top: 5px;"><button type="button" id="grav-chatbot-regenerate-btn" class="button btn btn-primary" style="background:#3b82f6; color:#fff; font-weight:600; padding:8px 16px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-refresh"></i> 🔄 Update & Regenerate Chart Metrics</button></div><div id="grav-chatbot-regenerate-status" style="margin-top:10px; display:none; padding:10px 14px; border-radius:6px; font-weight:600;"></div>'
+          ignore: true
+
         analytics_summary_text:
           type: text
           label: 📊 Interaction Summary Metrics
