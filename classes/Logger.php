@@ -152,12 +152,14 @@ class Logger
     protected function getLogFilePath(): string
     {
         $locator = $this->grav['locator'];
-        return $locator->findResource('user://data') . '/ai-chatbot/interactions.json';
+        $base = $locator->findResource('user://data', true) ?: (defined('GRAV_ROOT') ? GRAV_ROOT . '/user/data' : '/var/www/html/user/data');
+        return $base . '/ai-chatbot/interactions.json';
     }
 
     public function getErrorLogFilePath(): string
     {
         $locator = $this->grav['locator'];
-        return $locator->findResource('user://data') . '/ai-chatbot/error.log';
+        $base = $locator->findResource('user://data', true) ?: (defined('GRAV_ROOT') ? GRAV_ROOT . '/user/data' : '/var/www/html/user/data');
+        return $base . '/ai-chatbot/error.log';
     }
 }

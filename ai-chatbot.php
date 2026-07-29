@@ -252,6 +252,16 @@ class AiChatbotPlugin extends Plugin
             exit();
         }
 
+        // Initialize Grav Pages container so FAQ pages are loaded
+        if (isset($this->grav['pages'])) {
+            $pages = $this->grav['pages'];
+            if (method_exists($pages, 'init')) {
+                try {
+                    $pages->init();
+                } catch (\Throwable $t) {}
+            }
+        }
+
         $rawInput = file_get_contents('php://input');
         $data = json_decode($rawInput, true) ?: $_POST;
 
