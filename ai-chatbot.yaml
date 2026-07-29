@@ -19,6 +19,9 @@ rate_limit_max_requests: 10
 rate_limit_window_seconds: 60
 strict_site_scope: true
 
+export_require_auth: true
+export_allowed_users: "admin\nmilkboy"
+
 session_retention_days: 7
 
 logging_enabled: true

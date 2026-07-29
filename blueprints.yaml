@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.2.1
+version: 1.2.3
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -308,6 +308,24 @@ form:
           validate:
             type: bool
 
+        export_require_auth:
+          type: toggle
+          label: 🔒 Restrict Export Downloads to Whitelisted Users
+          help: Require user to be logged in to Grav Admin and listed in the user whitelist below before downloading CSV/JSON reports
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        export_allowed_users:
+          type: textarea
+          label: 👥 Whitelisted Usernames for Export Download
+          help: Enter authorized usernames (one per line or comma-separated) allowed to download interaction logs. Example: admin, milkboy
+          default: "admin\nmilkboy"
+
     section_logging:
       type: section
       title: PLUGIN_AI_CHATBOT.LOGGING_SETTINGS
@@ -356,36 +374,36 @@ form:
         analytics_summary_text:
           type: text
           label: 📊 Interaction Summary Metrics
-          default: "Total Queries: 46 | FAQ Matches: 23 (50% Saved) | AI Calls: 6 | Total Tokens: 4,951 | Est. Cost: $0.0007"
+          default: "Total Queries: 60 | FAQ Matches: 24 (40% Saved) | AI Calls: 36 | Total Tokens: 21,783 | Est. Cost: $0.0033"
           readonly: true
 
         analytics_chart_display:
           type: textarea
           label: 📈 Visual Interaction Volume & Source Distribution Chart
           help: Visual bar graphs of daily interaction volume and FAQ vs AI hit ratios
-          default: "Loading charts..."
+          default: "📈 DAILY INTERACTION VOLUME:\n  2026-07-28 : ████████████████████ (40 queries)\n  2026-07-29 : ███ (6 queries)\n\n📊 QUERY SOURCE DISTRIBUTION RATIO:\n  ⚡ FAQ Matches (Free) : ████████ 24 (40%)\n  🤖 AI Model Calls     : ████████████ 36 (60%)"
           rows: 9
           readonly: true
 
         download_csv_link:
           type: text
-          label: 📥 Download CSV Report URL
-          default: /chatbot-export?format=csv&range=all
-          help: Open or copy this URL in your browser to download CSV spreadsheet report.
+          label: 📥 Full CSV Report Download URL
+          default: http://localhost/chatbot-export?format=csv&range=all
+          help: Full absolute URL to download CSV spreadsheet report.
           readonly: true
 
         download_json_link:
           type: text
-          label: 📄 Download JSON Analytics Dataset URL
-          default: /chatbot-export?format=json&range=all
-          help: Open or copy this URL in your browser to download JSON telemetry dataset.
+          label: 📄 Full JSON Analytics Dataset Download URL
+          default: http://localhost/chatbot-export?format=json&range=all
+          help: Full absolute URL to download JSON telemetry dataset.
           readonly: true
 
         download_raw_link:
           type: text
-          label: 💾 Download Raw Interactions Log URL
-          default: /chatbot-export?format=raw_interactions&range=all
-          help: Open or copy this URL in your browser to download complete raw interaction entries.
+          label: 💾 Full Raw Interactions Log Download URL
+          default: http://localhost/chatbot-export?format=raw_interactions&range=all
+          help: Full absolute URL to download complete raw interaction entries.
           readonly: true
 
         analytics_recommendations_text:

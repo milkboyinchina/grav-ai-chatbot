@@ -72,7 +72,7 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Populate blueprint fields dynamically with live analytics metrics, visual bar charts, and export URLs.
+     * Populate blueprint fields dynamically with live analytics metrics, visual bar charts, and full absolute export URLs.
      */
     public function onBlueprintCreated($event)
     {
@@ -122,10 +122,15 @@ class AiChatbotPlugin extends Plugin
 
                 $chartStr = implode("\n", $chartLines);
 
-                // Export URLs
-                $csvUrl = "/chatbot-export?format=csv&range=" . urlencode($range);
-                $jsonUrl = "/chatbot-export?format=json&range=" . urlencode($range);
-                $rawUrl = "/chatbot-export?format=raw_interactions&range=" . urlencode($range);
+                // Read full site URL from site.yaml or fallback to rootUrl(true)
+                $siteUrl = rtrim($this->config->get('site.url') ?: $this->grav['uri']->rootUrl(true), '/');
+                if (empty($siteUrl) || $siteUrl === '/') {
+                    $siteUrl = 'http://localhost';
+                }
+
+                $csvUrl = "{$siteUrl}/chatbot-export?format=csv&range=" . urlencode($range);
+                $jsonUrl = "{$siteUrl}/chatbot-export?format=json&range=" . urlencode($range);
+                $rawUrl = "{$siteUrl}/chatbot-export?format=raw_interactions&range=" . urlencode($range);
 
                 // Recommendations
                 $recs = $data['recommendations'] ?? [];
@@ -235,8 +240,65 @@ class AiChatbotPlugin extends Plugin
         exit();
     }
 
+    /**
+     * Handle export download with user whitelist authentication check.
+     */
     protected function handleAnalyticsExport()
     {
+        $requireAuth = (bool)$this->config->get('plugins.ai-chatbot.export_require_auth', true);
+
+        if ($requireAuth) {
+            $user = $this->grav['user'] ?? null;
+            if (empty($user) || !$user->authenticated) {
+                if (isset($this->grav['session'])) {
+                    $user = $this->grav['session']->user ?? null;
+                }
+            }
+
+            $adminUser = null;
+            if ($user && isset($user->authenticated) && $user->authenticated) {
+                $adminUser = $user;
+            } elseif (isset($_SESSION['user'])) {
+                $adminUser = $_SESSION['user'];
+            }
+
+            $rawAllowed = $this->config->get('plugins.ai-chatbot.export_allowed_users', "admin\nmilkboy");
+            $allowedUsers = array_filter(array_map('trim', preg_split('/[\r\n,]+/', $rawAllowed)));
+
+            $username = '';
+            if (is_object($adminUser) && isset($adminUser->username)) {
+                $username = strtolower(trim($adminUser->username));
+            } elseif (is_array($adminUser) && isset($adminUser['username'])) {
+                $username = strtolower(trim($adminUser['username']));
+            }
+
+            $isAuthorized = false;
+            if (!empty($username)) {
+                foreach ($allowedUsers as $allowed) {
+                    if (strtolower($allowed) === $username) {
+                        $isAuthorized = true;
+                        break;
+                    }
+                }
+            }
+
+            // Superadmin authorization fallback
+            if (!$isAuthorized && is_object($adminUser) && method_exists($adminUser, 'authorize') && $adminUser->authorize('admin.super')) {
+                $isAuthorized = true;
+            }
+
+            if (!$isAuthorized) {
+                http_response_code(403);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'status' => 403,
+                    'error' => 'Forbidden',
+                    'message' => "Access Denied: User '" . ($username ?: 'guest') . "' is not authorized to download interaction telemetry data. Please log in as a whitelisted admin user (" . implode(', ', $allowedUsers) . ")."
+                ], JSON_PRETTY_PRINT);
+                exit();
+            }
+        }
+
         $format = $_GET['format'] ?? 'csv';
         $range = $_GET['range'] ?? 'all';
         $generator = new AnalyticsReportGenerator($this->grav);
