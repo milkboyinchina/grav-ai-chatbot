@@ -5,7 +5,8 @@ use Grav\Common\Grav;
 
 /**
  * Class Logger
- * Logs visitor interactions, source (FAQ vs AI), prompt & completion tokens, and estimated API costs based on provider rates.
+ * Logs visitor interactions, source (FAQ vs AI), prompt & completion tokens, estimated API costs,
+ * and maintains dedicated error logs in user/data/ai-chatbot/error.log.
  *
  * @license GPL-3.0-or-later
  */
@@ -107,9 +108,56 @@ class Logger
         return json_decode($raw, true) ?: [];
     }
 
+    /**
+     * Record a formatted error entry to user/data/ai-chatbot/error.log.
+     */
+    public function logError(string $message, string $context = 'GENERAL'): void
+    {
+        $errorFile = $this->getErrorLogFilePath();
+        $dir = dirname($errorFile);
+        if (!file_exists($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $timestamp = date('Y-m-d H:i:s P');
+        $logLine = sprintf("[%s] [ERROR] [%s] %s\n", $timestamp, strtoupper($context), trim($message));
+
+        file_put_contents($errorFile, $logLine, FILE_APPEND);
+    }
+
+    /**
+     * Get error log contents.
+     */
+    public function getErrorLogs(): string
+    {
+        $errorFile = $this->getErrorLogFilePath();
+        if (!file_exists($errorFile) || filesize($errorFile) === 0) {
+            return "No error logs recorded. Plugin operating normally.";
+        }
+
+        return file_get_contents($errorFile);
+    }
+
+    /**
+     * Clear error log file.
+     */
+    public function clearErrorLogs(): void
+    {
+        $errorFile = $this->getErrorLogFilePath();
+        if (file_exists($errorFile)) {
+            file_put_contents($errorFile, '');
+        }
+    }
+
     protected function getLogFilePath(): string
     {
         $locator = $this->grav['locator'];
         return $locator->findResource('user://data') . '/ai-chatbot/interactions.json';
+    }
+
+    public function getErrorLogFilePath(): string
+    {
+        $locator = $this->grav['locator'];
+        return $locator->findResource('user://data') . '/ai-chatbot/error.log';
     }
 }

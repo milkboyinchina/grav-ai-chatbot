@@ -220,10 +220,13 @@ class ChatbotHandler
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
 
         if (empty($apiKey) && in_array($provider, ['groq', 'gemini', 'openai', 'openrouter'], true)) {
+            $msg = "API Key is required for provider '{$provider}'.";
+            $logger = new Logger($this->grav);
+            $logger->logError($msg, 'TEST_CONNECTION');
             return [
                 'http_code' => 400,
                 'success' => false,
-                'message' => "API Key is required for provider '{$provider}'."
+                'message' => $msg
             ];
         }
 
@@ -247,16 +250,22 @@ class ChatbotHandler
                 ];
             }
 
+            $errMsg = "Connected to {$provider}, but received empty response payload.";
+            $logger = new Logger($this->grav);
+            $logger->logError($errMsg, 'TEST_CONNECTION');
             return [
                 'http_code' => 500,
                 'success' => false,
-                'message' => "Connected to {$provider}, but received empty response payload."
+                'message' => $errMsg
             ];
         } catch (\Throwable $e) {
+            $errMsg = "Connection test failed for {$provider} ({$model}): " . $e->getMessage();
+            $logger = new Logger($this->grav);
+            $logger->logError($errMsg, 'TEST_CONNECTION');
             return [
                 'http_code' => 500,
                 'success' => false,
-                'message' => "Connection test failed for {$provider}: " . $e->getMessage()
+                'message' => $errMsg
             ];
         }
     }
@@ -312,10 +321,14 @@ class ChatbotHandler
                 'source' => 'summarize_page'
             ];
         } catch (\Throwable $e) {
+            $errMsg = "Could not summarize page ({$route}): " . $e->getMessage();
+            $logger = new Logger($this->grav);
+            $logger->logError($errMsg, 'SUMMARIZE_PAGE');
+            $customMsg = $this->config['custom_error_message'] ?? 'An unexpected connection error occurred. Please try again later.';
             return [
                 'http_code' => 500,
                 'success' => false,
-                'answer' => "Could not summarize page: " . $e->getMessage()
+                'answer' => $customMsg
             ];
         }
     }
@@ -325,6 +338,9 @@ class ChatbotHandler
      */
     protected function queryAiModel(string $question, string $currentRoute, array $history): array
     {
+        $provider = $this->config['provider'] ?? 'groq';
+        $model = $this->config['model'] ?? 'llama-3.3-70b-versatile';
+
         try {
             $indexer = new ContextIndexer($this->grav);
             $siteContext = $indexer->buildContextPrompt($currentRoute);
@@ -337,7 +353,7 @@ class ChatbotHandler
                 'question' => $question,
                 'answer' => $response,
                 'source' => 'ai_api',
-                'provider' => $this->config['provider'] ?? 'groq',
+                'provider' => $provider,
                 'prompt_tokens' => 450,
                 'completion_tokens' => 120
             ]);
@@ -347,13 +363,18 @@ class ChatbotHandler
                 'success' => true,
                 'answer' => $response,
                 'source' => 'ai_api',
-                'provider' => $this->config['provider'] ?? 'groq'
+                'provider' => $provider
             ];
         } catch (\Throwable $e) {
+            $errMsg = "AI Model Query Failed [Provider: {$provider}, Model: {$model}]: " . $e->getMessage();
+            $logger = new Logger($this->grav);
+            $logger->logError($errMsg, 'AI_MODEL_API');
+
+            $customMsg = $this->config['custom_error_message'] ?? 'An unexpected connection error occurred. Please try again later.';
             return [
                 'http_code' => 500,
                 'success' => false,
-                'answer' => "An unexpected error occurred while communicating with the AI service: " . $e->getMessage()
+                'answer' => $customMsg
             ];
         }
     }

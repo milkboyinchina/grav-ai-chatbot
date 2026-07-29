@@ -74,13 +74,14 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Populate blueprint fields dynamically with live analytics metrics, visual bar charts, and full absolute export URLs.
+     * Populate blueprint fields dynamically with live analytics metrics, visual bar charts, error logs, and export URLs.
      */
     public function onBlueprintCreated($event)
     {
         $blueprint = $event['blueprint'];
         if ($blueprint->getFilename() === 'ai-chatbot') {
             try {
+                $logger = new Logger($this->grav);
                 $generator = new AnalyticsReportGenerator($this->grav);
                 $data = $generator->getDashboardAnalyticsData();
 
@@ -158,6 +159,9 @@ class AiChatbotPlugin extends Plugin
 
                 $exampleDisclaimer = "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
 
+                $errLogPath = $logger->getErrorLogFilePath();
+                $errInstStr = "📁 Relative Path: user/data/ai-chatbot/error.log\n📁 Absolute Path: {$errLogPath}\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur.";
+
                 $blueprint->set('form.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_chart_display.default', $chartStr);
                 $blueprint->set('form.fields.section_analytics.fields.download_csv_link.default', $csvUrl);
@@ -166,6 +170,8 @@ class AiChatbotPlugin extends Plugin
                 $blueprint->set('form.fields.section_analytics.fields.analytics_data_file_location.default', $fileInstStr);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
                 $blueprint->set('form.fields.section_logging.fields.cost_estimation_example.default', $exampleDisclaimer);
+                $blueprint->set('form.fields.section_logging.fields.ai_chatbot_error_log_display.default', $logger->getErrorLogs());
+                $blueprint->set('form.fields.section_logging.fields.ai_chatbot_error_log_location.default', $errInstStr);
             } catch (\Throwable $e) {
                 // Ignore gracefully
             }

@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.3.1
+version: 1.3.2
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -378,6 +378,22 @@ form:
           help: Pricing formula guide and provider accuracy warning
           default: "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: $0.15 per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: $0.60 per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × $0.15) + (Completion Tokens / 1,000,000 × $0.60).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements."
           rows: 7
+          readonly: true
+
+        ai_chatbot_error_log_display:
+          type: textarea
+          label: 🚨 AI Chatbot Live Error Log
+          help: Live error log entries recorded by the AI Chatbot plugin
+          default: "No error logs recorded. Plugin operating normally."
+          rows: 8
+          readonly: true
+
+        ai_chatbot_error_log_location:
+          type: textarea
+          label: 📁 Error Log File Location & Deleting Instructions
+          help: Information on where error log files are stored and how to view or delete error data.
+          default: "📁 Log File Path: user/data/ai-chatbot/error.log\nAbsolute Path: /var/www/html/user/data/ai-chatbot/error.log\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur."
+          rows: 5
           readonly: true
 
     section_analytics:
