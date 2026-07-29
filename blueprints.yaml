@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.2.5
+version: 1.2.6
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -345,6 +345,7 @@ form:
         log_api_usage:
           type: toggle
           label: PLUGIN_AI_CHATBOT.LOG_API_USAGE
+          help: Track Token Usage & Estimated Cost
           highlight: 1
           default: 1
           options:
@@ -352,6 +353,26 @@ form:
             0: PLUGIN_ADMIN.DISABLED
           validate:
             type: bool
+
+        cost_input_token_price_per_m:
+          type: text
+          label: 💵 Input Token Price per 1 Million (USD)
+          help: Price in USD per 1,000,000 Input / Prompt Tokens (e.g. Google Gemini 1.5 Flash = $0.15 per 1M)
+          default: '0.15'
+
+        cost_output_token_price_per_m:
+          type: text
+          label: 💵 Output Token Price per 1 Million (USD)
+          help: Price in USD per 1,000,000 Output / Completion Tokens (e.g. Google Gemini 1.5 Flash = $0.60 per 1M)
+          default: '0.60'
+
+        cost_estimation_example:
+          type: textarea
+          label: 💡 Provider Token Pricing Example & Estimation Disclaimer
+          help: Pricing formula guide and provider accuracy warning
+          default: "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: $0.15 per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: $0.60 per 1,000,000 tokens ($0.00060 / 1k)\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × Input Price) + (Completion Tokens / 1,000,000 × Output Price).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements."
+          rows: 7
+          readonly: true
 
     section_analytics:
       type: section
@@ -361,24 +382,17 @@ form:
         analytics_action:
           type: select
           label: ⚙️ Telemetry & Data Management Actions
-          help: Select an action (e.g. Generate 60 Sample Logs or Clear Data), then click 'Apply Action' or 'Save' to execute.
+          help: Select an action (e.g. Generate 60 Sample Logs or Clear Data), then click Save to execute.
           default: none
           options:
             none: "-- Select Telemetry Action --"
             generate_demo: "🎲 Generate 60 Sample Demo Interactions (180 Days)"
             clear_data: "🗑️ Clear ALL Interaction Telemetry Logs"
 
-        analytics_action_apply_button:
-          type: display
-          label: Execute Telemetry Action
-          markdown: true
-          content: '<div style="margin-top: 5px;"><button type="button" id="grav-chatbot-apply-action-btn" class="button btn btn-primary" style="background:#3b82f6; color:#fff; font-weight:600; padding:8px 16px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-play"></i> ⚡ Apply Telemetry Action</button></div><div id="grav-chatbot-action-status" style="margin-top:10px; display:none; padding:10px 14px; border-radius:6px; font-weight:600;"></div>'
-          ignore: true
-
         analytics_range:
           type: select
           label: 📅 Date Range Filter
-          help: Filter interaction telemetry metrics and charts by date range
+          help: Select date range filter (e.g. Last 7 Days, 1 Month, 3 Months, 6 Months, 12 Months, All Time) then click Save to update charts
           default: all
           options:
             7d: Last 7 Days

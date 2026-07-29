@@ -26,6 +26,8 @@ session_retention_days: 7
 
 logging_enabled: true
 log_api_usage: true
+cost_input_token_price_per_m: '0.15'
+cost_output_token_price_per_m: '0.60'
 
 analytics_action: none
 analytics_range: all

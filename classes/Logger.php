@@ -5,7 +5,7 @@ use Grav\Common\Grav;
 
 /**
  * Class Logger
- * Logs visitor interactions, source (FAQ vs AI), prompt & completion tokens, and estimated API costs.
+ * Logs visitor interactions, source (FAQ vs AI), prompt & completion tokens, and estimated API costs based on provider rates.
  *
  * @license GPL-3.0-or-later
  */
@@ -36,11 +36,16 @@ class Logger
             $logs = json_decode($raw, true) ?: [];
         }
 
-        // Calculate estimated cost in USD (approx $0.15 per 1M tokens for Gemini/Flash)
-        $promptTokens = $entry['prompt_tokens'] ?? 0;
-        $completionTokens = $entry['completion_tokens'] ?? 0;
+        $config = $this->grav['config']->get('plugins.ai-chatbot', []);
+        $inputPricePerM = (float)($config['cost_input_token_price_per_m'] ?? 0.15);
+        $outputPricePerM = (float)($config['cost_output_token_price_per_m'] ?? 0.60);
+
+        $promptTokens = (int)($entry['prompt_tokens'] ?? 0);
+        $completionTokens = (int)($entry['completion_tokens'] ?? 0);
         $totalTokens = $promptTokens + $completionTokens;
-        $estCost = ($totalTokens / 1000000) * 0.15;
+
+        // Formula: (Prompt Tokens / 1,000,000 * Input Price) + (Completion Tokens / 1,000,000 * Output Price)
+        $estCost = (($promptTokens / 1000000) * $inputPricePerM) + (($completionTokens / 1000000) * $outputPricePerM);
 
         $record = [
             'id' => uniqid('log_', true),

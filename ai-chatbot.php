@@ -82,7 +82,7 @@ class AiChatbotPlugin extends Plugin
         if ($blueprint->getFilename() === 'ai-chatbot') {
             try {
                 $logger = new Logger($this->grav);
-                $action = $this->config->get('plugins.ai-chatbot.analytics_action', 'none');
+                $action = $_POST['data']['analytics_action'] ?? $this->config->get('plugins.ai-chatbot.analytics_action', 'none');
 
                 if ($action === 'generate_demo') {
                     $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
@@ -91,7 +91,7 @@ class AiChatbotPlugin extends Plugin
                     $logger->clearLogs();
                 }
 
-                $range = $this->config->get('plugins.ai-chatbot.analytics_range', 'all');
+                $range = $_POST['data']['analytics_range'] ?? $_GET['range'] ?? $this->config->get('plugins.ai-chatbot.analytics_range', 'all');
                 $generator = new AnalyticsReportGenerator($this->grav);
                 $data = $generator->getDashboardAnalyticsData($range);
 
@@ -159,12 +159,18 @@ class AiChatbotPlugin extends Plugin
                     $recStr = "No candidate FAQ recommendations for selected period. All interactions logged in user/data/ai-chatbot/interactions.json.";
                 }
 
+                $inPrice = $this->config->get('plugins.ai-chatbot.cost_input_token_price_per_m', '0.15');
+                $outPrice = $this->config->get('plugins.ai-chatbot.cost_output_token_price_per_m', '0.60');
+
+                $exampleDisclaimer = "💡 Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens\n\n⚠️ Token Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
+
                 $blueprint->set('form.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_chart_display.default', $chartStr);
                 $blueprint->set('form.fields.section_analytics.fields.download_csv_link.default', $csvUrl);
                 $blueprint->set('form.fields.section_analytics.fields.download_json_link.default', $jsonUrl);
                 $blueprint->set('form.fields.section_analytics.fields.download_raw_link.default', $rawUrl);
                 $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
+                $blueprint->set('form.fields.section_logging.fields.cost_estimation_example.default', $exampleDisclaimer);
             } catch (\Throwable $e) {
                 // Ignore gracefully
             }
