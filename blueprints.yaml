@@ -342,3 +342,14 @@ form:
             0: PLUGIN_ADMIN.DISABLED
           validate:
             type: bool
+
+    section_analytics:
+      type: section
+      title: AI Analytics & Performance Dashboard
+      underline: true
+      fields:
+        analytics_dashboard_display:
+          type: display
+          markdown: true
+          content: '<div class="grav-chatbot-analytics-dashboard"><h2>🤖 AI Chatbot Analytics & Performance Reports</h2><p class="teaser">Track visitor query trends, FAQ pre-matching cost savings, token consumption, and automated FAQ recommendations.</p><div class="grav-analytics-cards"><div class="grav-card"><div class="grav-card-label">Total Queries</div><div class="grav-card-value" id="card-total-queries">0</div></div><div class="grav-card green"><div class="grav-card-label">FAQ Matches (Free Hits)</div><div class="grav-card-value" id="card-faq-hits">0</div></div><div class="grav-card blue"><div class="grav-card-label">AI API Requests</div><div class="grav-card-value" id="card-ai-hits">0</div></div><div class="grav-card orange"><div class="grav-card-label">Est. API Tokens</div><div class="grav-card-value" id="card-total-tokens">0</div></div></div><div class="grav-analytics-actions" style="margin-top:15px; margin-bottom:20px;"><a href="/chatbot-export?format=csv" class="button button-action btn btn-outline-primary" style="margin-right:10px;">📥 Export CSV Report</a> <a href="/chatbot-export?format=json" class="button btn btn-outline-secondary">📄 Export JSON Data</a></div><div class="grav-analytics-charts-grid"><div class="grav-chart-container"><h3>📈 Daily Interaction Volume</h3><div id="chart-daily-volume" class="grav-svg-chart"></div></div><div class="grav-chart-container"><h3>📊 Query Source Distribution Ratio</h3><div id="chart-ratio" class="grav-svg-chart"></div></div></div><div class="grav-analytics-recommendations" style="margin-top:20px;"><h3>💡 Candidate FAQ Recommendations</h3><p>The following visitor questions were frequently handled by the AI API. Adding them to your <code>/faq</code> page will answer future queries instantly for free!</p><table class="grav-table"><thead><tr><th>Frequency</th><th>Sample Visitor Question</th><th>AI Generated Response</th></tr></thead><tbody id="recommendations-table-body"><tr><td colspan="3" class="text-center">Loading recommendations...</td></tr></tbody></table></div></div>'
+          ignore: true
