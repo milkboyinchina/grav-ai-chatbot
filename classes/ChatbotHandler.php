@@ -97,6 +97,43 @@ class ChatbotHandler
             return $this->handleSummarizePage($currentRoute);
         }
 
+        // TIER 0: Blacklisted Words Guardrail Check
+        if ($this->config['blacklist_filter_enabled'] ?? true) {
+            $rawBlacklist = $this->config['blacklist_words'] ?? "spam, scam, hack, exploit, bypass, admin_password, secret_token, leak, porn, casino, gambling, illegal";
+            $words = array_filter(array_map('trim', preg_split('/[\r\n,]+/', strtolower($rawBlacklist))));
+
+            $qLower = strtolower($question);
+            $matchedWord = null;
+
+            foreach ($words as $word) {
+                if (!empty($word) && preg_match('/\b' . preg_quote($word, '/') . '\b/i', $qLower)) {
+                    $matchedWord = $word;
+                    break;
+                }
+            }
+
+            if ($matchedWord) {
+                $blockMsg = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
+                $logger = new Logger($this->grav);
+                $logger->logInteraction([
+                    'question' => $question,
+                    'answer' => $blockMsg,
+                    'source' => 'blacklist_guardrail',
+                    'provider' => 'security_guardrail',
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0
+                ]);
+                $logger->logError("Blacklisted word detected ('{$matchedWord}') in visitor query: \"{$question}\"", 'GUARDRAIL_BLOCK');
+
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'answer' => $blockMsg,
+                    'source' => 'blacklist_guardrail'
+                ];
+            }
+        }
+
         // TIER 1: FAQ Local Pre-Matching
         if ($this->config['faq_enabled'] ?? true) {
             $faqResolver = new FaqResolver($this->grav, $this->config);

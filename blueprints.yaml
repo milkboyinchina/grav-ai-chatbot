@@ -1,14 +1,14 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.3.2
-description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
+version: 1.3.3
+description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, blacklisted word safety guardrails, and analytics reporting.
 icon: robot
 author:
   name: milkboyinchina
   email: milkboyinchina@users.noreply.github.com
 homepage: https://github.com/milkboyinchina/grav-ai-chatbot
-keywords: grav, plugin, ai, chatbot, groq, gemini, openrouter, openai, faq, rag, themes, session, quick-replies, test-connection
+keywords: grav, plugin, ai, chatbot, groq, gemini, openrouter, openai, faq, rag, themes, session, quick-replies, test-connection, guardrail, blacklist
 bugs: https://github.com/milkboyinchina/grav-ai-chatbot/issues
 docs: https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/README.md
 license: GPL-3.0-or-later
@@ -314,6 +314,32 @@ form:
           validate:
             type: bool
 
+        blacklist_filter_enabled:
+          type: toggle
+          label: 🚫 Enable Blacklisted Words Guardrail Filter
+          help: Block visitor queries containing forbidden words or profanity before sending to AI API
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        blacklist_words:
+          type: textarea
+          label: 🚫 Blacklisted Words / Restricted Vocabulary List
+          help: Enter restricted words, profanity, or forbidden topics (one per line or comma-separated).
+          default: "spam\nscam\nhack\nexploit\nbypass\nadmin_password\nsecret_token\nleak\nporn\ncasino\ngambling\nillegal"
+          rows: 6
+
+        blacklist_response_text:
+          type: textarea
+          label: 🚫 Blacklisted Words Warning Response Message
+          help: Custom response displayed to the visitor when a blacklisted word is detected.
+          default: "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language."
+          rows: 3
+
         export_require_auth:
           type: toggle
           label: 🔒 Restrict Export Downloads to Whitelisted Users
@@ -391,7 +417,7 @@ form:
         ai_chatbot_error_log_location:
           type: textarea
           label: 📁 Error Log File Location & Deleting Instructions
-          help: Information on where error log files are stored and how to view or delete error data.
+          help: Information on where error log files are stored and how to edit or clear error data.
           default: "📁 Log File Path: user/data/ai-chatbot/error.log\nAbsolute Path: /var/www/html/user/data/ai-chatbot/error.log\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur."
           rows: 5
           readonly: true
