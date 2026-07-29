@@ -43,7 +43,6 @@ class AiChatbotPlugin extends Plugin
             'onPageNotFound' => ['onPageNotFound', 1000],
             'onPageInitialized' => ['onPageInitialized', 1000],
             'onAdminMenu' => ['onAdminMenu', 0],
-            'onBlueprintCreated' => ['onBlueprintCreated', 0],
         ];
     }
 
@@ -72,54 +71,6 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Dynamic Markdown injection into blueprint for Admin 2 (SvelteKit SPA) and classic Admin.
-     */
-    public function onBlueprintCreated($event)
-    {
-        $blueprint = $event['blueprint'];
-        if ($blueprint->getFilename() === 'ai-chatbot') {
-            $generator = new AnalyticsReportGenerator($this->grav);
-            $data = $generator->getDashboardAnalyticsData();
-
-            $summary = $data['summary'] ?? [];
-            $totalQueries = $summary['total_queries'] ?? 0;
-            $faqHits = $summary['faq_hits'] ?? 0;
-            $aiHits = $summary['ai_hits'] ?? 0;
-            $totalTokens = number_format($summary['total_tokens'] ?? 0);
-            $totalCost = number_format($summary['total_cost_usd'] ?? 0, 4);
-
-            $faqPct = $totalQueries > 0 ? round(($faqHits / $totalQueries) * 100) : 0;
-
-            $markdown = "### 🤖 AI Chatbot Analytics & Performance Reports\n\n";
-            $markdown .= "Track visitor query trends, FAQ pre-matching cost savings, token consumption, and automated FAQ recommendations.\n\n";
-            $markdown .= "| 🔢 Total Queries | ⚡ FAQ Matches (Free Hits) | 🤖 AI API Calls | 🪙 Est. Tokens | 💵 Est. Cost |\n";
-            $markdown .= "| --- | --- | --- | --- | --- |\n";
-            $markdown .= "| **{$totalQueries}** | **{$faqHits}** ({$faqPct}% saved) | **{$aiHits}** | **{$totalTokens}** | **\${$totalCost}** |\n\n";
-            $markdown .= "---\n\n";
-            $markdown .= "### 📥 Export Telemetry Reports\n\n";
-            $markdown .= "[📥 Export CSV Report](/chatbot-export?format=csv) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [📄 Export JSON Data](/chatbot-export?format=json)\n\n";
-            $markdown .= "---\n\n";
-            $markdown .= "### 💡 Candidate FAQ Recommendations\n\n";
-            $markdown .= "> The following visitor questions were frequently handled by the AI API. Adding them to your `/faq` page will answer future queries instantly for free!\n\n";
-
-            $recs = $data['recommendations'] ?? [];
-            if (empty($recs)) {
-                $markdown .= "*No FAQ recommendations available yet. Log more AI queries to see candidates!*\n";
-            } else {
-                $markdown .= "| Frequency | Sample Visitor Question | Suggested AI Response |\n";
-                $markdown .= "| --- | --- | --- |\n";
-                foreach ($recs as $rec) {
-                    $q = str_replace('|', '-', $rec['sample_question']);
-                    $a = str_replace('|', '-', substr($rec['suggested_answer'], 0, 120)) . '...';
-                    $markdown .= "| **{$rec['count']}x asked** | {$q} | {$a} |\n";
-                }
-            }
-
-            $blueprint->set('form.fields.section_analytics.fields.analytics_dashboard_display.content', $markdown);
-        }
-    }
-
-    /**
      * Plugin initialization. Subscribes necessary events.
      */
     public function onPluginsInitialized()
@@ -136,7 +87,6 @@ class AiChatbotPlugin extends Plugin
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
                 'onAdminMenu' => ['onAdminMenu', 0],
-                'onBlueprintCreated' => ['onBlueprintCreated', 0],
             ]);
         } else {
             $this->enable([
