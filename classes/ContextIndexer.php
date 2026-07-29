@@ -21,6 +21,53 @@ class ContextIndexer
     }
 
     /**
+     * Convenience method for building site context prompt.
+     *
+     * @param string $currentRoute
+     * @return string
+     */
+    public function buildContextPrompt(string $currentRoute = '/'): string
+    {
+        return $this->buildSiteContext();
+    }
+
+    /**
+     * Return indexed pages array with routes and text content for summarization.
+     *
+     * @return array
+     */
+    public function getIndexedContext(): array
+    {
+        $pagesContainer = $this->grav['pages'] ?? null;
+        if (!$pagesContainer) {
+            return [];
+        }
+
+        try {
+            if (method_exists($pagesContainer, 'init')) {
+                try {
+                    $pagesContainer->init();
+                } catch (\Throwable $t) {}
+            }
+            $allPages = $pagesContainer->all() ?: [];
+        } catch (\Throwable $e) {
+            $allPages = [];
+        }
+
+        $result = [];
+        foreach ($allPages as $page) {
+            if ($page instanceof Page && $page->published() && $page->routable()) {
+                $result[] = [
+                    'route' => $page->route(),
+                    'title' => $page->title(),
+                    'content' => strip_tags($page->content())
+                ];
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Builds site summary text from published pages.
      *
      * @param array $excludeRoutes List of routes to exclude from indexing
@@ -50,12 +97,12 @@ class ContextIndexer
         /** @var Page $page */
         foreach ($pages as $page) {
             try {
-                if (!$page->published() || !$page->routable()) {
+                if (!$page instanceof Page || !$page->published() || !$page->routable()) {
                     continue;
                 }
 
                 $route = $page->route();
-                if (in_array($route, $excludeRoutes) || strpos($route, '/hidden-') !== false) {
+                if (in_array($route, $excludeRoutes, true) || strpos($route, '/hidden-') !== false) {
                     continue;
                 }
 

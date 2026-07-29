@@ -32,6 +32,29 @@ class ContactPageResolver
     }
 
     /**
+     * Resolves contact intent if user asks for contact info.
+     *
+     * @param string $userQuestion
+     * @return array|null Returns ['answer' => string] or null if not a contact intent
+     */
+    public function resolveContactIntent(string $userQuestion): ?array
+    {
+        $questionLower = strtolower($userQuestion);
+        $isContactIntent = preg_match('/(contact|reach|email|phone|address|location|call|support|talk to|office|hours)/i', $questionLower);
+        
+        if (!$isContactIntent) {
+            return null;
+        }
+
+        $info = $this->getContactInformation($userQuestion);
+        if (empty($info)) {
+            return null;
+        }
+
+        return ['answer' => $info];
+    }
+
+    /**
      * Alias method for resolving contact details.
      */
     public function resolveContactDetails(string $userQuestion): string

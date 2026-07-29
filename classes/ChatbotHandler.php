@@ -28,171 +28,189 @@ class ChatbotHandler
      */
     public function processRequest(array $data): array
     {
-        $question = trim($data['question'] ?? $data['message'] ?? '');
-        $action = trim($data['action'] ?? 'query');
-        $messagesHistory = $data['history'] ?? [];
-        $currentRoute = $data['current_route'] ?? '/';
+        try {
+            $question = trim($data['question'] ?? $data['message'] ?? '');
+            $action = trim($data['action'] ?? 'query');
+            $messagesHistory = $data['history'] ?? [];
+            $currentRoute = $data['current_route'] ?? '/';
 
-        if ($action === 'analytics_report') {
-            $range = trim($data['range'] ?? 'all');
-            $generator = new AnalyticsReportGenerator($this->grav);
-            return [
-                'http_code' => 200,
-                'success' => true,
-                'analytics' => $generator->getDashboardAnalyticsData($range)
-            ];
-        }
+            if ($action === 'analytics_report') {
+                $range = trim($data['range'] ?? 'all');
+                $generator = new AnalyticsReportGenerator($this->grav);
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'analytics' => $generator->getDashboardAnalyticsData($range)
+                ];
+            }
 
-        if ($action === 'clear_analytics') {
-            $logger = new Logger($this->grav);
-            $logger->clearLogs();
-            return [
-                'http_code' => 200,
-                'success' => true,
-                'message' => 'All interaction telemetry records have been cleared successfully.'
-            ];
-        }
+            if ($action === 'clear_analytics') {
+                $logger = new Logger($this->grav);
+                $logger->clearLogs();
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'message' => 'All interaction telemetry records have been cleared successfully.'
+                ];
+            }
 
-        if ($action === 'generate_demo_data') {
-            $logger = new Logger($this->grav);
-            $count = $this->generateDemoTelemetryData($logger);
-            return [
-                'http_code' => 200,
-                'success' => true,
-                'message' => "Successfully generated {$count} realistic sample interaction logs spanning the last 180 days!"
-            ];
-        }
+            if ($action === 'generate_demo_data') {
+                $logger = new Logger($this->grav);
+                $count = $this->generateDemoTelemetryData($logger);
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'message' => "Successfully generated {$count} realistic sample interaction logs spanning the last 180 days!"
+                ];
+            }
 
-        if ($action === 'test_connection') {
-            return $this->testAiConnection($data);
-        }
+            if ($action === 'test_connection') {
+                return $this->testAiConnection($data);
+            }
 
-        if (empty($question) && $action !== 'summarize_page') {
-            return [
-                'http_code' => 400,
-                'success' => false,
-                'answer' => 'Please enter a valid question.'
-            ];
-        }
+            if (empty($question) && $action !== 'summarize_page') {
+                return [
+                    'http_code' => 400,
+                    'success' => false,
+                    'answer' => 'Please enter a valid question.'
+                ];
+            }
 
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $limiter = new RateLimiter($this->grav, $this->config);
-        if (!$limiter->checkRateLimit($ip)) {
-            $logger = new Logger($this->grav);
-            $logger->logInteraction([
-                'question' => $question,
-                'answer' => 'Rate limit exceeded.',
-                'source' => 'rate_limit',
-                'provider' => $this->config['provider'] ?? 'groq'
-            ]);
+            // IP-Based Rate Limiting Check
+            if (!empty($this->config['rate_limit_enabled'])) {
+                $maxRequests = (int)($this->config['rate_limit_max_requests'] ?? 10);
+                $windowSeconds = (int)($this->config['rate_limit_window_seconds'] ?? 60);
 
-            return [
-                'http_code' => 429,
-                'success' => false,
-                'answer' => 'Too many requests. Please wait a minute before asking again.'
-            ];
-        }
+                $limiter = new RateLimiter($this->grav, $this->config);
+                $limResult = $limiter->checkRateLimit($maxRequests, $windowSeconds);
 
-        if ($action === 'summarize_page') {
-            return $this->handleSummarizePage($currentRoute);
-        }
+                if (!empty($limResult) && empty($limResult['allowed'])) {
+                    $logger = new Logger($this->grav);
+                    $logger->logInteraction([
+                        'question' => $question,
+                        'answer' => 'Rate limit exceeded.',
+                        'source' => 'rate_limit',
+                        'provider' => $this->config['provider'] ?? 'groq'
+                    ]);
 
-        // TIER 0: Blacklisted Words Guardrail Check
-        if ($this->config['blacklist_filter_enabled'] ?? true) {
-            $rawBlacklist = $this->config['blacklist_words'] ?? "spam, scam, hack, exploit, bypass, admin_password, secret_token, leak, porn, casino, gambling, illegal";
-            $words = array_filter(array_map('trim', preg_split('/[\r\n,]+/', strtolower($rawBlacklist))));
-
-            $qLower = strtolower($question);
-            $matchedWord = null;
-
-            foreach ($words as $word) {
-                if (!empty($word) && preg_match('/\b' . preg_quote($word, '/') . '\b/i', $qLower)) {
-                    $matchedWord = $word;
-                    break;
+                    return [
+                        'http_code' => 429,
+                        'success' => false,
+                        'answer' => 'Too many requests. Please wait a minute before asking again.'
+                    ];
                 }
             }
 
-            if ($matchedWord) {
-                $blockMsg = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
+            if ($action === 'summarize_page') {
+                return $this->handleSummarizePage($currentRoute);
+            }
+
+            // TIER 0: Blacklisted Words Guardrail Check
+            if ($this->config['blacklist_filter_enabled'] ?? true) {
+                $rawBlacklist = $this->config['blacklist_words'] ?? "spam, scam, hack, exploit, bypass, admin_password, secret_token, leak, porn, casino, gambling, illegal";
+                $words = array_filter(array_map('trim', preg_split('/[\r\n,]+/', strtolower($rawBlacklist))));
+
+                $qLower = strtolower($question);
+                $matchedWord = null;
+
+                foreach ($words as $word) {
+                    if (!empty($word) && preg_match('/\b' . preg_quote($word, '/') . '\b/i', $qLower)) {
+                        $matchedWord = $word;
+                        break;
+                    }
+                }
+
+                if ($matchedWord) {
+                    $blockMsg = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
+                    $logger = new Logger($this->grav);
+                    $logger->logInteraction([
+                        'question' => $question,
+                        'answer' => $blockMsg,
+                        'source' => 'guardrail',
+                        'provider' => 'safety_filter',
+                        'prompt_tokens' => 0,
+                        'completion_tokens' => 0
+                    ]);
+
+                    return [
+                        'http_code' => 200,
+                        'success' => true,
+                        'answer' => $blockMsg,
+                        'source' => 'guardrail'
+                    ];
+                }
+            }
+
+            // TIER 1: Semantic Local FAQ Pre-Matching
+            if ($this->config['faq_enabled'] ?? true) {
+                $faqResolver = new FaqResolver($this->grav, $this->config);
+                $faqMatch = $faqResolver->findMatch($question);
+
+                if ($faqMatch) {
+                    $logger = new Logger($this->grav);
+                    $logger->logInteraction([
+                        'question' => $question,
+                        'answer' => $faqMatch['answer'],
+                        'source' => 'faq_match',
+                        'provider' => 'local_faq',
+                        'prompt_tokens' => 0,
+                        'completion_tokens' => 0
+                    ]);
+
+                    return [
+                        'http_code' => 200,
+                        'success' => true,
+                        'answer' => $faqMatch['answer'],
+                        'source' => 'faq_match',
+                        'similarity' => $faqMatch['similarity']
+                    ];
+                }
+            }
+
+            // TIER 2: Contact Page Intent Resolution
+            $contactResolver = new ContactPageResolver($this->grav, $this->config);
+            $contactResponse = $contactResolver->resolveContactIntent($question);
+            if ($contactResponse) {
                 $logger = new Logger($this->grav);
                 $logger->logInteraction([
                     'question' => $question,
-                    'answer' => $blockMsg,
-                    'source' => 'blacklist_guardrail',
-                    'provider' => 'security_guardrail',
+                    'answer' => $contactResponse['answer'],
+                    'source' => 'contact_resolver',
+                    'provider' => 'local_contact',
                     'prompt_tokens' => 0,
                     'completion_tokens' => 0
                 ]);
-                $logger->logError("Blacklisted word detected ('{$matchedWord}') in visitor query: \"{$question}\"", 'GUARDRAIL_BLOCK');
 
                 return [
                     'http_code' => 200,
                     'success' => true,
-                    'answer' => $blockMsg,
-                    'source' => 'blacklist_guardrail'
+                    'answer' => $contactResponse['answer'],
+                    'source' => 'contact_resolver'
                 ];
             }
-        }
 
-        // TIER 1: FAQ Local Pre-Matching
-        if ($this->config['faq_enabled'] ?? true) {
-            $faqResolver = new FaqResolver($this->grav, $this->config);
-            $faqMatch = $faqResolver->findMatch($question);
-
-            if ($faqMatch) {
-                $logger = new Logger($this->grav);
-                $logger->logInteraction([
-                    'question' => $question,
-                    'answer' => $faqMatch['answer'],
-                    'source' => 'faq_match',
-                    'provider' => 'local_faq',
-                    'prompt_tokens' => 0,
-                    'completion_tokens' => 0
-                ]);
-
+            // TIER 3: AI Model Call (Groq, Gemini, OpenRouter, OpenAI, Custom)
+            if (!($this->config['ai_enabled'] ?? true)) {
                 return [
                     'http_code' => 200,
                     'success' => true,
-                    'answer' => $faqMatch['answer'],
-                    'source' => 'faq_match',
-                    'similarity' => $faqMatch['similarity']
+                    'answer' => "I'm currently operating in offline mode. I couldn't find an exact match in our FAQ or Contact pages.",
+                    'source' => 'offline_fallback'
                 ];
             }
-        }
 
-        // TIER 2: Contact Page Intent Resolution
-        $contactResolver = new ContactPageResolver($this->grav, $this->config);
-        $contactResponse = $contactResolver->resolveContactIntent($question);
-        if ($contactResponse) {
+            return $this->queryAiModel($question, $currentRoute, $messagesHistory);
+        } catch (\Throwable $e) {
             $logger = new Logger($this->grav);
-            $logger->logInteraction([
-                'question' => $question,
-                'answer' => $contactResponse['answer'],
-                'source' => 'contact_resolver',
-                'provider' => 'local_contact',
-                'prompt_tokens' => 0,
-                'completion_tokens' => 0
-            ]);
+            $logger->logError("Uncaught ChatbotHandler Exception: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString(), 'HANDLER_CRITICAL');
 
+            $customMsg = $this->config['custom_error_message'] ?? 'An unexpected connection error occurred. Please try again later.';
             return [
-                'http_code' => 200,
-                'success' => true,
-                'answer' => $contactResponse['answer'],
-                'source' => 'contact_resolver'
+                'http_code' => 500,
+                'success' => false,
+                'answer' => $customMsg
             ];
         }
-
-        // TIER 3: AI Model Call (Groq, Gemini, OpenRouter, OpenAI, Custom)
-        if (!($this->config['ai_enabled'] ?? true)) {
-            return [
-                'http_code' => 200,
-                'success' => true,
-                'answer' => "I'm currently operating in offline mode. I couldn't find an exact match in our FAQ or Contact pages.",
-                'source' => 'offline_fallback'
-            ];
-        }
-
-        return $this->queryAiModel($question, $currentRoute, $messagesHistory);
     }
 
     /**
@@ -218,7 +236,7 @@ class ChatbotHandler
         $now = time();
 
         for ($i = 0; $i < 60; $i++) {
-            $daysAgo = (int)floor(($i / 60) * 175); // 0 to 175 days ago
+            $daysAgo = (int)floor(($i / 60) * 175);
             $timestamp = date('c', $now - ($daysAgo * 86400) - rand(100, 7200));
 
             $item = $sampleQuestions[$i % count($sampleQuestions)];
@@ -275,19 +293,22 @@ class ChatbotHandler
                 'custom_endpoint' => $customEndpoint
             ]);
 
-            $testPrompt = "Ping! Reply with 'OK' if you can read this message.";
-            $systemPrompt = "You are testing AI API connection. Keep response under 5 words.";
-            $response = $client->generateResponse($testPrompt, $systemPrompt);
+            $res = $client->generateResponse('Reply with "PONG".', [
+                ['role' => 'user', 'content' => 'Ping test connection']
+            ]);
 
-            if (!empty($response)) {
+            $answer = is_array($res) ? ($res['answer'] ?? '') : (string)$res;
+            $success = is_array($res) ? !empty($res['success']) : !empty($answer);
+
+            if ($success && !empty($answer)) {
                 return [
                     'http_code' => 200,
                     'success' => true,
-                    'message' => "Successfully connected to {$provider} ({$model})! Response: " . trim($response)
+                    'message' => "Successfully connected to {$provider} ({$model})! Response: {$answer}"
                 ];
             }
 
-            $errMsg = "Connected to {$provider}, but received empty response payload.";
+            $errMsg = is_array($res) && !empty($res['error']) ? $res['error'] : "Connected to {$provider}, but received empty response payload.";
             $logger = new Logger($this->grav);
             $logger->logError($errMsg, 'TEST_CONNECTION');
             return [
@@ -341,7 +362,11 @@ class ChatbotHandler
 
         try {
             $client = AiClientFactory::create($this->config);
-            $summary = $client->generateResponse($prompt, $systemPrompt);
+            $res = $client->generateResponse($systemPrompt, [
+                ['role' => 'user', 'content' => $prompt]
+            ]);
+
+            $summary = is_array($res) ? ($res['answer'] ?? '') : (string)$res;
 
             $logger = new Logger($this->grav);
             $logger->logInteraction([
@@ -382,23 +407,57 @@ class ChatbotHandler
             $indexer = new ContextIndexer($this->grav);
             $siteContext = $indexer->buildContextPrompt($currentRoute);
 
+            $messages = [];
+            if (!empty($history) && is_array($history)) {
+                foreach ($history as $h) {
+                    if (!empty($h['text'])) {
+                        $messages[] = [
+                            'role' => ($h['role'] === 'user') ? 'user' : 'assistant',
+                            'content' => $h['text']
+                        ];
+                    }
+                }
+            }
+            $messages[] = [
+                'role' => 'user',
+                'content' => $question
+            ];
+
             $client = AiClientFactory::create($this->config);
-            $response = $client->generateResponse($question, $siteContext, $history);
+            $res = $client->generateResponse($siteContext, $messages);
+
+            $answer = is_array($res) ? ($res['answer'] ?? '') : (string)$res;
+            $promptTokens = is_array($res) ? (int)($res['prompt_tokens'] ?? 450) : 450;
+            $completionTokens = is_array($res) ? (int)($res['completion_tokens'] ?? 120) : 120;
+            $success = is_array($res) ? !empty($res['success']) : !empty($answer);
+
+            if (!$success) {
+                $errMsg = is_array($res) && !empty($res['error']) ? $res['error'] : 'Empty or invalid response from AI provider.';
+                $logger = new Logger($this->grav);
+                $logger->logError("AI Model Query Error [Provider: {$provider}, Model: {$model}]: {$errMsg}", 'AI_MODEL_API');
+
+                $customMsg = $this->config['custom_error_message'] ?? 'An unexpected connection error occurred. Please try again later.';
+                return [
+                    'http_code' => 500,
+                    'success' => false,
+                    'answer' => $customMsg
+                ];
+            }
 
             $logger = new Logger($this->grav);
             $logger->logInteraction([
                 'question' => $question,
-                'answer' => $response,
+                'answer' => $answer,
                 'source' => 'ai_api',
                 'provider' => $provider,
-                'prompt_tokens' => 450,
-                'completion_tokens' => 120
+                'prompt_tokens' => $promptTokens,
+                'completion_tokens' => $completionTokens
             ]);
 
             return [
                 'http_code' => 200,
                 'success' => true,
-                'answer' => $response,
+                'answer' => $answer,
                 'source' => 'ai_api',
                 'provider' => $provider
             ];

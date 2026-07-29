@@ -12,10 +12,10 @@ class GeminiClient implements AiClientInterface
     protected string $apiKey;
     protected string $model;
 
-    public function __construct(string $apiKey, string $model = 'gemini-1.5-flash')
+    public function __construct(string $apiKey, string $model = 'gemini-2.0-flash')
     {
         $this->apiKey = $apiKey;
-        $this->model = $model ?: 'gemini-1.5-flash';
+        $this->model = $model ?: 'gemini-2.0-flash';
     }
 
     public function generateResponse(string $systemPrompt, array $messages): array
@@ -30,15 +30,30 @@ class GeminiClient implements AiClientInterface
             ];
         }
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
+        $targetModel = $this->model;
+        if ($targetModel === 'gemini-1.5-flash' || $targetModel === 'gemini-1.5-flash-latest') {
+            $targetModel = 'gemini-2.0-flash';
+        }
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$targetModel}:generateContent?key={$this->apiKey}";
 
         // Format contents payload for Gemini REST API
         $contents = [];
         foreach ($messages as $msg) {
-            $role = ($msg['role'] === 'assistant' || $msg['role'] === 'model') ? 'model' : 'user';
+            $role = (!empty($msg['role']) && ($msg['role'] === 'assistant' || $msg['role'] === 'model')) ? 'model' : 'user';
+            $text = $msg['content'] ?? $msg['text'] ?? '';
+            if (!empty($text)) {
+                $contents[] = [
+                    'role' => $role,
+                    'parts' => [['text' => $text]]
+                ];
+            }
+        }
+
+        if (empty($contents)) {
             $contents[] = [
-                'role' => $role,
-                'parts' => [['text' => $msg['content']]]
+                'role' => 'user',
+                'parts' => [['text' => 'Hello']]
             ];
         }
 
@@ -70,10 +85,10 @@ class GeminiClient implements AiClientInterface
             $errMsg = $errData['error']['message'] ?? $curlError ?: "HTTP Error {$httpCode}";
             return [
                 'success' => false,
-                'answer' => "AI Service Error: {$errMsg}",
+                'answer' => "AI Service Error ({$httpCode}): {$errMsg}",
                 'prompt_tokens' => 0,
                 'completion_tokens' => 0,
-                'error' => $errMsg
+                'error' => "HTTP {$httpCode}: {$errMsg}"
             ];
         }
 
