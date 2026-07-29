@@ -199,8 +199,9 @@ class AiChatbotPlugin extends Plugin
     protected function handleAnalyticsExport()
     {
         $format = $_GET['format'] ?? 'csv';
+        $range = $_GET['range'] ?? 'all';
         $generator = new AnalyticsReportGenerator($this->grav);
-        $generator->exportReport($format);
+        $generator->exportReport($format, $range);
         exit();
     }
 

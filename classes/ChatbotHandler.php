@@ -37,11 +37,12 @@ class ChatbotHandler
         $currentRoute = $data['current_route'] ?? '/';
 
         if ($action === 'analytics_report') {
+            $range = trim($data['range'] ?? 'all');
             $generator = new AnalyticsReportGenerator($this->grav);
             return [
                 'http_code' => 200,
                 'success' => true,
-                'analytics' => $generator->getDashboardAnalyticsData()
+                'analytics' => $generator->getDashboardAnalyticsData($range)
             ];
         }
 

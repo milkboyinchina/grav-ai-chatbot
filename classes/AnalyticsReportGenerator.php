@@ -5,7 +5,8 @@ use Grav\Common\Grav;
 
 /**
  * Class AnalyticsReportGenerator
- * Aggregates interaction metrics, generates chart data for the Admin dashboard, and formats CSV/JSON exports.
+ * Aggregates interaction metrics with date range filtering (7d, 1m, 3m, 6m, 12m, all),
+ * generates chart data for the Admin dashboard, and formats CSV, JSON, and raw interaction exports.
  *
  * @license GPL-3.0-or-later
  */
@@ -21,29 +22,47 @@ class AnalyticsReportGenerator
     }
 
     /**
-     * Download or output report according to format (csv or json).
+     * Download or output report according to format (csv, json, or raw_interactions) and date range.
+     *
+     * @param string $format Export format: 'csv', 'json', or 'raw_interactions'
+     * @param string $range Date range: '7d', '1m', '3m', '6m', '12m', 'all'
      */
-    public function exportReport(string $format = 'csv'): void
+    public function exportReport(string $format = 'csv', string $range = 'all'): void
     {
+        $dateStr = date('Y-m-d');
+        $rangeSlug = preg_replace('/[^\w\-]/', '', $range ?: 'all');
+
+        if ($format === 'raw_interactions') {
+            header('Content-Type: application/json');
+            header("Content-Disposition: attachment; filename=\"ai-chatbot-interactions-{$rangeSlug}-{$dateStr}.json\"");
+            $logs = $this->filterLogsByRange($this->logger->getLogs(), $range);
+            echo json_encode(array_values($logs), JSON_PRETTY_PRINT);
+            exit();
+        }
+
         if ($format === 'json') {
             header('Content-Type: application/json');
-            header('Content-Disposition: attachment; filename="ai-chatbot-analytics-' . date('Y-m-d') . '.json"');
-            echo json_encode($this->generateJsonReport(), JSON_PRETTY_PRINT);
+            header("Content-Disposition: attachment; filename=\"ai-chatbot-analytics-{$rangeSlug}-{$dateStr}.json\"");
+            echo json_encode($this->generateJsonReport($range), JSON_PRETTY_PRINT);
             exit();
         }
 
         header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="ai-chatbot-analytics-' . date('Y-m-d') . '.csv"');
-        echo $this->generateCsvReport();
+        header("Content-Disposition: attachment; filename=\"ai-chatbot-analytics-{$rangeSlug}-{$dateStr}.csv\"");
+        echo $this->generateCsvReport($range);
         exit();
     }
 
     /**
-     * Get pre-processed data structure for Admin Dashboard graphs.
+     * Get pre-processed data structure for Admin Dashboard graphs filtered by date range.
+     *
+     * @param string $range Date range: '7d', '1m', '3m', '6m', '12m', 'all'
+     * @return array
      */
-    public function getDashboardAnalyticsData(): array
+    public function getDashboardAnalyticsData(string $range = 'all'): array
     {
-        $logs = $this->logger->getLogs();
+        $rawLogs = $this->logger->getLogs();
+        $logs = $this->filterLogsByRange($rawLogs, $range);
 
         $totalQueries = count($logs);
         $faqHits = 0;
@@ -77,6 +96,7 @@ class AnalyticsReportGenerator
         $recommendations = FaqRecommender::getRecommendations($logs, 2);
 
         return [
+            'range' => $range,
             'summary' => [
                 'total_queries' => $totalQueries,
                 'faq_hits' => $faqHits,
@@ -100,11 +120,42 @@ class AnalyticsReportGenerator
     }
 
     /**
-     * Generate CSV export string.
+     * Filter log records according to date range string.
      */
-    public function generateCsvReport(): string
+    protected function filterLogsByRange(array $logs, string $range = 'all'): array
     {
-        $logs = $this->logger->getLogs();
+        if (empty($range) || $range === 'all') {
+            return $logs;
+        }
+
+        $daysMap = [
+            '7d' => 7,
+            '1m' => 30,
+            '3m' => 90,
+            '6m' => 180,
+            '12m' => 365,
+        ];
+
+        $days = $daysMap[$range] ?? 0;
+        if ($days <= 0) {
+            return $logs;
+        }
+
+        $cutoff = strtotime("-{$days} days");
+        $filtered = array_filter($logs, function ($log) use ($cutoff) {
+            $ts = strtotime($log['timestamp'] ?? '');
+            return $ts !== false && $ts >= $cutoff;
+        });
+
+        return array_values($filtered);
+    }
+
+    /**
+     * Generate CSV export string for given date range.
+     */
+    public function generateCsvReport(string $range = 'all'): string
+    {
+        $logs = $this->filterLogsByRange($this->logger->getLogs(), $range);
 
         $output = fopen('php://temp', 'r+');
         fputcsv($output, ['ID', 'Timestamp', 'IP Hash', 'Question', 'Answer', 'Source', 'Provider', 'Prompt Tokens', 'Completion Tokens', 'Total Tokens', 'Est Cost (USD)']);
@@ -133,14 +184,15 @@ class AnalyticsReportGenerator
     }
 
     /**
-     * Generate JSON export structure.
+     * Generate JSON export structure for given date range.
      */
-    public function generateJsonReport(): array
+    public function generateJsonReport(string $range = 'all'): array
     {
         return [
             'generated_at' => date('c'),
-            'analytics' => $this->getDashboardAnalyticsData(),
-            'logs' => $this->logger->getLogs()
+            'range' => $range,
+            'analytics' => $this->getDashboardAnalyticsData($range),
+            'logs' => $this->filterLogsByRange($this->logger->getLogs(), $range)
         ];
     }
 }

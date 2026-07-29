@@ -5,7 +5,7 @@
     if (!targetEl) {
       const allEls = document.querySelectorAll('p, div, span, fieldset, form');
       allEls.forEach(function (el) {
-        if (!targetEl && el.textContent && el.textContent.includes('Loading real-time interaction metrics...')) {
+        if (!targetEl && el.textContent && (el.textContent.includes('Loading real-time interaction metrics...') || el.textContent.includes('Live Analytics & Performance Metrics'))) {
           targetEl = el;
         }
       });
@@ -16,7 +16,31 @@
 
       targetEl.innerHTML = `
         <div class="grav-chatbot-analytics-dashboard" style="margin-top: 15px;">
-          <!-- Metric Cards -->
+          <!-- Filter & Action Controls Bar -->
+          <div class="grav-analytics-controls" style="display: flex; gap: 15px; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155;">
+            <!-- Date Range Filter Dropdown & Refresh -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label for="grav-analytics-range-select" style="color: #cbd5e1; font-weight: 600; margin: 0; font-size: 0.9rem;">📅 Date Range:</label>
+              <select id="grav-analytics-range-select" class="form-select" style="background: #0f172a; color: #fff; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; cursor: pointer;">
+                <option value="7d">Last 7 Days</option>
+                <option value="1m">Last 1 Month (30 Days)</option>
+                <option value="3m">Last 3 Months (90 Days)</option>
+                <option value="6m">Last 6 Months (180 Days)</option>
+                <option value="12m">Last 12 Months (1 Year)</option>
+                <option value="all" selected>All Time</option>
+              </select>
+              <button type="button" id="grav-analytics-refresh-btn" class="button btn btn-outline-primary" style="padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;">🔄 Refresh</button>
+            </div>
+
+            <!-- Download Export Links -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <a id="btn-export-csv" href="/chatbot-export?format=csv&range=all" target="_blank" class="button btn btn-primary" style="padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; background: #3b82f6; color: #fff;">📥 Download CSV</a>
+              <a id="btn-export-json" href="/chatbot-export?format=json&range=all" target="_blank" class="button btn btn-secondary" style="padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; background: #64748b; color: #fff;">📄 Download JSON Data</a>
+              <a id="btn-export-raw" href="/chatbot-export?format=raw_interactions&range=all" target="_blank" class="button btn btn-info" style="padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; background: #0284c7; color: #fff;">💾 Raw Interactions JSON</a>
+            </div>
+          </div>
+
+          <!-- Summary Metric Cards -->
           <div class="grav-analytics-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
             <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; color: #fff;">
               <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Total Queries</div>
@@ -34,12 +58,6 @@
               <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Est. API Tokens</div>
               <div id="card-total-tokens" style="font-size: 1.8rem; font-weight: 700; color: #fb923c; margin-top: 4px;">...</div>
             </div>
-          </div>
-
-          <!-- Actions Bar -->
-          <div style="margin-bottom: 25px; display: flex; gap: 12px; flex-wrap: wrap;">
-            <a href="/chatbot-export?format=csv" target="_blank" class="button btn btn-primary" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;">📥 Export CSV Report</a>
-            <a href="/chatbot-export?format=json" target="_blank" class="button btn btn-secondary" style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;">📄 Export JSON Data</a>
           </div>
 
           <!-- Charts Grid -->
@@ -76,18 +94,53 @@
         </div>
       `;
 
-      fetchAnalyticsData();
+      // Bind Date Range Dropdown Change Listener
+      const rangeSelect = document.getElementById('grav-analytics-range-select');
+      if (rangeSelect) {
+        rangeSelect.addEventListener('change', function () {
+          const selectedRange = rangeSelect.value || 'all';
+          updateDownloadLinks(selectedRange);
+          fetchAnalyticsData(selectedRange);
+        });
+      }
+
+      // Bind Refresh Button Click Listener
+      const refreshBtn = document.getElementById('grav-analytics-refresh-btn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', function () {
+          const selectedRange = rangeSelect ? rangeSelect.value : 'all';
+          refreshBtn.innerHTML = '⏳ Loading...';
+          refreshBtn.disabled = true;
+          fetchAnalyticsData(selectedRange).finally(() => {
+            refreshBtn.innerHTML = '🔄 Refresh';
+            refreshBtn.disabled = false;
+          });
+        });
+      }
+
+      fetchAnalyticsData('all');
     }
 
     attachTestApiListener();
   }
 
-  async function fetchAnalyticsData() {
+  function updateDownloadLinks(range) {
+    const btnCsv = document.getElementById('btn-export-csv');
+    const btnJson = document.getElementById('btn-export-json');
+    const btnRaw = document.getElementById('btn-export-raw');
+
+    if (btnCsv) btnCsv.href = '/chatbot-export?format=csv&range=' + encodeURIComponent(range);
+    if (btnJson) btnJson.href = '/chatbot-export?format=json&range=' + encodeURIComponent(range);
+    if (btnRaw) btnRaw.href = '/chatbot-export?format=raw_interactions&range=' + encodeURIComponent(range);
+  }
+
+  async function fetchAnalyticsData(range) {
+    const selectedRange = range || 'all';
     try {
       const res = await fetch('/chatbot-api', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'analytics_report' })
+        body: JSON.stringify({ action: 'analytics_report', range: selectedRange })
       });
       const resData = await res.json();
       if (resData.success && resData.analytics) {
@@ -120,7 +173,7 @@
 
       dailyChartContainer.innerHTML = '';
       if (labels.length === 0) {
-        dailyChartContainer.innerHTML = '<p style="color:#94a3b8; margin:auto;">No interactions logged yet.</p>';
+        dailyChartContainer.innerHTML = '<p style="color:#94a3b8; margin:auto;">No interactions logged for selected period.</p>';
       } else {
         labels.forEach(function (label, idx) {
           const val = values[idx];
@@ -133,7 +186,7 @@
           group.style.flex = '1';
 
           group.innerHTML = `
-            <div style="height:${heightPx}px; width: 100%; max-width: 32px; background: #38bdf8; border-radius: 4px;" title="${val} queries"></div>
+            <div style="height:${heightPx}px; width: 100%; max-width: 32px; background: #38bdf8; border-radius: 4px;" title="${val} queries on ${label}"></div>
             <span style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">${label.substring(5)}</span>
           `;
           dailyChartContainer.appendChild(group);
@@ -168,7 +221,7 @@
       tbody.innerHTML = '';
       const recs = data.recommendations || [];
       if (recs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="padding:12px; text-align:center; color:#94a3b8;">No FAQ recommendations available yet. Log more AI queries to see candidates!</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="padding:12px; text-align:center; color:#94a3b8;">No FAQ recommendations available for selected period.</td></tr>';
       } else {
         recs.forEach(function (rec) {
           const tr = document.createElement('tr');

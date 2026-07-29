@@ -1,61 +1,79 @@
 <div class="grav-chatbot-analytics-dashboard">
-  <h2>🤖 AI Chatbot Analytics & Performance Reports</h2>
+  <h2>🤖 AI Chatbot Analytics & Performance Dashboard</h2>
   <p class="teaser">Track visitor query trends, FAQ pre-matching cost savings, token consumption, and automated FAQ recommendations.</p>
 
-  <!-- Summary Metric Cards -->
-  <div class="grav-analytics-cards">
-    <div class="grav-card">
-      <div class="grav-card-label">Total Queries</div>
-      <div class="grav-card-value" id="card-total-queries">0</div>
+  <!-- Filter & Action Controls Bar -->
+  <div class="grav-analytics-controls" style="display: flex; gap: 15px; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155;">
+    <!-- Date Range Dropdown -->
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label for="grav-analytics-range-select" style="color: #cbd5e1; font-weight: 600; margin: 0;">📅 Date Range Filter:</label>
+      <select id="grav-analytics-range-select" class="form-select" style="background: #0f172a; color: #fff; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px;">
+        <option value="7d">Last 7 Days</option>
+        <option value="1m">Last 1 Month (30 Days)</option>
+        <option value="3m">Last 3 Months (90 Days)</option>
+        <option value="6m">Last 6 Months (180 Days)</option>
+        <option value="12m">Last 12 Months (1 Year)</option>
+        <option value="all" selected>All Time</option>
+      </select>
+      <button type="button" id="grav-analytics-refresh-btn" class="button btn btn-outline-primary" style="padding: 6px 14px; border-radius: 6px; font-weight: 600;"><i class="fa fa-refresh"></i> Refresh</button>
     </div>
-    <div class="grav-card green">
-      <div class="grav-card-label">FAQ Matches (Free Hits)</div>
-      <div class="grav-card-value" id="card-faq-hits">0</div>
-    </div>
-    <div class="grav-card blue">
-      <div class="grav-card-label">AI API Requests</div>
-      <div class="grav-card-value" id="card-ai-hits">0</div>
-    </div>
-    <div class="grav-card orange">
-      <div class="grav-card-label">Est. API Tokens</div>
-      <div class="grav-card-value" id="card-total-tokens">0</div>
+
+    <!-- Download Links Bar -->
+    <div class="grav-analytics-exports" style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <a id="btn-export-csv" href="/chatbot-export?format=csv&range=all" target="_blank" class="button btn btn-primary" style="padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600;">📥 Download CSV</a>
+      <a id="btn-export-json" href="/chatbot-export?format=json&range=all" target="_blank" class="button btn btn-secondary" style="padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600;">📄 Download JSON Data</a>
+      <a id="btn-export-raw" href="/chatbot-export?format=raw_interactions&range=all" target="_blank" class="button btn btn-info" style="padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; background: #0284c7; color: #fff;">💾 Raw Interactions JSON</a>
     </div>
   </div>
 
-  <!-- Actions & Export Bar -->
-  <div class="grav-analytics-actions">
-    <a href="/chatbot-export?format=csv" class="button button-action">📥 Export CSV Report</a>
-    <a href="/chatbot-export?format=json" class="button">📄 Export JSON Data</a>
+  <!-- Summary Metric Cards -->
+  <div class="grav-analytics-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+    <div class="grav-card" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
+      <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">Total Queries</div>
+      <div class="grav-card-value" id="card-total-queries" style="font-size: 1.8rem; font-weight: 700; color: #38bdf8; margin-top: 5px;">0</div>
+    </div>
+    <div class="grav-card green" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
+      <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">FAQ Matches (Free Hits)</div>
+      <div class="grav-card-value" id="card-faq-hits" style="font-size: 1.8rem; font-weight: 700; color: #34d399; margin-top: 5px;">0</div>
+    </div>
+    <div class="grav-card blue" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
+      <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">AI API Requests</div>
+      <div class="grav-card-value" id="card-ai-hits" style="font-size: 1.8rem; font-weight: 700; color: #818cf8; margin-top: 5px;">0</div>
+    </div>
+    <div class="grav-card orange" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; color: #fff;">
+      <div class="grav-card-label" style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase;">Est. API Tokens</div>
+      <div class="grav-card-value" id="card-total-tokens" style="font-size: 1.8rem; font-weight: 700; color: #fb923c; margin-top: 5px;">0</div>
+    </div>
   </div>
 
   <!-- Visual Graphs Grid -->
-  <div class="grav-analytics-charts-grid">
-    <div class="grav-chart-container">
-      <h3>📈 Daily Interaction Volume</h3>
-      <div id="chart-daily-volume" class="grav-svg-chart"></div>
+  <div class="grav-analytics-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+    <div class="grav-chart-container" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px;">
+      <h3 style="margin-top:0; font-size: 1.1rem; color: #e2e8f0;">📈 Daily Interaction Volume</h3>
+      <div id="chart-daily-volume" class="grav-svg-chart" style="min-height: 160px; display: flex; align-items: flex-end; gap: 8px; padding-top: 15px;"></div>
     </div>
-    <div class="grav-chart-container">
-      <h3>📊 Query Source Distribution Ratio</h3>
-      <div id="chart-ratio" class="grav-svg-chart"></div>
+    <div class="grav-chart-container" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px;">
+      <h3 style="margin-top:0; font-size: 1.1rem; color: #e2e8f0;">📊 Query Source Distribution Ratio</h3>
+      <div id="chart-ratio" class="grav-svg-chart" style="min-height: 160px; display: flex; align-items: center;"></div>
     </div>
   </div>
 
   <!-- FAQ Recommendations Table -->
-  <div class="grav-analytics-recommendations">
-    <h3>💡 Candidate FAQ Recommendations</h3>
-    <p>The following visitor questions were frequently handled by the AI API. Adding them to your <code>/faq</code> page will answer future queries instantly for free!</p>
+  <div class="grav-analytics-recommendations" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px;">
+    <h3 style="margin-top:0; font-size: 1.1rem; color: #e2e8f0;">💡 Candidate FAQ Recommendations</h3>
+    <p style="color: #94a3b8; font-size: 0.9rem;">The following visitor questions were frequently handled by the AI API. Adding them to your <code>/faq</code> page will answer future queries instantly for free!</p>
     
-    <table class="grav-table">
+    <table class="grav-table" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
       <thead>
-        <tr>
-          <th>Frequency</th>
-          <th>Sample Visitor Question</th>
-          <th>AI Generated Response</th>
+        <tr style="border-bottom: 1px solid #334155; text-align: left; color: #cbd5e1;">
+          <th style="padding: 8px;">Frequency</th>
+          <th style="padding: 8px;">Sample Visitor Question</th>
+          <th style="padding: 8px;">AI Generated Response</th>
         </tr>
       </thead>
       <tbody id="recommendations-table-body">
         <tr>
-          <td colspan="3" class="text-center">Loading recommendations...</td>
+          <td colspan="3" class="text-center" style="padding: 12px; text-align: center; color: #94a3b8;">Loading recommendations...</td>
         </tr>
       </tbody>
     </table>
