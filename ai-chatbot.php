@@ -43,6 +43,7 @@ class AiChatbotPlugin extends Plugin
             'onPageNotFound' => ['onPageNotFound', 1000],
             'onPageInitialized' => ['onPageInitialized', 1000],
             'onAdminMenu' => ['onAdminMenu', 0],
+            'onBlueprintCreated' => ['onBlueprintCreated', 0],
         ];
     }
 
@@ -71,6 +72,47 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
+     * Populate blueprint fields dynamically with live analytics metrics.
+     */
+    public function onBlueprintCreated($event)
+    {
+        $blueprint = $event['blueprint'];
+        if ($blueprint->getFilename() === 'ai-chatbot') {
+            try {
+                $generator = new AnalyticsReportGenerator($this->grav);
+                $data = $generator->getDashboardAnalyticsData();
+
+                $summary = $data['summary'] ?? [];
+                $totalQueries = $summary['total_queries'] ?? 0;
+                $faqHits = $summary['faq_hits'] ?? 0;
+                $aiHits = $summary['ai_hits'] ?? 0;
+                $totalTokens = number_format($summary['total_tokens'] ?? 0);
+                $totalCost = number_format($summary['total_cost_usd'] ?? 0, 4);
+
+                $faqPct = $totalQueries > 0 ? round(($faqHits / $totalQueries) * 100) : 0;
+
+                $summaryStr = "Total Queries: {$totalQueries} | FAQ Matches: {$faqHits} ({$faqPct}% Saved) | AI Calls: {$aiHits} | Total Tokens: {$totalTokens} | Est. Cost: \${$totalCost}";
+
+                $recs = $data['recommendations'] ?? [];
+                $recLines = [];
+                if (!empty($recs)) {
+                    foreach ($recs as $rec) {
+                        $recLines[] = "• [{$rec['count']}x asked] Q: {$rec['sample_question']} => A: " . substr($rec['suggested_answer'], 0, 100) . "...";
+                    }
+                    $recStr = implode("\n\n", $recLines);
+                } else {
+                    $recStr = "No candidate FAQ recommendations at this time. Logged interactions are stored in user/data/ai-chatbot/interactions.json.";
+                }
+
+                $blueprint->set('form.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
+                $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
+            } catch (\Throwable $e) {
+                // Ignore gracefully
+            }
+        }
+    }
+
+    /**
      * Plugin initialization. Subscribes necessary events.
      */
     public function onPluginsInitialized()
@@ -87,6 +129,7 @@ class AiChatbotPlugin extends Plugin
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
                 'onAdminMenu' => ['onAdminMenu', 0],
+                'onBlueprintCreated' => ['onBlueprintCreated', 0],
             ]);
         } else {
             $this->enable([

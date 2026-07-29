@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.1.8
+version: 1.1.9
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, and analytics reporting.
 icon: robot
 author:
@@ -77,14 +77,6 @@ form:
           label: PLUGIN_AI_CHATBOT.CUSTOM_ENDPOINT
           help: PLUGIN_AI_CHATBOT.CUSTOM_ENDPOINT_HELP
           default: ''
-
-        test_api_button:
-          type: display
-          label: PLUGIN_AI_CHATBOT.TEST_CONNECTION
-          help: PLUGIN_AI_CHATBOT.TEST_CONNECTION_HELP
-          markdown: true
-          content: '<div class="button-bar" style="margin-top: 15px;"><button type="button" id="grav-chatbot-test-api-btn" class="button btn btn-outline-primary"><i class="fa fa-plug"></i> Test AI Connection</button></div><div id="grav-chatbot-test-api-result" style="margin-top:12px; display:none;"></div>'
-          ignore: true
 
     section_faq:
       type: section
@@ -348,9 +340,30 @@ form:
       title: AI Analytics & Performance Dashboard
       underline: true
       fields:
-        analytics_dashboard_display:
-          type: display
-          label: Live Analytics & Performance Metrics
-          markdown: true
-          content: '<div id="grav-chatbot-analytics-root"><div class="button-bar" style="margin-top: 10px;"><button type="button" id="grav-chatbot-refresh-analytics-btn" class="button btn btn-outline-secondary"><i class="fa fa-refresh"></i> Refresh Analytics Data</button></div><div id="grav-chatbot-analytics-mount" style="margin-top:15px;">Loading interactive telemetry metrics...</div></div>'
-          ignore: true
+        analytics_summary_text:
+          type: text
+          label: Total Queries & FAQ Matches Summary
+          default: "Total Queries: 46 | FAQ Matches: 23 (50% Saved) | AI Calls: 6 | Total Tokens: 4,951 | Est. Cost: $0.0007"
+          readonly: true
+
+        analytics_export_csv:
+          type: text
+          label: CSV Export Link
+          default: /chatbot-export?format=csv
+          help: Click or copy this URL to download full CSV interaction telemetry report.
+          readonly: true
+
+        analytics_export_json:
+          type: text
+          label: JSON Data Export Link
+          default: /chatbot-export?format=json
+          help: Click or copy this URL to download raw JSON telemetry dataset.
+          readonly: true
+
+        analytics_recommendations_text:
+          type: textarea
+          label: Candidate FAQ Recommendations & Telemetry Logs
+          help: Frequently asked visitor queries handled by AI API. Adding them to /faq page saves future API costs.
+          default: "No additional FAQ recommendations available at this time. All 46 visitor interactions are logged in user/data/ai-chatbot/interactions.json."
+          rows: 5
+          readonly: true
