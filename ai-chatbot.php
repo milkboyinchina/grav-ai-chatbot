@@ -5,7 +5,9 @@ use Grav\Common\Plugin;
 use Grav\Plugin\AiChatbot\ChatbotHandler;
 use Grav\Plugin\AiChatbot\AnalyticsReportGenerator;
 
-// Register PSR-4 Autoloader for Plugin Classes
+/**
+ * PSR-4 Autoloader fallback for plugin classes.
+ */
 spl_autoload_register(function ($class) {
     $prefix = 'Grav\\Plugin\\AiChatbot\\';
     $baseDir = __DIR__ . '/classes/';
@@ -37,10 +39,11 @@ class AiChatbotPlugin extends Plugin
     public static function getSubscribedEvents(): array
     {
         return [
-            'onPluginsInitialized' => ['onPluginsInitialized', 0],
-            'onPageNotFound' => ['onPageNotFound', 0],
-            'onPageInitialized' => ['onPageInitialized', 0],
+            'onPluginsInitialized' => ['onPluginsInitialized', 1000],
+            'onPageNotFound' => ['onPageNotFound', 1000],
+            'onPageInitialized' => ['onPageInitialized', 1000],
             'onAdminMenu' => ['onAdminMenu', 0],
+            'onBlueprintCreated' => ['onBlueprintCreated', 0],
         ];
     }
 
@@ -56,10 +59,68 @@ class AiChatbotPlugin extends Plugin
             'authorize' => 'admin.plugins',
             'priority' => 10
         ];
+
+        if (isset($this->grav['admin'])) {
+            $this->grav['admin']->sidebar['ai-chatbot'] = [
+                'route' => 'plugins/ai-chatbot',
+                'icon' => 'fa-robot',
+                'title' => 'AI Chatbot',
+                'authorize' => 'admin.plugins',
+                'priority' => 10
+            ];
+        }
     }
 
     /**
-     * Initialize plugin configuration and asset injectors.
+     * Dynamic Markdown injection into blueprint for Admin 2 (SvelteKit SPA) and classic Admin.
+     */
+    public function onBlueprintCreated($event)
+    {
+        $blueprint = $event['blueprint'];
+        if ($blueprint->getFilename() === 'ai-chatbot') {
+            $generator = new AnalyticsReportGenerator($this->grav);
+            $data = $generator->getDashboardAnalyticsData();
+
+            $summary = $data['summary'] ?? [];
+            $totalQueries = $summary['total_queries'] ?? 0;
+            $faqHits = $summary['faq_hits'] ?? 0;
+            $aiHits = $summary['ai_hits'] ?? 0;
+            $totalTokens = number_format($summary['total_tokens'] ?? 0);
+            $totalCost = number_format($summary['total_cost_usd'] ?? 0, 4);
+
+            $faqPct = $totalQueries > 0 ? round(($faqHits / $totalQueries) * 100) : 0;
+
+            $markdown = "### 🤖 AI Chatbot Analytics & Performance Reports\n\n";
+            $markdown .= "Track visitor query trends, FAQ pre-matching cost savings, token consumption, and automated FAQ recommendations.\n\n";
+            $markdown .= "| 🔢 Total Queries | ⚡ FAQ Matches (Free Hits) | 🤖 AI API Calls | 🪙 Est. Tokens | 💵 Est. Cost |\n";
+            $markdown .= "| --- | --- | --- | --- | --- |\n";
+            $markdown .= "| **{$totalQueries}** | **{$faqHits}** ({$faqPct}% saved) | **{$aiHits}** | **{$totalTokens}** | **\${$totalCost}** |\n\n";
+            $markdown .= "---\n\n";
+            $markdown .= "### 📥 Export Telemetry Reports\n\n";
+            $markdown .= "[📥 Export CSV Report](/chatbot-export?format=csv) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [📄 Export JSON Data](/chatbot-export?format=json)\n\n";
+            $markdown .= "---\n\n";
+            $markdown .= "### 💡 Candidate FAQ Recommendations\n\n";
+            $markdown .= "> The following visitor questions were frequently handled by the AI API. Adding them to your `/faq` page will answer future queries instantly for free!\n\n";
+
+            $recs = $data['recommendations'] ?? [];
+            if (empty($recs)) {
+                $markdown .= "*No FAQ recommendations available yet. Log more AI queries to see candidates!*\n";
+            } else {
+                $markdown .= "| Frequency | Sample Visitor Question | Suggested AI Response |\n";
+                $markdown .= "| --- | --- | --- |\n";
+                foreach ($recs as $rec) {
+                    $q = str_replace('|', '-', $rec['sample_question']);
+                    $a = str_replace('|', '-', substr($rec['suggested_answer'], 0, 120)) . '...';
+                    $markdown .= "| **{$rec['count']}x asked** | {$q} | {$a} |\n";
+                }
+            }
+
+            $blueprint->set('form.fields.section_analytics.fields.analytics_dashboard_display.content', $markdown);
+        }
+    }
+
+    /**
+     * Plugin initialization. Subscribes necessary events.
      */
     public function onPluginsInitialized()
     {
@@ -72,31 +133,29 @@ class AiChatbotPlugin extends Plugin
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
                 'onTwigSiteVariables' => ['onAdminTwigSiteVariables', 0],
-                'onPageInitialized' => ['onPageInitialized', 0],
-                'onPageNotFound' => ['onPageNotFound', 0],
+                'onPageInitialized' => ['onPageInitialized', 1000],
+                'onPageNotFound' => ['onPageNotFound', 1000],
                 'onAdminMenu' => ['onAdminMenu', 0],
+                'onBlueprintCreated' => ['onBlueprintCreated', 0],
             ]);
         } else {
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
                 'onTwigSiteVariables' => ['onTwigSiteVariables', 0],
-                'onPageInitialized' => ['onPageInitialized', 0],
-                'onPageNotFound' => ['onPageNotFound', 0],
+                'onPageInitialized' => ['onPageInitialized', 1000],
+                'onPageNotFound' => ['onPageNotFound', 1000],
             ]);
         }
     }
 
     /**
-     * Intercept custom routes if standard page lookup returns Page Not Found.
+     * Intercept custom API routes for Chatbot AJAX (/chatbot-api) and Analytics Exports (/chatbot-export).
      */
     public function onPageNotFound()
     {
         $this->routeCheck();
     }
 
-    /**
-     * Intercept API & Export calls after Grav Pages object is fully loaded.
-     */
     public function onPageInitialized()
     {
         $this->routeCheck();
@@ -120,6 +179,36 @@ class AiChatbotPlugin extends Plugin
             }
             exit();
         }
+    }
+
+    protected function handleChatbotQueryApi()
+    {
+        header('Content-Type: application/json');
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Headers: Content-Type');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            http_response_code(200);
+            exit();
+        }
+
+        $rawInput = file_get_contents('php://input');
+        $data = json_decode($rawInput, true) ?: $_POST;
+
+        $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
+        $response = $handler->processRequest($data);
+
+        http_response_code(200);
+        echo json_encode($response);
+        exit();
+    }
+
+    protected function handleAnalyticsExport()
+    {
+        $format = $_GET['format'] ?? 'csv';
+        $generator = new AnalyticsReportGenerator($this->grav);
+        $generator->exportReport($format);
+        exit();
     }
 
     /**
@@ -190,16 +279,16 @@ class AiChatbotPlugin extends Plugin
         $this->grav['assets']->addInlineJs("
             document.addEventListener('DOMContentLoaded', function() {
                 if (!document.getElementById('grav-ai-chatbot-root')) {
-                    const div = document.createElement('div');
+                    var div = document.createElement('div');
                     div.innerHTML = " . json_encode($widgetHtml) . ";
                     document.body.appendChild(div.firstElementChild);
                 }
             });
-        ", ['group' => 'bottom']);
+        ");
     }
 
     /**
-     * Inject Admin Analytics Dashboard CSS & JS and register admin sidebar menu link.
+     * Inject admin-specific assets for analytics reporting.
      */
     public function onAdminTwigSiteVariables()
     {
@@ -216,34 +305,15 @@ class AiChatbotPlugin extends Plugin
                 'priority' => 10
             ];
         }
-    }
 
-    /**
-     * Controller method for AJAX Chatbot API requests.
-     */
-    protected function handleChatbotQueryApi()
-    {
-        header('Content-Type: application/json');
-        $config = (array)$this->config->get('plugins.ai-chatbot');
-
-        $rawInput = file_get_contents('php://input');
-        $data = json_decode($rawInput, true) ?: $_POST ?: $_GET;
-
-        $handler = new ChatbotHandler($this->grav, $config);
-        $response = $handler->processRequest($data);
-
-        http_response_code($response['http_code'] ?? 200);
-        echo json_encode($response);
-        exit();
-    }
-
-    /**
-     * Controller method for CSV and JSON Analytics Reports exports.
-     */
-    protected function handleAnalyticsExport()
-    {
-        $format = $_GET['format'] ?? 'csv';
-        $reportGen = new AnalyticsReportGenerator($this->grav);
-        $reportGen->exportReport($format);
+        if (isset($this->grav['admin'])) {
+            $this->grav['admin']->sidebar['ai-chatbot'] = [
+                'route' => 'plugins/ai-chatbot',
+                'icon' => 'fa-robot',
+                'title' => 'AI Chatbot',
+                'authorize' => 'admin.plugins',
+                'priority' => 10
+            ];
+        }
     }
 }
