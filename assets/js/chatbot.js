@@ -1,123 +1,107 @@
 (function () {
-  let isInitialized = false;
+  'use strict';
 
-  function initChatbot() {
+  function initGravChatbot() {
     const config = window.GravChatbotConfig || {};
     const apiEndpoint = config.apiEndpoint || '/chatbot-api';
-    const retentionDays = parseInt(config.sessionRetentionDays, 10) || 7;
+    const position = config.position || 'bottom-right';
+    const welcomeMessage = config.welcomeMessage || 'Hello! How can I help you with this website today?';
+    const customErrorMessage = config.customErrorMessage || 'An unexpected connection error occurred. Please try again later.';
+    const accentColor = config.accentColor || '#3b82f6';
+    const themePreset = config.themePreset || 'glass_blue';
+    const retentionDays = config.sessionRetentionDays || 7;
+    const notificationEnabled = config.notificationEnabled !== false;
+    const notificationText = config.notificationText || '👋 Hi there! Need help finding anything on our website?';
+    const notificationDelaySeconds = config.notificationDelaySeconds || 4;
+    const quickRepliesEnabled = config.quickRepliesEnabled !== false;
+    const quickReplies = config.quickReplies || [];
+
     const STORAGE_KEY = 'grav_ai_chatbot_session_v1';
+    let isOpen = false;
+    let history = [];
 
-    const toggleBtn = document.getElementById('grav-chatbot-toggle');
-    const closeBtn = document.getElementById('grav-chatbot-close');
-    const windowBox = document.getElementById('grav-chatbot-window');
-    const messagesFeed = document.getElementById('grav-chatbot-messages');
-    const inputForm = document.getElementById('grav-chatbot-form');
-    const inputField = document.getElementById('grav-chatbot-input');
-    const toastBox = document.getElementById('grav-chatbot-toast');
-    const toastClose = document.getElementById('grav-chatbot-toast-close');
-    const iconChat = toggleBtn ? toggleBtn.querySelector('.grav-chatbot-icon-chat') : null;
-    const iconClose = toggleBtn ? toggleBtn.querySelector('.grav-chatbot-icon-close') : null;
+    const widgetRoot = document.getElementById('grav-ai-chatbot-root');
+    if (!widgetRoot) return;
 
-    if (!toggleBtn || !windowBox) {
-      // Retry initialization if widget elements are rendered dynamically
-      if (!isInitialized) {
-        setTimeout(initChatbot, 150);
-      }
-      return;
+    // Apply Position & Theme
+    widgetRoot.className = 'grav-chatbot-root pos-' + position + ' theme-' + themePreset;
+    if (accentColor && themePreset === 'custom') {
+      widgetRoot.style.setProperty('--grav-chatbot-accent', accentColor);
     }
 
-    isInitialized = true;
+    const toggleBtn = widgetRoot.querySelector('#grav-chatbot-toggle-btn');
+    const windowEl = widgetRoot.querySelector('#grav-chatbot-window');
+    const closeBtn = widgetRoot.querySelector('#grav-chatbot-close-btn');
+    const messagesFeed = widgetRoot.querySelector('#grav-chatbot-messages');
+    const inputForm = widgetRoot.querySelector('#grav-chatbot-form');
+    const inputField = widgetRoot.querySelector('#grav-chatbot-input');
+    const toastEl = widgetRoot.querySelector('#grav-chatbot-toast');
+    const toastText = widgetRoot.querySelector('#grav-chatbot-toast-text');
+    const toastClose = widgetRoot.querySelector('#grav-chatbot-toast-close');
+    const quickRepliesContainer = widgetRoot.querySelector('#grav-chatbot-quick-replies');
 
-    let history = [];
-    let isOpen = false;
-
-    loadSession();
-
-    if (config.notificationEnabled && toastBox) {
-      const delayMs = (parseInt(config.notificationDelaySeconds, 10) || 4) * 1000;
-      setTimeout(function () {
-        if (!isOpen && !sessionStorage.getItem('grav_chatbot_toast_dismissed')) {
-          toastBox.style.display = 'flex';
-        }
-      }, delayMs);
-
-      if (toastClose) {
-        toastClose.addEventListener('click', function (e) {
-          e.stopPropagation();
-          dismissToast();
+    // Render Quick Replies
+    if (quickRepliesContainer && quickRepliesEnabled && Array.isArray(quickReplies) && quickReplies.length > 0) {
+      quickRepliesContainer.innerHTML = '';
+      quickReplies.forEach(qr => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'grav-chatbot-quick-reply-btn';
+        btn.textContent = qr.label || qr.action_or_prompt;
+        btn.addEventListener('click', function () {
+          if (qr.type === 'action') {
+            sendQuestion(qr.label || qr.action_or_prompt, qr.action_or_prompt);
+          } else {
+            sendQuestion(qr.action_or_prompt || qr.label, 'query');
+          }
         });
-      }
-
-      toastBox.addEventListener('click', function () {
-        dismissToast();
-        toggleChat(true);
+        quickRepliesContainer.appendChild(btn);
       });
     }
 
-    function dismissToast() {
-      if (toastBox) toastBox.style.display = 'none';
-      sessionStorage.setItem('grav_chatbot_toast_dismissed', 'true');
-    }
-
-    function toggleChat(show) {
-      isOpen = show !== undefined ? show : windowBox.style.display === 'none' || windowBox.style.display === '';
-      windowBox.style.display = isOpen ? 'flex' : 'none';
-
-      if (iconChat && iconClose) {
-        iconChat.style.display = isOpen ? 'none' : 'block';
-        iconClose.style.display = isOpen ? 'block' : 'none';
-      }
-
+    // Toggle Chat Window
+    function toggleChat(forceState) {
+      isOpen = typeof forceState === 'boolean' ? forceState : !isOpen;
       if (isOpen) {
-        dismissToast();
+        windowEl.classList.add('active');
+        toggleBtn.classList.add('active');
+        if (toastEl) toastEl.classList.remove('active');
+        if (messagesFeed && messagesFeed.children.length === 0) {
+          appendMessage('assistant', welcomeMessage, null, true);
+        }
         if (inputField) inputField.focus();
+      } else {
+        windowEl.classList.remove('active');
+        toggleBtn.classList.remove('active');
       }
-
       saveSession();
     }
 
-    // Attach Click Event Directly to Toggle Button
-    toggleBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      toggleChat();
-    });
+    if (toggleBtn) toggleBtn.addEventListener('click', () => toggleChat());
+    if (closeBtn) closeBtn.addEventListener('click', () => toggleChat(false));
 
-    if (closeBtn) {
-      closeBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        toggleChat(false);
+    // Proactive Toast Notification
+    if (notificationEnabled && toastEl && toastText) {
+      toastText.textContent = notificationText;
+      setTimeout(() => {
+        if (!isOpen && !localStorage.getItem('grav_chatbot_toast_dismissed')) {
+          toastEl.classList.add('active');
+        }
+      }, notificationDelaySeconds * 1000);
+
+      if (toastClose) {
+        toastClose.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toastEl.classList.remove('active');
+          localStorage.setItem('grav_chatbot_toast_dismissed', 'true');
+        });
+      }
+
+      toastEl.addEventListener('click', () => {
+        toastEl.classList.remove('active');
+        toggleChat(true);
       });
     }
-
-    // Global Document Click Delegation Fallback for Chat Launcher
-    document.addEventListener('click', function (e) {
-      const target = e.target.closest('#grav-chatbot-toggle, .grav-chatbot-launcher');
-      if (target && !e.defaultPrevented) {
-        toggleChat();
-      }
-    });
-
-    // Quick Reply Pill Click Handler
-    document.addEventListener('click', function (e) {
-      const pill = e.target.closest('.grav-chatbot-pill');
-      if (pill && !e.defaultPrevented) {
-        e.preventDefault();
-        const action = pill.getAttribute('data-action');
-        const prompt = pill.getAttribute('data-prompt');
-
-        if (action === 'summarize_page') {
-          sendQuestion(pill.textContent.trim(), 'summarize_page');
-        } else if (action === 'contact') {
-          sendQuestion('How can I contact support or the team?', 'query');
-        } else if (action) {
-          sendQuestion(pill.textContent.trim(), action);
-        } else if (prompt) {
-          sendQuestion(prompt, 'query');
-        } else {
-          sendQuestion(pill.textContent.trim(), 'query');
-        }
-      }
-    });
 
     function appendMessage(role, text, source, skipSave) {
       if (!messagesFeed) return;
@@ -159,10 +143,10 @@
         const btnNo = document.createElement('button');
         btnNo.type = 'button';
         btnNo.className = 'grav-chatbot-btn-confirm no';
-        btnNo.innerHTML = '👎 No, ask AI';
+        btnNo.innerHTML = '👎 No (Ask AI)';
         btnNo.addEventListener('click', function () {
-          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-escalating">Connecting to AI Assistant...</span>';
-          sendQuestion(text, 'force_ai');
+          confirmBox.innerHTML = '<span class="grav-chatbot-confirm-thankyou">Routing to AI assistant... 🤖</span>';
+          sendQuestion(textNode.textContent, 'force_ai');
         });
 
         confirmBox.appendChild(promptText);
@@ -176,25 +160,18 @@
       messagesFeed.scrollTop = messagesFeed.scrollHeight;
 
       if (!skipSave) {
-        history.push({ role, text, source, timestamp: Date.now() });
+        history.push({ role, text, source });
         saveSession();
       }
     }
 
     function showTypingIndicator() {
-      if (!messagesFeed) return null;
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'grav-chatbot-msg assistant typing-msg';
-      msgDiv.innerHTML = `
-        <div class="grav-chatbot-bubble">
-          <div class="grav-chatbot-typing">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-      `;
-      messagesFeed.appendChild(msgDiv);
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'grav-chatbot-msg assistant typing-msg';
+      typingDiv.innerHTML = '<div class="grav-chatbot-bubble"><span class="grav-chatbot-typing-dots"><span></span><span></span><span></span></span></div>';
+      messagesFeed.appendChild(typingDiv);
       messagesFeed.scrollTop = messagesFeed.scrollHeight;
-      return msgDiv;
+      return typingDiv;
     }
 
     function removeTypingIndicator(element) {
@@ -272,14 +249,14 @@
         const data = await res.json();
         removeTypingIndicator(typingEl);
 
-        if (data.answer) {
+        if (data.success && data.answer) {
           appendMessage('assistant', data.answer, data.source);
         } else {
-          appendMessage('assistant', 'Sorry, I could not process your request at this time.');
+          appendMessage('assistant', data.answer || customErrorMessage);
         }
       } catch (err) {
         removeTypingIndicator(typingEl);
-        appendMessage('assistant', 'An unexpected connection error occurred. Please try again later.');
+        appendMessage('assistant', customErrorMessage);
       }
     }
 
@@ -299,23 +276,22 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 
-      // Markdown links: [title](url)
-      escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="grav-chatbot-link" target="_blank" rel="noopener">$1</a>');
+      // Basic Markdown Formatting
+      escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+      escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      escaped = escaped.replace(/\n/g, '<br>');
 
-      // Bold text: **text**
-      escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-      // Headers: ### Header
-      escaped = escaped.replace(/^### (.*$)/gim, '<h4 class="grav-chatbot-h4">$1</h4>');
-
-      // Newlines to <br>
-      return escaped.replace(/\n/g, '<br>');
+      return escaped;
     }
+
+    loadSession();
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initChatbot);
+    document.addEventListener('DOMContentLoaded', initGravChatbot);
   } else {
-    initChatbot();
+    initGravChatbot();
   }
 })();

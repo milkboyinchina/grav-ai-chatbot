@@ -1,8 +1,8 @@
 enabled: true
 ai_enabled: true
-provider: groq
-api_key: ''
-model: llama-3.3-70b-versatile
+provider: gemini
+api_key: YOUR_API_KEY_HERE
+model: gemini-1.5-flash
 custom_endpoint: ''
 
 faq_enabled: true
@@ -29,14 +29,12 @@ log_api_usage: true
 cost_input_token_price_per_m: '0.15'
 cost_output_token_price_per_m: '0.60'
 
-analytics_action: none
-analytics_range: all
-
 theme_preset: glass_blue
 position: bottom-right
 display_mode: all
 display_pages: "/\n/contact\n/faq"
 welcome_message: 'Hello! How can I help you with this website today?'
+custom_error_message: 'An unexpected connection error occurred. Please try again later.'
 accent_color: '#3b82f6'
 
 quick_replies_enabled: true

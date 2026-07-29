@@ -105,7 +105,7 @@ class AiChatbotPlugin extends Plugin
                 $maxDaily = max(1, ...($dailyValues ?: [1]));
 
                 if (empty($dailyLabels)) {
-                    $chartLines[] = "  (No interaction data logged)";
+                    $chartLines[] = "  (No interaction data logged yet)";
                 } else {
                     $slicedLabels = count($dailyLabels) > 25 ? array_slice($dailyLabels, -25) : $dailyLabels;
                     $slicedValues = count($dailyValues) > 25 ? array_slice($dailyValues, -25) : $dailyValues;
@@ -409,6 +409,7 @@ class AiChatbotPlugin extends Plugin
             'apiEndpoint' => '/chatbot-api',
             'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
             'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
+            'customErrorMessage' => $this->config->get('plugins.ai-chatbot.custom_error_message', 'An unexpected connection error occurred. Please try again later.'),
             'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
             'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
             'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
