@@ -6,7 +6,7 @@ use Grav\Common\Grav;
 /**
  * Class Logger
  * Logs visitor interactions, source (FAQ vs AI), prompt & completion tokens, estimated API costs,
- * and maintains dedicated error logs in user/data/ai-chatbot/error.log.
+ * server AI response payloads, and maintains dedicated error logs in user/data/ai-chatbot/error.log.
  *
  * @license GPL-3.0-or-later
  */
@@ -109,6 +109,43 @@ class Logger
     }
 
     /**
+     * Record raw AI provider response to user/data/ai-chatbot/ai_responses.log.
+     */
+    public function logAiResponse(array $data): void
+    {
+        $logFile = $this->getAiResponseLogFilePath();
+        $dir = dirname($logFile);
+        if (!file_exists($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $timestamp = date('Y-m-d H:i:s P');
+        $provider = $data['provider'] ?? 'ai';
+        $model = $data['model'] ?? 'default';
+        $status = !empty($data['success']) ? 'SUCCESS' : 'FAILURE';
+        $promptTokens = (int)($data['prompt_tokens'] ?? 0);
+        $completionTokens = (int)($data['completion_tokens'] ?? 0);
+        $question = trim($data['question'] ?? '');
+        $answer = trim($data['answer'] ?? '');
+        $error = $data['error'] ?? null;
+
+        $logEntry = sprintf(
+            "[%s] [%s] [PROVIDER: %s] [MODEL: %s] [TOKENS: %d in / %d out]\nQuestion: %s\nAnswer: %s%s\n--------------------------------------------------\n",
+            $timestamp,
+            $status,
+            strtoupper($provider),
+            $model,
+            $promptTokens,
+            $completionTokens,
+            $question,
+            $answer,
+            $error ? "\nError: {$error}" : ''
+        );
+
+        file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
+
+    /**
      * Record a formatted error entry to user/data/ai-chatbot/error.log.
      */
     public function logError(string $message, string $context = 'GENERAL'): void
@@ -154,6 +191,13 @@ class Logger
         $locator = $this->grav['locator'];
         $base = $locator->findResource('user://data', true) ?: (defined('GRAV_ROOT') ? GRAV_ROOT . '/user/data' : '/var/www/html/user/data');
         return $base . '/ai-chatbot/interactions.json';
+    }
+
+    public function getAiResponseLogFilePath(): string
+    {
+        $locator = $this->grav['locator'];
+        $base = $locator->findResource('user://data', true) ?: (defined('GRAV_ROOT') ? GRAV_ROOT . '/user/data' : '/var/www/html/user/data');
+        return $base . '/ai-chatbot/ai_responses.log';
     }
 
     public function getErrorLogFilePath(): string

@@ -34,6 +34,7 @@ session_retention_days: 7
 
 logging_enabled: true
 log_api_usage: true
+log_ai_responses: false
 cost_input_token_price_per_m: '0.15'
 cost_output_token_price_per_m: '0.60'
 

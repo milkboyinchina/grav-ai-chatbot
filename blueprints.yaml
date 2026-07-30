@@ -425,6 +425,18 @@ form:
           validate:
             type: bool
 
+        log_ai_responses:
+          type: toggle
+          label: 🤖 Enable AI Server Response Logging
+          help: Record full AI server response payloads to user/data/ai-chatbot/ai_responses.log (Disabled by default)
+          highlight: 0
+          default: 0
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
         cost_input_token_price_per_m:
           type: text
           label: Input Token Price(USD) per 1 Million Token

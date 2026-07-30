@@ -471,6 +471,19 @@ class ChatbotHandler
                 $logger = new Logger($this->grav);
                 $logger->logError("AI Model Query Error [Provider: {$provider}, Model: {$model}]: {$errMsg}", 'AI_MODEL_API');
 
+                if (!empty($this->config['log_ai_responses'])) {
+                    $logger->logAiResponse([
+                        'provider' => $provider,
+                        'model' => $model,
+                        'success' => false,
+                        'question' => $question,
+                        'answer' => '',
+                        'prompt_tokens' => $promptTokens,
+                        'completion_tokens' => $completionTokens,
+                        'error' => $errMsg
+                    ]);
+                }
+
                 $customMsg = $this->config['custom_error_message'] ?? 'An unexpected connection error occurred. Please try again later.';
                 return [
                     'http_code' => 500,
@@ -488,6 +501,19 @@ class ChatbotHandler
                 'prompt_tokens' => $promptTokens,
                 'completion_tokens' => $completionTokens
             ]);
+
+            if (!empty($this->config['log_ai_responses'])) {
+                $logger->logAiResponse([
+                    'provider' => $provider,
+                    'model' => $model,
+                    'success' => true,
+                    'question' => $question,
+                    'answer' => $answer,
+                    'prompt_tokens' => $promptTokens,
+                    'completion_tokens' => $completionTokens,
+                    'error' => null
+                ]);
+            }
 
             return [
                 'http_code' => 200,
