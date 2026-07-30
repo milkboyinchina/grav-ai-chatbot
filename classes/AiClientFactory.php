@@ -22,6 +22,7 @@ class AiClientFactory
         $apiKey = trim($config['api_key'] ?? '');
         $model = trim($config['model'] ?? '');
         $customEndpoint = trim($config['custom_endpoint'] ?? '');
+        $timeout = (int)($config['api_timeout'] ?? 30);
 
         switch ($provider) {
             case 'groq':
@@ -29,7 +30,8 @@ class AiClientFactory
                     $apiKey,
                     $model ?: 'llama-3.3-70b-versatile',
                     'https://api.groq.com/openai/v1',
-                    false
+                    false,
+                    $timeout
                 );
 
             case 'openrouter':
@@ -37,7 +39,8 @@ class AiClientFactory
                     $apiKey,
                     $model ?: 'google/gemini-flash-1.5',
                     'https://openrouter.ai/api/v1',
-                    true
+                    true,
+                    $timeout
                 );
 
             case 'openai':
@@ -45,7 +48,8 @@ class AiClientFactory
                     $apiKey,
                     $model ?: 'gpt-4o-mini',
                     'https://api.openai.com/v1',
-                    false
+                    false,
+                    $timeout
                 );
 
             case 'custom':
@@ -53,14 +57,16 @@ class AiClientFactory
                     $apiKey,
                     $model ?: 'default',
                     $customEndpoint,
-                    false
+                    false,
+                    $timeout
                 );
 
             case 'gemini':
             default:
                 return new GeminiClient(
                     $apiKey,
-                    $model ?: 'gemini-1.5-flash'
+                    $model ?: 'gemini-2.0-flash',
+                    $timeout
                 );
         }
     }

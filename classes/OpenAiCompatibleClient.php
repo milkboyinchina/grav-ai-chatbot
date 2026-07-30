@@ -3,7 +3,7 @@ namespace Grav\Plugin\AiChatbot;
 
 /**
  * Class OpenAiCompatibleClient
- * Driver for OpenAI Chat Completions API & OpenRouter endpoints.
+ * Driver for OpenAI Chat Completions API, Groq & OpenRouter endpoints.
  *
  * @license GPL-3.0-or-later
  */
@@ -13,12 +13,14 @@ class OpenAiCompatibleClient implements AiClientInterface
     protected string $model;
     protected string $endpoint;
     protected bool $isOpenRouter;
+    protected int $timeout;
 
-    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false)
+    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false, int $timeout = 30)
     {
         $this->apiKey = $apiKey;
         $this->model = $model ?: 'gpt-4o-mini';
         $this->isOpenRouter = $isOpenRouter;
+        $this->timeout = max(5, $timeout);
 
         if (!empty($endpoint)) {
             $this->endpoint = rtrim($endpoint, '/') . '/chat/completions';
@@ -75,7 +77,7 @@ class OpenAiCompatibleClient implements AiClientInterface
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
 
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

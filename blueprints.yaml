@@ -85,6 +85,16 @@ form:
           help: PLUGIN_AI_CHATBOT.CUSTOM_ENDPOINT_HELP
           default: ''
 
+        api_timeout:
+          type: text
+          label: ⏱️ AI Provider API Timeout (Seconds)
+          help: Maximum HTTP execution time in seconds for AI provider responses (default 30 seconds, range 5-120)
+          default: 30
+          validate:
+            type: int
+            min: 5
+            max: 120
+
     section_faq:
       type: section
       title: PLUGIN_AI_CHATBOT.FAQ_SETTINGS

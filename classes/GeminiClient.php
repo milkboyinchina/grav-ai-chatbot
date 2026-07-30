@@ -11,11 +11,13 @@ class GeminiClient implements AiClientInterface
 {
     protected string $apiKey;
     protected string $model;
+    protected int $timeout;
 
-    public function __construct(string $apiKey, string $model = 'gemini-2.0-flash')
+    public function __construct(string $apiKey, string $model = 'gemini-2.0-flash', int $timeout = 30)
     {
         $this->apiKey = $apiKey;
         $this->model = $model ?: 'gemini-2.0-flash';
+        $this->timeout = max(5, $timeout);
     }
 
     public function generateResponse(string $systemPrompt, array $messages): array
@@ -73,7 +75,7 @@ class GeminiClient implements AiClientInterface
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
 
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
