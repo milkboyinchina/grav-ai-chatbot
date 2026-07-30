@@ -3,7 +3,7 @@ namespace Grav\Plugin\AiChatbot;
 
 /**
  * Class OpenAiCompatibleClient
- * Driver for OpenAI Chat Completions API, Groq & OpenRouter endpoints.
+ * Driver for OpenAI Chat Completions API, Groq, OpenRouter & Ollama endpoints.
  *
  * @license GPL-3.0-or-later
  */
@@ -15,14 +15,16 @@ class OpenAiCompatibleClient implements AiClientInterface
     protected bool $isOpenRouter;
     protected int $timeout;
     protected int $maxTokens;
+    protected int $contextWindowTokens;
 
-    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false, int $timeout = 30, int $maxTokens = 800)
+    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false, int $timeout = 30, int $maxTokens = 800, int $contextWindowTokens = 8192)
     {
         $this->apiKey = $apiKey;
         $this->model = $model ?: 'gpt-4o-mini';
         $this->isOpenRouter = $isOpenRouter;
         $this->timeout = max(5, $timeout);
         $this->maxTokens = max(50, $maxTokens);
+        $this->contextWindowTokens = max(512, $contextWindowTokens);
 
         if (!empty($endpoint)) {
             $this->endpoint = rtrim($endpoint, '/') . '/chat/completions';
@@ -61,7 +63,10 @@ class OpenAiCompatibleClient implements AiClientInterface
             'model' => $this->model,
             'messages' => $formattedMessages,
             'temperature' => 0.4,
-            'max_tokens' => $this->maxTokens
+            'max_tokens' => $this->maxTokens,
+            'options' => [
+                'num_ctx' => $this->contextWindowTokens
+            ]
         ];
 
         $headers = [
@@ -79,33 +84,45 @@ class OpenAiCompatibleClient implements AiClientInterface
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
-        $result = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $response = curl_exec($ch);
         $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if ($curlError || $httpCode !== 200) {
-            $errData = json_decode($result, true);
-            $errMsg = $errData['error']['message'] ?? $curlError ?: "HTTP Error {$httpCode}";
+        if (!empty($curlError)) {
             return [
                 'success' => false,
-                'answer' => "AI Service Error: {$errMsg}",
+                'answer' => 'AI Service Error: ' . $curlError,
                 'prompt_tokens' => 0,
                 'completion_tokens' => 0,
-                'error' => $errMsg
+                'error' => $curlError
             ];
         }
 
-        $data = json_decode($result, true);
-        $answerText = $data['choices'][0]['message']['content'] ?? 'No response generated.';
-        $promptTokens = $data['usage']['prompt_tokens'] ?? 0;
-        $completionTokens = $data['usage']['completion_tokens'] ?? 0;
+        $data = json_decode($response, true);
+
+        if ($httpCode !== 200 || !empty($data['error'])) {
+            $errorMsg = is_array($data['error'] ?? null) ? ($data['error']['message'] ?? 'Unknown Error') : ($data['error'] ?? "HTTP Error {$httpCode}");
+            return [
+                'success' => false,
+                'answer' => 'AI Service Error: ' . $errorMsg,
+                'prompt_tokens' => 0,
+                'completion_tokens' => 0,
+                'error' => $errorMsg
+            ];
+        }
+
+        $content = $data['choices'][0]['message']['content'] ?? '';
+        $promptTokens = (int)($data['usage']['prompt_tokens'] ?? 0);
+        $completionTokens = (int)($data['usage']['completion_tokens'] ?? 0);
 
         return [
-            'success' => true,
-            'answer' => trim($answerText),
+            'success' => !empty($content),
+            'answer' => trim($content),
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
             'error' => null

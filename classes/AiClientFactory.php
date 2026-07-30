@@ -24,6 +24,7 @@ class AiClientFactory
         $customEndpoint = trim($config['custom_endpoint'] ?? '');
         $timeout = (int)($config['api_timeout'] ?? 30);
         $maxTokens = (int)($config['max_tokens'] ?? 800);
+        $contextWindowTokens = (int)($config['context_window_tokens'] ?? 8192);
 
         switch ($provider) {
             case 'groq':
@@ -33,7 +34,8 @@ class AiClientFactory
                     'https://api.groq.com/openai/v1',
                     false,
                     $timeout,
-                    $maxTokens
+                    $maxTokens,
+                    $contextWindowTokens
                 );
 
             case 'openrouter':
@@ -43,7 +45,8 @@ class AiClientFactory
                     'https://openrouter.ai/api/v1',
                     true,
                     $timeout,
-                    $maxTokens
+                    $maxTokens,
+                    $contextWindowTokens
                 );
 
             case 'openai':
@@ -53,7 +56,8 @@ class AiClientFactory
                     'https://api.openai.com/v1',
                     false,
                     $timeout,
-                    $maxTokens
+                    $maxTokens,
+                    $contextWindowTokens
                 );
 
             case 'ollama':
@@ -71,7 +75,8 @@ class AiClientFactory
                     $endpoint,
                     false,
                     $timeout,
-                    $maxTokens
+                    $maxTokens,
+                    $contextWindowTokens
                 );
 
             case 'custom':
@@ -81,7 +86,8 @@ class AiClientFactory
                     $customEndpoint,
                     false,
                     $timeout,
-                    $maxTokens
+                    $maxTokens,
+                    $contextWindowTokens
                 );
 
             case 'gemini':

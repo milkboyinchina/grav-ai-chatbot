@@ -24,11 +24,12 @@ class ContextIndexer
      * Convenience method for building site context prompt.
      *
      * @param string $currentRoute
+     * @param int $maxContextChars
      * @return string
      */
-    public function buildContextPrompt(string $currentRoute = '/'): string
+    public function buildContextPrompt(string $currentRoute = '/', int $maxContextChars = 3000): string
     {
-        return $this->buildSiteContext();
+        return $this->buildSiteContext([], $maxContextChars);
     }
 
     /**
@@ -68,12 +69,13 @@ class ContextIndexer
     }
 
     /**
-     * Builds site summary text from published pages.
+     * Builds site summary text from published pages, strictly constrained by maxContextChars to honor model context limits.
      *
      * @param array $excludeRoutes List of routes to exclude from indexing
+     * @param int $maxContextChars Maximum character count allowed for context prompt
      * @return string
      */
-    public function buildSiteContext(array $excludeRoutes = []): string
+    public function buildSiteContext(array $excludeRoutes = [], int $maxContextChars = 3000): string
     {
         $pages = [];
         try {
@@ -93,6 +95,7 @@ class ContextIndexer
         }
 
         $siteContext = [];
+        $accumulatedLen = 0;
 
         /** @var Page $page */
         foreach ($pages as $page) {
@@ -110,19 +113,32 @@ class ContextIndexer
                 $content = strip_tags($page->content());
                 // Truncate individual page length to prevent excessive tokens
                 $cleanContent = trim(preg_replace('/\s+/', ' ', $content));
-                if (strlen($cleanContent) > 600) {
-                    $cleanContent = substr($cleanContent, 0, 600) . '...';
+                if (strlen($cleanContent) > 400) {
+                    $cleanContent = substr($cleanContent, 0, 400) . '...';
                 }
 
                 if (!empty($cleanContent)) {
-                    $siteContext[] = "Page Title: {$title} (Route: {$route})\nSummary: {$cleanContent}";
+                    $entry = "Page Title: {$title} (Route: {$route})\nSummary: {$cleanContent}";
+                    $entryLen = strlen($entry);
+
+                    if ($accumulatedLen + $entryLen > $maxContextChars && !empty($siteContext)) {
+                        break;
+                    }
+
+                    $siteContext[] = $entry;
+                    $accumulatedLen += $entryLen + 7;
                 }
             } catch (\Throwable $t) {
                 continue;
             }
         }
 
-        return implode("\n\n---\n\n", array_slice($siteContext, 0, 15));
+        $result = implode("\n\n---\n\n", $siteContext);
+        if (strlen($result) > $maxContextChars) {
+            $result = substr($result, 0, $maxContextChars) . '...';
+        }
+
+        return $result;
     }
 
     /**

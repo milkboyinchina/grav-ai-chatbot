@@ -442,8 +442,17 @@ class ChatbotHandler
         $model = $this->config['model'] ?? 'llama-3.3-70b-versatile';
 
         try {
+            $contextWindowTokens = (int)($this->config['context_window_tokens'] ?? 8192);
+            $maxOutputTokens = (int)($this->config['max_tokens'] ?? 800);
+            $maxInputTokens = (int)($this->config['max_input_tokens'] ?? 500);
+
+            // Dynamically calculate max allowed context prompt characters to respect context_window_tokens limit
+            $reservedTokens = $maxOutputTokens + $maxInputTokens + 150; // Output + input + prompt framing
+            $maxContextTokens = max(150, $contextWindowTokens - $reservedTokens);
+            $maxContextChars = $maxContextTokens * 4; // Approx 4 chars per token average
+
             $indexer = new ContextIndexer($this->grav);
-            $siteContext = $indexer->buildContextPrompt($currentRoute);
+            $siteContext = $indexer->buildContextPrompt($currentRoute, $maxContextChars);
 
             $messages = [];
             if (!empty($history) && is_array($history)) {
