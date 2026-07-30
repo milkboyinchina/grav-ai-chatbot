@@ -65,7 +65,8 @@ class OpenAiCompatibleClient implements AiClientInterface
             'temperature' => 0.4,
             'max_tokens' => $this->maxTokens,
             'options' => [
-                'num_ctx' => $this->contextWindowTokens
+                'num_ctx' => $this->contextWindowTokens,
+                'num_predict' => $this->maxTokens
             ]
         ];
 
