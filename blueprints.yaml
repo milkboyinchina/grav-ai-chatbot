@@ -105,6 +105,16 @@ form:
             min: 50
             max: 4000
 
+        max_input_tokens:
+          type: text
+          label: 📥 Max Input Tokens (User Question Limit)
+          help: Maximum allowed input tokens for user question (default 500 tokens, ~2000 characters). If exceeded, a warning message is displayed.
+          default: 500
+          validate:
+            type: int
+            min: 50
+            max: 8000
+
     section_faq:
       type: section
       title: PLUGIN_AI_CHATBOT.FAQ_SETTINGS

@@ -76,6 +76,20 @@ class ChatbotHandler
                 ];
             }
 
+            // Input Token / Character Length Limit Check
+            $maxInputTokens = (int)($this->config['max_input_tokens'] ?? 500);
+            $maxInputChars = $maxInputTokens * 4; // Approx 4 chars per token average
+            if (!empty($question) && mb_strlen($question) > $maxInputChars) {
+                $logger = new Logger($this->grav);
+                $logger->logError("Input Limit Exceeded", "User message (" . mb_strlen($question) . " chars) exceeds maximum allowed limit of {$maxInputTokens} tokens ({$maxInputChars} chars).", "INPUT_LIMIT");
+
+                return [
+                    'http_code' => 400,
+                    'success' => false,
+                    'answer' => "⚠️ Message length limit exceeded: Your question exceeds the maximum input limit of {$maxInputTokens} tokens (~{$maxInputChars} characters). Please shorten your question and try again."
+                ];
+            }
+
             // IP-Based Rate Limiting Check
             if (!empty($this->config['rate_limit_enabled'])) {
                 $maxRequests = (int)($this->config['rate_limit_max_requests'] ?? 10);

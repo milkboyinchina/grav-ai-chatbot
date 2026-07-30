@@ -7,6 +7,7 @@ model: gemini-2.0-flash
 custom_endpoint: ''
 api_timeout: 30
 max_tokens: 800
+max_input_tokens: 500
 
 faq_enabled: true
 enable_multilingual_faq: true

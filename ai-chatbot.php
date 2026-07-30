@@ -336,6 +336,7 @@ class AiChatbotPlugin extends Plugin
             'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
             'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
             'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
+            'maxInputTokens' => (int)$this->config->get('plugins.ai-chatbot.max_input_tokens', 500),
             'currentRoute' => $currentRoute,
         ]);
 
@@ -595,6 +596,7 @@ class AiChatbotPlugin extends Plugin
             'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
             'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
             'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
+            'maxInputTokens' => (int)$this->config->get('plugins.ai-chatbot.max_input_tokens', 500),
             'currentRoute' => $currentRoute,
         ]);
 

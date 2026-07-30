@@ -236,6 +236,17 @@
       const q = customQuestion || (inputField ? inputField.value.trim() : '');
       if (!q) return;
 
+      const maxInputTokens = config.maxInputTokens || 500;
+      const maxInputChars = maxInputTokens * 4;
+
+      if (q.length > maxInputChars && action !== 'summarize_page') {
+        if (!customQuestion && inputField) {
+          inputField.value = q; // Preserve user's text for editing
+        }
+        appendMessage('assistant', `⚠️ **Message Too Long**: Your question (${q.length} characters) exceeds the maximum allowed input limit of ${maxInputTokens} tokens (~${maxInputChars} characters). Please shorten your message and try again.`, null, true);
+        return;
+      }
+
       if (!customQuestion && inputField) {
         inputField.value = '';
       }
