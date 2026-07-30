@@ -203,8 +203,8 @@ class ChatbotHandler
                 ];
             }
 
-            // TIER 3: AI Model Call (Groq, Gemini, OpenRouter, OpenAI, Custom)
-            if (!($this->config['ai_enabled'] ?? true)) {
+            // TIER 3: AI Model Call (Groq, Gemini, OpenRouter, OpenAI, Ollama, Custom)
+            if (!$this->isAiEnabled()) {
                 $aiDisabledReply = $this->config['ai_disabled_response_text'] ?? "AI assistant is currently disabled. Please search our FAQ or contact site support for assistance.";
                 $logger = new Logger($this->grav);
                 $logger->logInteraction([
@@ -382,13 +382,14 @@ class ChatbotHandler
             ];
         }
 
-        if (!($this->config['ai_enabled'] ?? true)) {
+        if (!$this->isAiEnabled()) {
             $aiDisabledReply = $this->config['ai_disabled_response_text'] ?? "AI assistant is currently disabled. Please search our FAQ or contact site support for assistance.";
             return [
                 'http_code' => 200,
                 'success' => true,
                 'answer' => $aiDisabledReply,
-                'source' => 'ai_disabled'
+                'source' => 'ai_disabled',
+                'debug_raw_ai_enabled' => $this->config['ai_enabled'] ?? 'MISSING'
             ];
         }
 
@@ -534,5 +535,23 @@ class ChatbotHandler
                 'answer' => $customMsg
             ];
         }
+    }
+
+    /**
+     * Check if AI features are enabled in plugin configuration.
+     */
+    protected function isAiEnabled(): bool
+    {
+        $val = $this->config['ai_enabled'] ?? true;
+        if (is_bool($val)) {
+            return $val;
+        }
+        if (is_numeric($val)) {
+            return (int)$val === 1;
+        }
+        if (is_string($val)) {
+            return in_array(strtolower(trim($val)), ['1', 'true', 'yes', 'on', 'enabled'], true);
+        }
+        return (bool)$val;
     }
 }
