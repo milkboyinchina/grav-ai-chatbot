@@ -6,6 +6,7 @@ api_key: YOUR_API_KEY_HERE
 model: gemini-2.0-flash
 custom_endpoint: ''
 api_timeout: 30
+max_tokens: 800
 
 faq_enabled: true
 enable_multilingual_faq: true

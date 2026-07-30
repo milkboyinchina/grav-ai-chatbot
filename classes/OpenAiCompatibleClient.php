@@ -14,13 +14,15 @@ class OpenAiCompatibleClient implements AiClientInterface
     protected string $endpoint;
     protected bool $isOpenRouter;
     protected int $timeout;
+    protected int $maxTokens;
 
-    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false, int $timeout = 30)
+    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false, int $timeout = 30, int $maxTokens = 800)
     {
         $this->apiKey = $apiKey;
         $this->model = $model ?: 'gpt-4o-mini';
         $this->isOpenRouter = $isOpenRouter;
         $this->timeout = max(5, $timeout);
+        $this->maxTokens = max(50, $maxTokens);
 
         if (!empty($endpoint)) {
             $this->endpoint = rtrim($endpoint, '/') . '/chat/completions';
@@ -59,7 +61,7 @@ class OpenAiCompatibleClient implements AiClientInterface
             'model' => $this->model,
             'messages' => $formattedMessages,
             'temperature' => 0.4,
-            'max_tokens' => 800
+            'max_tokens' => $this->maxTokens
         ];
 
         $headers = [

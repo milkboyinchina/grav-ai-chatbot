@@ -12,12 +12,14 @@ class GeminiClient implements AiClientInterface
     protected string $apiKey;
     protected string $model;
     protected int $timeout;
+    protected int $maxTokens;
 
-    public function __construct(string $apiKey, string $model = 'gemini-2.0-flash', int $timeout = 30)
+    public function __construct(string $apiKey, string $model = 'gemini-2.0-flash', int $timeout = 30, int $maxTokens = 800)
     {
         $this->apiKey = $apiKey;
         $this->model = $model ?: 'gemini-2.0-flash';
         $this->timeout = max(5, $timeout);
+        $this->maxTokens = max(50, $maxTokens);
     }
 
     public function generateResponse(string $systemPrompt, array $messages): array
@@ -66,7 +68,7 @@ class GeminiClient implements AiClientInterface
             ],
             'generationConfig' => [
                 'temperature' => 0.4,
-                'maxOutputTokens' => 800
+                'maxOutputTokens' => $this->maxTokens
             ]
         ];
 

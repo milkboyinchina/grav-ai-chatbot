@@ -95,6 +95,16 @@ form:
             min: 5
             max: 120
 
+        max_tokens:
+          type: text
+          label: 🔤 Max Output Tokens per Response
+          help: Maximum completion tokens generated per AI reply (default 800 tokens, range 50-4000)
+          default: 800
+          validate:
+            type: int
+            min: 50
+            max: 4000
+
     section_faq:
       type: section
       title: PLUGIN_AI_CHATBOT.FAQ_SETTINGS
