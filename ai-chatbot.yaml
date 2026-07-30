@@ -43,6 +43,7 @@ theme_preset: glass_blue
 position: bottom-right
 display_mode: all
 display_pages: "/\n/contact\n/faq"
+bot_title: 'Website Assistant'
 welcome_message: 'Hello! How can I help you with this website today?'
 custom_error_message: 'An unexpected connection error occurred. Please try again later.'
 accent_color: '#3b82f6'

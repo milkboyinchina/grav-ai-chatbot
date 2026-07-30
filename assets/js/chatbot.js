@@ -5,6 +5,7 @@
     const config = window.GravChatbotConfig || {};
     const apiEndpoint = config.apiEndpoint || '/chatbot-api';
     const position = config.position || 'bottom-right';
+    const botTitle = config.botTitle || 'Website Assistant';
     const welcomeMessage = config.welcomeMessage || 'Hello! How can I help you with this website today?';
     const customErrorMessage = config.customErrorMessage || 'An unexpected connection error occurred. Please try again later.';
     const accentColor = config.accentColor || '#3b82f6';
@@ -28,6 +29,11 @@
     widgetRoot.className = 'grav-chatbot-container ' + position + ' theme-' + themePreset;
     if (accentColor && themePreset === 'custom') {
       widgetRoot.style.setProperty('--grav-chatbot-accent', accentColor);
+    }
+
+    const titleTextEl = widgetRoot.querySelector('.grav-chatbot-title-text');
+    if (titleTextEl && config.botTitle) {
+      titleTextEl.textContent = botTitle;
     }
 
     const toggleBtn = widgetRoot.querySelector('#grav-chatbot-toggle');

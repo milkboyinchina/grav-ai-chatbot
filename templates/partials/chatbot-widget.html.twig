@@ -22,7 +22,7 @@
     <div class="grav-chatbot-header" style="background-color: {{ config.plugins['ai-chatbot'].accent_color|default('#3b82f6') }};">
       <div class="grav-chatbot-title">
         <span class="grav-chatbot-status-dot"></span>
-        <span>Website Assistant</span>
+        <span class="grav-chatbot-title-text">{{ config.plugins['ai-chatbot'].bot_title|default('Website Assistant') }}</span>
       </div>
       <button id="grav-chatbot-close" class="grav-chatbot-header-close">&times;</button>
     </div>

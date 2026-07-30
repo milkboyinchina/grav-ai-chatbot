@@ -242,6 +242,12 @@ form:
           default: "/\n/home\n/contact\n/faq"
           rows: 5
 
+        bot_title:
+          type: text
+          label: 🤖 Chatbot Header Window Title
+          help: Title displayed in the top header bar of the chat widget window (default "Website Assistant")
+          default: 'Website Assistant'
+
         welcome_message:
           type: text
           label: PLUGIN_AI_CHATBOT.WELCOME_MESSAGE

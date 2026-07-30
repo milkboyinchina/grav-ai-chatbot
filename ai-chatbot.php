@@ -326,6 +326,7 @@ class AiChatbotPlugin extends Plugin
         $jsConfig = json_encode([
             'apiEndpoint' => '/chatbot-api',
             'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
+            'botTitle' => $this->config->get('plugins.ai-chatbot.bot_title', 'Website Assistant'),
             'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
             'customErrorMessage' => $this->config->get('plugins.ai-chatbot.custom_error_message', 'An unexpected connection error occurred. Please try again later.'),
             'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
@@ -592,6 +593,7 @@ class AiChatbotPlugin extends Plugin
         $jsConfig = json_encode([
             'apiEndpoint' => '/chatbot-api',
             'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
+            'botTitle' => $this->config->get('plugins.ai-chatbot.bot_title', 'Website Assistant'),
             'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
             'customErrorMessage' => $this->config->get('plugins.ai-chatbot.custom_error_message', 'An unexpected connection error occurred. Please try again later.'),
             'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
