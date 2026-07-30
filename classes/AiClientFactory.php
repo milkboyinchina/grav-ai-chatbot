@@ -4,7 +4,7 @@ namespace Grav\Plugin\AiChatbot;
 /**
  * Class AiClientFactory
  * Creates the appropriate AI driver instance based on plugin config.
- * Supports Groq, Google Gemini, OpenRouter, OpenAI, and Custom endpoints.
+ * Supports Groq, Google Gemini, OpenRouter, OpenAI, Ollama (Local/Remote), and Custom endpoints.
  *
  * @license GPL-3.0-or-later
  */
@@ -51,6 +51,20 @@ class AiClientFactory
                     $apiKey,
                     $model ?: 'gpt-4o-mini',
                     'https://api.openai.com/v1',
+                    false,
+                    $timeout,
+                    $maxTokens
+                );
+
+            case 'ollama':
+                $endpoint = $customEndpoint ?: 'http://localhost:11434/v1';
+                if (!preg_match('/\/v1\/?$/i', $endpoint)) {
+                    $endpoint = rtrim($endpoint, '/') . '/v1';
+                }
+                return new OpenAiCompatibleClient(
+                    $apiKey ?: 'ollama',
+                    $model ?: 'llama3.2',
+                    $endpoint,
                     false,
                     $timeout,
                     $maxTokens
