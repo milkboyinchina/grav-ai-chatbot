@@ -19,6 +19,7 @@
     const STORAGE_KEY = 'grav_ai_chatbot_session_v1';
     let isOpen = false;
     let history = [];
+    let lastUserQuestion = '';
 
     const widgetRoot = document.getElementById('grav-ai-chatbot-root');
     if (!widgetRoot) return;
@@ -158,7 +159,7 @@
         btnNo.innerHTML = 'No (Ask AI)';
         btnNo.addEventListener('click', function () {
           confirmBox.innerHTML = '<span class="grav-chatbot-confirm-thankyou">Routing to AI assistant...</span>';
-          sendQuestion(textNode.textContent, 'force_ai');
+          sendQuestion(lastUserQuestion || 'Help with my query', 'force_ai');
         });
 
         confirmBox.appendChild(promptText);
@@ -252,6 +253,7 @@
       }
 
       if (action !== 'force_ai') {
+        lastUserQuestion = q;
         appendMessage('user', q);
       }
 

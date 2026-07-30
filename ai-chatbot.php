@@ -336,7 +336,9 @@ class AiChatbotPlugin extends Plugin
             'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
             'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
             'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
+            'maxTokens' => (int)$this->config->get('plugins.ai-chatbot.max_tokens', 800),
             'maxInputTokens' => (int)$this->config->get('plugins.ai-chatbot.max_input_tokens', 500),
+            'contextWindowTokens' => (int)$this->config->get('plugins.ai-chatbot.context_window_tokens', 8192),
             'currentRoute' => $currentRoute,
         ]);
 
@@ -413,7 +415,11 @@ class AiChatbotPlugin extends Plugin
         $rawInput = file_get_contents('php://input');
         $data = json_decode($rawInput, true) ?: $_POST;
 
-        $handler = new ChatbotHandler($this->grav, $this->config->get('plugins.ai-chatbot', []));
+        $cfg = $this->config->get('plugins.ai-chatbot', []);
+        $logger = new Logger($this->grav);
+        $logger->logError("LIVE_CONFIG_DUMP: " . json_encode($cfg), 'CONFIG_DEBUG');
+
+        $handler = new ChatbotHandler($this->grav, $cfg);
         $response = $handler->processRequest($data);
 
         http_response_code(200);
@@ -596,7 +602,9 @@ class AiChatbotPlugin extends Plugin
             'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
             'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
             'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
+            'maxTokens' => (int)$this->config->get('plugins.ai-chatbot.max_tokens', 800),
             'maxInputTokens' => (int)$this->config->get('plugins.ai-chatbot.max_input_tokens', 500),
+            'contextWindowTokens' => (int)$this->config->get('plugins.ai-chatbot.context_window_tokens', 8192),
             'currentRoute' => $currentRoute,
         ]);
 

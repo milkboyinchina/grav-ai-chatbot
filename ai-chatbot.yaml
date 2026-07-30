@@ -8,6 +8,7 @@ custom_endpoint: 'http://100.100.75.77:11434/'
 api_timeout: 30
 max_tokens: 800
 max_input_tokens: 500
+context_window_tokens: 8192
 
 faq_enabled: true
 enable_multilingual_faq: true

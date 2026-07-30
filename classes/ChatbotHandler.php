@@ -156,7 +156,7 @@ class ChatbotHandler
             }
 
             // TIER 1: Semantic Local FAQ Pre-Matching
-            if ($this->config['faq_enabled'] ?? true) {
+            if ($action !== 'force_ai' && ($this->config['faq_enabled'] ?? true)) {
                 $faqResolver = new FaqResolver($this->grav, $this->config);
                 $faqMatch = $faqResolver->findMatch($question);
 
@@ -182,25 +182,27 @@ class ChatbotHandler
             }
 
             // TIER 2: Contact Page Intent Resolution
-            $contactResolver = new ContactPageResolver($this->grav, $this->config);
-            $contactResponse = $contactResolver->resolveContactIntent($question);
-            if ($contactResponse) {
-                $logger = new Logger($this->grav);
-                $logger->logInteraction([
-                    'question' => $question,
-                    'answer' => $contactResponse['answer'],
-                    'source' => 'contact_resolver',
-                    'provider' => 'local_contact',
-                    'prompt_tokens' => 0,
-                    'completion_tokens' => 0
-                ]);
+            if ($action !== 'force_ai') {
+                $contactResolver = new ContactPageResolver($this->grav, $this->config);
+                $contactResponse = $contactResolver->resolveContactIntent($question);
+                if ($contactResponse) {
+                    $logger = new Logger($this->grav);
+                    $logger->logInteraction([
+                        'question' => $question,
+                        'answer' => $contactResponse['answer'],
+                        'source' => 'contact_resolver',
+                        'provider' => 'local_contact',
+                        'prompt_tokens' => 0,
+                        'completion_tokens' => 0
+                    ]);
 
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'answer' => $contactResponse['answer'],
-                    'source' => 'contact_resolver'
-                ];
+                    return [
+                        'http_code' => 200,
+                        'success' => true,
+                        'answer' => $contactResponse['answer'],
+                        'source' => 'contact_resolver'
+                    ];
+                }
             }
 
             // TIER 3: AI Model Call (Groq, Gemini, OpenRouter, OpenAI, Ollama, Custom)

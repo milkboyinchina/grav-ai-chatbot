@@ -57,7 +57,11 @@ class AiClientFactory
                 );
 
             case 'ollama':
-                $endpoint = $customEndpoint ?: 'http://localhost:11434/v1';
+                $endpoint = $customEndpoint ?: 'http://host.docker.internal:11434/v1';
+                // If endpoint uses localhost or 127.0.0.1 inside container environment, translate to host.docker.internal
+                if (preg_match('/localhost|127\.0\.0\.1/i', $endpoint)) {
+                    $endpoint = preg_replace('/localhost|127\.0\.0\.1/i', 'host.docker.internal', $endpoint);
+                }
                 if (!preg_match('/\/v1\/?$/i', $endpoint)) {
                     $endpoint = rtrim($endpoint, '/') . '/v1';
                 }
