@@ -126,6 +126,97 @@ form:
             min: 512
             max: 2000000
 
+    section_rag:
+      type: section
+      title: 🧠 RAG (Retrieval-Augmented Generation) & Page Indexing Engine
+      underline: true
+      fields:
+        rag_enabled:
+          type: toggle
+          label: 🧠 Enable RAG Vector Retrieval Search
+          help: Use vector similarity search to retrieve relevant page chunks for AI answers. If disabled, uses legacy site summary context.
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        rag_indexing_enabled:
+          type: toggle
+          label: ⚡ Enable Automatic Page Indexing
+          help: Enable automatic page parsing and vector embedding generation on page save, page deletion, and background cron runs.
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        rag_embedding_provider:
+          type: select
+          label: 🧩 RAG Embedding Provider Engine
+          help: Select driver for generating text vector embeddings (Ollama local, Gemini, OpenAI, or Local TF-IDF keyword fallback)
+          default: tfidf_local
+          options:
+            tfidf_local: ⚡ Local TF-IDF / BM25 Inverted Index (Free / No External API Needed)
+            ollama: 🦙 Ollama Local Embeddings (nomic-embed-text / mxbai-embed-large)
+            gemini: ♊ Google Gemini Embeddings (text-embedding-004)
+            openai: 🤖 OpenAI / OpenRouter Embeddings (text-embedding-3-small)
+
+        rag_embedding_model:
+          type: text
+          label: 🏷️ Embedding Model Identifier
+          help: Embedding model name (e.g. nomic-embed-text, text-embedding-004, text-embedding-3-small)
+          default: 'tfidf_local'
+
+        rag_top_k:
+          type: text
+          label: 🎯 Top-K Chunks to Retrieve
+          help: Number of relevant page chunks to inject into the prompt context per query (Default 3, Range 1-10)
+          default: 3
+          validate:
+            type: int
+            min: 1
+            max: 10
+
+        rag_min_similarity:
+          type: text
+          label: 📊 Minimum Similarity Threshold (%)
+          help: Minimum similarity score required to include a page chunk (Default 65%)
+          default: 65
+          validate:
+            type: int
+            min: 10
+            max: 100
+
+        rag_scheduler_enabled:
+          type: toggle
+          label: ⏰ Enable Background Scheduled Re-indexing
+          help: Automatically re-index Grav pages in the background via Grav CMS Scheduler
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        rag_scheduler_cron:
+          type: text
+          label: 🕒 Scheduled Cron Expression
+          help: Standard 5-field cron expression for background re-indexing (Default "0 2 * * *" = Daily at 2:00 AM)
+          default: '0 2 * * *'
+
+        rebuild_rag_index_button:
+          type: display
+          label: ⚡ Manual RAG Index Operations
+          markdown: true
+          content: '<div style="margin-top: 5px;"><button type="button" id="grav-chatbot-rebuild-rag-btn" class="button btn btn-primary" style="background:#10b981; color:#fff; font-weight:600; padding:8px 16px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-database"></i> ⚡ Rebuild RAG Vector Index Now</button></div><div id="grav-chatbot-rag-status" style="margin-top:10px; display:none; padding:10px 14px; border-radius:6px; font-weight:600;"></div><script>(function(){var btn=document.getElementById("grav-chatbot-rebuild-rag-btn");var statusEl=document.getElementById("grav-chatbot-rag-status");if(btn){btn.addEventListener("click",function(){btn.disabled=true;statusEl.style.display="block";statusEl.style.background="#f3f4f6";statusEl.style.color="#1f2937";statusEl.innerHTML="⏳ Rebuilding RAG Vector Index... Please wait.";fetch("/chatbot-api?t="+Date.now(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"rebuild_rag_index"})}).then(function(res){return res.json()}).then(function(data){btn.disabled=false;if(data.success){statusEl.style.background="#d1fae5";statusEl.style.color="#065f46";statusEl.innerHTML="✅ "+data.message}else{statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML="❌ Indexing Error: "+(data.error||data.message||"Failed")}}).catch(function(err){btn.disabled=false;statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML="❌ Connection Error: "+err.message})})}})();</script>'
+          ignore: true
+
     section_faq:
       type: section
       title: PLUGIN_AI_CHATBOT.FAQ_SETTINGS

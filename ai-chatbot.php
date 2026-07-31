@@ -62,6 +62,9 @@ class AiChatbotPlugin extends Plugin
             'onOutputGenerated' => ['onOutputGenerated', 0],
             'onAdminMenu' => ['onAdminMenu', 0],
             'onBlueprintCreated' => ['onBlueprintCreated', 0],
+            'onPageSaved' => ['onPageSaved', 0],
+            'onPageDeleted' => ['onPageDeleted', 0],
+            'onSchedulerInitialized' => ['onSchedulerInitialized', 0],
         ];
     }
 
@@ -670,5 +673,66 @@ class AiChatbotPlugin extends Plugin
                 'priority' => 10
             ];
         }
+    }
+
+    /**
+     * Re-index single page when saved in Grav Admin or CLI.
+     */
+    public function onPageSaved($event): void
+    {
+        if (!($this->config->get('plugins.ai-chatbot.rag_indexing_enabled', true))) {
+            return;
+        }
+
+        $page = $event['page'] ?? null;
+        if ($page instanceof \Grav\Common\Page\Page) {
+            try {
+                $indexer = new \Grav\Plugin\AiChatbot\Rag\Indexer($this->grav, $this->config->toArray());
+                $indexer->indexSinglePage($page);
+            } catch (\Throwable $t) {}
+        }
+    }
+
+    /**
+     * Remove deleted page chunks from vector store.
+     */
+    public function onPageDeleted($event): void
+    {
+        if (!($this->config->get('plugins.ai-chatbot.rag_indexing_enabled', true))) {
+            return;
+        }
+
+        $page = $event['page'] ?? null;
+        if ($page instanceof \Grav\Common\Page\Page) {
+            try {
+                $indexer = new \Grav\Plugin\AiChatbot\Rag\Indexer($this->grav, $this->config->toArray());
+                $indexer->removePageByRoute($page->route());
+            } catch (\Throwable $t) {}
+        }
+    }
+
+    /**
+     * Register RAG scheduled re-indexing job in Grav CMS Scheduler.
+     */
+    public function onSchedulerInitialized($event): void
+    {
+        if (!($this->config->get('plugins.ai-chatbot.rag_indexing_enabled', true)) ||
+            !($this->config->get('plugins.ai-chatbot.rag_scheduler_enabled', true))) {
+            return;
+        }
+
+        try {
+            $scheduler = $event['scheduler'] ?? null;
+            if (!$scheduler) return;
+
+            $cronExpr = $this->config->get('plugins.ai-chatbot.rag_scheduler_cron', '0 2 * * *');
+            $job = $scheduler->addFunction(
+                'Grav\Plugin\AiChatbot\Rag\Indexer::reindexAll',
+                [$this->grav, $this->config->toArray()],
+                'ai-chatbot-rag-reindex'
+            );
+            $job->at($cronExpr);
+            $job->output('user/data/ai-chatbot/rag_scheduler.log');
+        } catch (\Throwable $t) {}
     }
 }

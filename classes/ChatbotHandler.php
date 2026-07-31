@@ -68,7 +68,7 @@ class ChatbotHandler
                 return $this->testAiConnection($data);
             }
 
-            if (empty($question) && $action !== 'summarize_page') {
+            if (empty($question) && $action !== 'summarize_page' && $action !== 'rebuild_rag_index') {
                 return [
                     'http_code' => 400,
                     'success' => false,
@@ -117,6 +117,16 @@ class ChatbotHandler
 
             if ($action === 'summarize_page') {
                 return $this->handleSummarizePage($currentRoute);
+            }
+
+            if ($action === 'rebuild_rag_index') {
+                $ragIndexer = new \Grav\Plugin\AiChatbot\Rag\Indexer($this->grav, $this->config);
+                $res = $ragIndexer->runFullIndex(true);
+                return [
+                    'http_code' => 200,
+                    'success' => $res['success'] ?? false,
+                    'message' => $res['message'] ?? ($res['error'] ?? 'RAG index update complete.')
+                ];
             }
 
             // TIER 0: Blacklisted Words Guardrail Check
@@ -446,13 +456,29 @@ class ChatbotHandler
             $maxOutputTokens = (int)($this->config['max_tokens'] ?? 800);
             $maxInputTokens = (int)($this->config['max_input_tokens'] ?? 500);
 
-            // Dynamically calculate max allowed context prompt characters to respect context_window_tokens limit
             $reservedTokens = $maxOutputTokens + $maxInputTokens + 150; // Output + input + prompt framing
             $maxContextTokens = max(150, $contextWindowTokens - $reservedTokens);
             $maxContextChars = $maxContextTokens * 4; // Approx 4 chars per token average
 
-            $indexer = new ContextIndexer($this->grav);
-            $siteContext = $indexer->buildContextPrompt($currentRoute, $maxContextChars);
+            $siteContext = '';
+            $ragEnabled = (bool)($this->config['rag_enabled'] ?? true);
+
+            if ($ragEnabled) {
+                try {
+                    $retriever = new \Grav\Plugin\AiChatbot\Rag\Retriever($this->grav, $this->config);
+                    $ragRes = $retriever->searchAndBuildPrompt($question, $maxContextChars);
+                    if (!empty($ragRes['context_prompt'])) {
+                        $siteContext = $ragRes['context_prompt'];
+                    }
+                } catch (\Throwable $rt) {
+                    $siteContext = '';
+                }
+            }
+
+            if (empty($siteContext)) {
+                $indexer = new ContextIndexer($this->grav);
+                $siteContext = $indexer->buildContextPrompt($currentRoute, $maxContextChars);
+            }
 
             $messages = [];
             if (!empty($history) && is_array($history)) {

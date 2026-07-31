@@ -9,6 +9,14 @@ api_timeout: 30
 max_tokens: 800
 max_input_tokens: 500
 context_window_tokens: 8192
+rag_enabled: true
+rag_indexing_enabled: true
+rag_embedding_provider: tfidf_local
+rag_embedding_model: tfidf_local
+rag_top_k: 3
+rag_min_similarity: 65
+rag_scheduler_enabled: true
+rag_scheduler_cron: '0 2 * * *'
 
 faq_enabled: true
 enable_multilingual_faq: true
