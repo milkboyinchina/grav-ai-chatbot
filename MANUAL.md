@@ -1,6 +1,6 @@
-# Grav CMS AI Chatbot — Plugin Configuration & User Manual
+# Grav CMS AI Chatbot — User-Friendly Admin & Configuration Manual
 
-Welcome to the official manual for the **Grav CMS AI Chatbot Plugin** (`user/plugins/ai-chatbot`). This guide is structured to directly map to the **Grav Admin Plugin Configuration Page** (**Plugins -> AI Chatbot**), explaining every field, toggle, blueprint section, code snippet, and background process.
+Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`user/plugins/ai-chatbot`). This guide is designed to match the **Grav Admin Plugin Configuration Page** (**Plugins -> AI Chatbot**) step-by-step, clearly explaining every section, field, cross-section dependency, API key reuse rule, and background automation process.
 
 ---
 
@@ -9,9 +9,10 @@ Welcome to the official manual for the **Grav CMS AI Chatbot Plugin** (`user/plu
 1. [Plugin Master Enable / Disable](#1-plugin-master-enable--disable)
 2. [Section 1: AI Provider Settings (`section_provider`)](#section-1-ai-provider-settings-section_provider)
 3. [Section 2: 🧠 RAG (Retrieval-Augmented Generation) & Page Indexing Engine (`section_rag`)](#section-2--rag-retrieval-augmented-generation--page-indexing-engine-section_rag)
-   - [Does Installing the Plugin Add a Cron Schedule Automatically?](#does-installing-the-plugin-add-a-cron-schedule-automatically)
-   - [Server Crontab Setup Guide](#server-crontab-setup-guide)
-   - [RAG Architecture & Heading-Aware Chunking Example](#rag-architecture--heading-aware-chunking-example)
+   - [💡 Important: Provider & API Key Shared Dependency](#-important-provider--api-key-shared-dependency)
+   - [⏰ Does Installing the Plugin Add a Cron Schedule Automatically?](#-does-installing-the-plugin-add-a-cron-schedule-automatically)
+   - [⚙️ Server Crontab Setup Guide](#%EF%B8%8F-server-crontab-setup-guide)
+   - [🧩 RAG Architecture & Heading-Aware Chunking Example](#-rag-architecture--heading-aware-chunking-example)
 4. [Section 3: ❓ FAQ Settings (`section_faq`)](#section-3--faq-settings-section_faq)
 5. [Section 4: 📞 Contact Settings (`section_contact`)](#section-4--contact-settings-section_contact)
 6. [Section 5: 🎨 UI & Chatbot Widget Settings (`section_ui`)](#section-5--ui--chatbot-widget-settings-section_ui)
@@ -25,24 +26,24 @@ Welcome to the official manual for the **Grav CMS AI Chatbot Plugin** (`user/plu
 
 ## 1. Plugin Master Enable / Disable
 
-| Field Name | Type | Options / Default | Description & Instructions |
+| Field Name | Setting Key | Default | User Guidance |
 | :--- | :--- | :--- | :--- |
-| **Plugin Status** (`enabled`) | Toggle | `1` (Enabled) / `0` (Disabled) | Master switch for the entire plugin. When set to `0`, all chatbot endpoints, Twig assets, and scheduled tasks are deactivated. |
+| **Plugin Status** | `enabled` | `1` (Enabled) | Master switch for the entire plugin. When set to `0`, the chatbot widget is hidden, API endpoints are disabled, and background jobs are paused. |
 
 ---
 
 ## Section 1: AI Provider Settings (`section_provider`)
 
-Controls the core AI model connection, API authentication keys, model parameters, and offline fallback responses.
+Controls your primary AI chat completion model, secret API authentication keys, model parameters, and offline fallback messages.
 
-| Field Label | Setting Key | Default Value | Options / Help Guide |
+| Field Label | Setting Key | Default Value | Options & Cross-Section Dependencies |
 | :--- | :--- | :--- | :--- |
 | **Enable AI Fallback** | `ai_enabled` | `1` (Enabled) | Master toggle for cloud AI generation. When disabled, only local FAQ answers are delivered. |
-| **AI Disabled Message** | `ai_disabled_response_text` | *"AI assistant is currently disabled..."* | Text displayed to visitors when AI fallback is disabled and no local FAQ answer matches. |
+| **AI Disabled Message** | `ai_disabled_response_text` | *"AI assistant is currently disabled..."* | Text displayed to visitors when AI fallback is turned off. |
 | **AI Provider** | `provider` | `groq` | Select provider: `groq` (Groq Llama 3), `gemini` (Google Gemini), `openrouter` (OpenRouter API), `openai` (OpenAI), `ollama` (Local/Remote Ollama), `custom` (OpenAI-compatible server). |
-| **API Key** | `api_key` | *Blank* | Secret API Key for Groq, Gemini, OpenRouter, or OpenAI (Leave blank for local Ollama). |
-| **Model Identifier** | `model` | `gemini-2.0-flash` | Identifier string (e.g., `gemini-2.0-flash`, `gpt-4o-mini`, `llama-3.3-70b-versatile`, `nomic-embed-text`, `deepseek-r1`). |
-| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | Required for `custom` provider. For `ollama`, set remote host (e.g. `http://192.168.1.50:11434`) or leave blank for default local `http://localhost:11434`. |
+| **API Key** | `api_key` | *Blank* | **🔑 SHARED FIELD**: Secret API Key. Used for chat completions AND reused by RAG when cloud embedding is selected (`gemini` or `openai`). Leave blank for local Ollama/TF-IDF. |
+| **Model Identifier** | `model` | `gemini-2.0-flash` | Identifier string for chat completions (e.g., `gemini-2.0-flash`, `gpt-4o-mini`, `llama-3.3-70b-versatile`, `deepseek-r1`). |
+| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Custom endpoint URL. Used for `custom` provider AND reused by RAG when `ollama` is selected for vector embeddings. |
 | **API Timeout (Sec)** | `api_timeout` | `30` | Maximum HTTP execution time in seconds (Range: 5 - 120s). |
 | **Max Output Tokens** | `max_tokens` | `800` | Token limit for AI completion replies (Range: 50 - 4,000 tokens). |
 | **Max Input Tokens** | `max_input_tokens` | `500` | Maximum allowed tokens per user question (~2000 characters). |
@@ -56,7 +57,7 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 
 ### RAG Configuration Fields Matrix
 
-| Field Label | Setting Key | Default Value | Options / Help Guide |
+| Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
 | **Enable RAG Retrieval** | `rag_enabled` | `1` (Enabled) | Use SQLite vector search to inject relevant section chunks into prompts instead of full-site text. |
 | **Automatic Page Indexing** | `rag_indexing_enabled` | `1` (Enabled) | Enables automatic indexing on `onPageSaved`, `onPageDeleted`, and background cron runs. |
@@ -70,7 +71,21 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 
 ---
 
-### Does Installing the Plugin Add a Cron Schedule Automatically?
+### 💡 Important: Provider & API Key Shared Dependency
+
+To keep setup simple and avoid redundant configuration, RAG **reuses credentials from Section 1**:
+
+1. **Which API Key is used?**
+   - RAG uses the **`api_key`** field from **Section 1 (AI Provider Settings)**.
+   - If `gemini` or `openai` is selected as the `rag_embedding_provider`, RAG automatically reads `api_key` from Section 1.
+2. **Which Custom Endpoint is used?**
+   - If `ollama` is selected for RAG, RAG reuses **`custom_endpoint`** from Section 1 (or defaults to `http://localhost:11434`).
+3. **What happens if a Cloud API Key is missing?**
+   - If you select `gemini` or `openai` for RAG without entering an `api_key` in Section 1, RAG **automatically falls back to `tfidf_local`** (0 API cost, server-local matching) to ensure indexing never fails.
+
+---
+
+### ⏰ Does Installing the Plugin Add a Cron Schedule Automatically?
 
 > [!IMPORTANT]
 > **YES and NO**:
@@ -81,7 +96,7 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 > 2. **On the Server Level (ONE-TIME SETUP REQUIRED)**:  
 >    **No.** Grav relies on a single master Linux system crontab entry to run its scheduler loop. If your server does not have Grav's master cron job active, you must add it once.
 
-### Server Crontab Setup Guide
+### ⚙️ Server Crontab Setup Guide
 
 Run `crontab -e` on your server terminal and add:
 ```bash
@@ -90,7 +105,7 @@ Run `crontab -e` on your server terminal and add:
 
 ---
 
-### RAG Architecture & Heading-Aware Chunking Example
+### 🧩 RAG Architecture & Heading-Aware Chunking Example
 
 #### Sample Page (`user/pages/02.docs/default.md`):
 ```markdown
@@ -133,7 +148,7 @@ Run `composer install` in your Grav root directory.
 
 Pre-matches visitor questions against localized `/faq` pages with **0 AI API calls**.
 
-| Field Label | Setting Key | Default Value | Description & Options |
+| Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
 | **Enable FAQ Pre-Matching** | `faq_enabled` | `1` (Enabled) | Matches questions locally against `/faq` pages before invoking AI APIs. |
 | **Multilingual FAQ Matching** | `enable_multilingual_faq` | `1` (Enabled) | Matches language-specific FAQ files (e.g. `default.en.md`, `default.fr.md`). |
@@ -159,7 +174,7 @@ faqs:
 
 Multi-tier contact resolution for public and technical inquiries.
 
-| Field Label | Setting Key | Default Value | Description & Options |
+| Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
 | **Public Contact Route** | `contact_route` | `/contact` | Relative route to public contact page. |
 | **Enable Hidden Contacts** | `enable_hidden_contacts` | `1` (Enabled) | Reads hidden `/hidden-contacts` page for technical/engineering support inquiries. |
@@ -171,7 +186,7 @@ Multi-tier contact resolution for public and technical inquiries.
 
 Controls floating widget aesthetics, themes, page display visibility, and quick reply suggestion pills.
 
-| Field Label | Setting Key | Default Value | Description & Options |
+| Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
 | **Theme Preset** | `theme_preset` | `glass_blue` | Presets: `glass_blue` (Glassmorphic Blue), `emerald_dark` (Emerald Dark Mode), `purple_haze` (Purple Haze), `sunset_orange` (Sunset Orange), `custom` (Color Picker). |
 | **Widget Position** | `position` | `bottom-right` | Options: `bottom-right` or `bottom-left`. |
@@ -204,7 +219,7 @@ quick_replies:
 
 ## Section 7: 🛡️ Security & Limits Settings (`section_security`)
 
-| Field Label | Setting Key | Default Value | Description & Options |
+| Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
 | **Rate Limiting** | `rate_limit_enabled` | `1` (Enabled) | Protects against API quota exhaustion and spam attacks. |
 | **Max Requests** | `rate_limit_max_requests` | `10` | Maximum requests allowed per IP within the time window. |
@@ -220,7 +235,7 @@ quick_replies:
 
 ## Section 8: 📝 Logging & Cost Estimation Settings (`section_logging`)
 
-| Field Label | Setting Key | Default Value | Description & Options |
+| Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
 | **Logging Enabled** | `logging_enabled` | `1` (Enabled) | Logs visitor queries to `user/data/ai-chatbot/interactions.json`. |
 | **Log API Usage & Costs** | `log_api_usage` | `1` (Enabled) | Tracks token consumption and calculates estimated USD costs. |
