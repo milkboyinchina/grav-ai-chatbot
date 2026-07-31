@@ -19,6 +19,13 @@ dependencies:
 form:
   validation: loose
   fields:
+    manual_notice:
+      type: display
+      label: 📖 Documentation & Setup Guide
+      markdown: true
+      content: '> 💡 **Encountering any difficulties?** Please read the detailed **[Grav AI Chatbot Official User Manual (MANUAL.md)](https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/MANUAL.md)** on GitHub for complete step-by-step setup guides, field dependencies, RAG vector store options, and server cron setup.'
+      ignore: true
+
     enabled:
       type: toggle
       label: PLUGIN_AI_CHATBOT.ENABLED
