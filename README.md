@@ -41,8 +41,8 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
   - *Note*: Requires standard system crontab setup (`* * * * * cd /path/to/grav && php bin/grav scheduler`). See [`MANUAL.md`](MANUAL.md#2-grav-scheduler--automated-cron-setup) for details.
 
 - ⚡ **Multi-Provider AI Engines**:
-  - **Groq API** (Default: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
-  - **Google Gemini API** (`gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`).
+  - **Groq API** (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
+  - **Google Gemini API** (Default: `gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`).
   - **OpenRouter API** (`google/gemini-flash-1.5`, `anthropic/claude-3.5-sonnet`).
   - **OpenAI API** (`gpt-4o-mini`, `gpt-4o`).
   - **Custom Endpoints** (Local Ollama, vLLM, or self-hosted OpenAI-compatible servers).
