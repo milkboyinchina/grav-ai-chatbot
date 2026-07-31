@@ -71,6 +71,43 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 
 ---
 
+### 🎯 Which RAG Embedding Engine & Model Should You Choose (And Why?)
+
+The RAG engine supports 4 distinct embedding drivers. Choose the engine that best matches your hosting environment, budget, and privacy requirements:
+
+#### Option 1: ⚡ Local TF-IDF / BM25 Inverted Index (`tfidf_local`) [DEFAULT RECOMMENDED]
+- **Recommended Model ID**: `tfidf_local`
+- **Cost**: **$0.00** (Zero API token cost)
+- **Requirements**: None! Runs out-of-the-box on standard shared hosting or VPS.
+- **Why Choose This?**:  
+  - Perfect for 95% of Grav websites.
+  - Zero external API dependencies, zero cost, sub-millisecond local execution (< 0.35ms).
+  - Excellent keyword relevance and term-matching accuracy for technical documentation, blogs, and portfolio content.
+
+#### Option 2: 🦙 Ollama Local Embeddings (`ollama`)
+- **Recommended Model ID**: `nomic-embed-text` or `mxbai-embed-large`
+- **Cost**: **$0.00** (Free self-hosted AI model)
+- **Requirements**: Requires a running Ollama server (`ollama serve`). Endpoint defaults to `http://localhost:11434` or custom URL from Section 1.
+- **Why Choose This?**:  
+  - Ideal if you run your own local AI hardware or home lab server and want 100% private, local semantic vector search without sending data to external clouds.
+
+#### Option 3: ♊ Google Gemini Embeddings (`gemini`)
+- **Recommended Model ID**: `text-embedding-004`
+- **Cost**: Micro-fractional cloud pricing (~$0.00002 / 1k tokens)
+- **Requirements**: Requires `gemini` API Key set in Section 1.
+- **Why Choose This?**:  
+  - High-dimensional semantic vector search capable of understanding complex multi-lingual contextual queries.
+  - Fast, reliable cloud embedding with high accuracy for multi-language or large documentation sites.
+
+#### Option 4: 🤖 OpenAI / OpenRouter Embeddings (`openai`)
+- **Recommended Model ID**: `text-embedding-3-small` or `text-embedding-3-large`
+- **Cost**: ~$0.02 / 1M tokens
+- **Requirements**: Requires `openai` API Key set in Section 1.
+- **Why Choose This?**:  
+  - Industry-standard OpenAI semantic vector performance. Best choice if your entire AI stack is built around OpenAI models and enterprise API compliance.
+
+---
+
 ### 💡 Important: Provider & API Key Shared Dependency
 
 To keep setup simple and avoid redundant configuration, RAG **reuses credentials from Section 1**:
