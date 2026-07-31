@@ -1,38 +1,74 @@
-# Grav CMS AI Chatbot — Official User & Administrator Manual
+# Grav CMS AI Chatbot — Plugin Configuration & User Manual
 
-Welcome to the comprehensive user manual for the **Grav CMS AI Chatbot Plugin** (`user/plugins/ai-chatbot`). This guide provides detailed end-to-end instructions, real-world code examples, configuration samples, and administrative procedures for managing the **Retrieval-Augmented Generation (RAG) & Page Indexing Engine**.
+Welcome to the official manual for the **Grav CMS AI Chatbot Plugin** (`user/plugins/ai-chatbot`). This guide is structured to directly map to the **Grav Admin Plugin Configuration Page** (**Plugins -> AI Chatbot**), explaining every field, toggle, blueprint section, code snippet, and background process.
 
 ---
 
 ## 📋 Table of Contents
 
-1. [Overview & Key Features](#1-overview--key-features)
-2. [Grav Scheduler & Automated Cron Setup](#2-grav-scheduler--automated-cron-setup)
+1. [Plugin Master Enable / Disable](#1-plugin-master-enable--disable)
+2. [Section 1: AI Provider Settings (`section_provider`)](#section-1-ai-provider-settings-section_provider)
+3. [Section 2: 🧠 RAG (Retrieval-Augmented Generation) & Page Indexing Engine (`section_rag`)](#section-2--rag-retrieval-augmented-generation--page-indexing-engine-section_rag)
    - [Does Installing the Plugin Add a Cron Schedule Automatically?](#does-installing-the-plugin-add-a-cron-schedule-automatically)
-   - [Step-by-Step Server Crontab Setup](#step-by-step-server-crontab-setup)
-3. [Deep Dive: RAG (Retrieval-Augmented Generation) & Page Indexing Engine](#3-deep-dive-rag-retrieval-augmented-generation--page-indexing-engine)
-   - [Architecture & How RAG Works](#architecture--how-rag-works)
-   - [Supported Embedding Drivers & Code Examples](#supported-embedding-drivers--code-examples)
-   - [Heading-Aware Page Chunking Example](#heading-aware-page-chunking-example)
-   - [Incremental SHA-256 Hash Caching](#incremental-sha-256-hash-caching)
-   - [Manual vs Automated Indexing Workflows](#manual-vs-automated-indexing-workflows)
-4. [Grav Admin Configuration Options](#4-grav-admin-configuration-options)
-5. [Semantic FAQ Pre-Matching Engine & YAML Examples](#5-semantic-faq-pre-matching-engine--yaml-examples)
-6. [Multi-Tier Contact Resolution & Hidden Contact Setup](#6-multi-tier-contact-resolution--hidden-contact-setup)
-7. [Widget Customization & Quick Reply Configuration](#7-widget-customization--quick-reply-configuration)
-8. [Date Range Analytics & Data Export API Examples](#8-date-range-analytics--data-export-api-examples)
-9. [CLI Commands Reference & Examples](#9-cli-commands-reference--examples)
-10. [Troubleshooting & FAQs](#10-troubleshooting--faqs)
+   - [Server Crontab Setup Guide](#server-crontab-setup-guide)
+   - [RAG Architecture & Heading-Aware Chunking Example](#rag-architecture--heading-aware-chunking-example)
+4. [Section 3: ❓ FAQ Settings (`section_faq`)](#section-3--faq-settings-section_faq)
+5. [Section 4: 📞 Contact Settings (`section_contact`)](#section-4--contact-settings-section_contact)
+6. [Section 5: 🎨 UI & Chatbot Widget Settings (`section_ui`)](#section-5--ui--chatbot-widget-settings-section_ui)
+7. [Section 6: 🕒 Session Retention Settings (`section_session`)](#section-6--session-retention-settings-section_session)
+8. [Section 7: 🛡️ Security & Limits Settings (`section_security`)](#section-7--security--limits-settings-section_security)
+9. [Section 8: 📝 Logging & Cost Estimation Settings (`section_logging`)](#section-8--logging--cost-estimation-settings-section_logging)
+10. [Section 9: 📊 AI Analytics & Performance Dashboard (`section_analytics`)](#section-9--ai-analytics--performance-dashboard-section_analytics)
+11. [CLI Commands Reference](#cli-commands-reference)
 
 ---
 
-## 1. Overview & Key Features
+## 1. Plugin Master Enable / Disable
 
-The **Grav CMS AI Chatbot Plugin** delivers a high-performance conversational AI interface for your website. It pairs local zero-token FAQ pre-matching with RAG vector search and multi-provider LLMs (**Groq Llama 3**, **Google Gemini**, **OpenAI**, **OpenRouter**, or **Local Ollama**).
+| Field Name | Type | Options / Default | Description & Instructions |
+| :--- | :--- | :--- | :--- |
+| **Plugin Status** (`enabled`) | Toggle | `1` (Enabled) / `0` (Disabled) | Master switch for the entire plugin. When set to `0`, all chatbot endpoints, Twig assets, and scheduled tasks are deactivated. |
 
 ---
 
-## 2. Grav Scheduler & Automated Cron Setup
+## Section 1: AI Provider Settings (`section_provider`)
+
+Controls the core AI model connection, API authentication keys, model parameters, and offline fallback responses.
+
+| Field Label | Setting Key | Default Value | Options / Help Guide |
+| :--- | :--- | :--- | :--- |
+| **Enable AI Fallback** | `ai_enabled` | `1` (Enabled) | Master toggle for cloud AI generation. When disabled, only local FAQ answers are delivered. |
+| **AI Disabled Message** | `ai_disabled_response_text` | *"AI assistant is currently disabled..."* | Text displayed to visitors when AI fallback is disabled and no local FAQ answer matches. |
+| **AI Provider** | `provider` | `groq` | Select provider: `groq` (Groq Llama 3), `gemini` (Google Gemini), `openrouter` (OpenRouter API), `openai` (OpenAI), `ollama` (Local/Remote Ollama), `custom` (OpenAI-compatible server). |
+| **API Key** | `api_key` | *Blank* | Secret API Key for Groq, Gemini, OpenRouter, or OpenAI (Leave blank for local Ollama). |
+| **Model Identifier** | `model` | `gemini-2.0-flash` | Identifier string (e.g., `gemini-2.0-flash`, `gpt-4o-mini`, `llama-3.3-70b-versatile`, `nomic-embed-text`, `deepseek-r1`). |
+| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | Required for `custom` provider. For `ollama`, set remote host (e.g. `http://192.168.1.50:11434`) or leave blank for default local `http://localhost:11434`. |
+| **API Timeout (Sec)** | `api_timeout` | `30` | Maximum HTTP execution time in seconds (Range: 5 - 120s). |
+| **Max Output Tokens** | `max_tokens` | `800` | Token limit for AI completion replies (Range: 50 - 4,000 tokens). |
+| **Max Input Tokens** | `max_input_tokens` | `500` | Maximum allowed tokens per user question (~2000 characters). |
+| **Context Window** | `context_window_tokens` | `8192` | Model token capacity (e.g., 8192, 16384, 128000). |
+
+---
+
+## Section 2: 🧠 RAG (Retrieval-Augmented Generation) & Page Indexing Engine (`section_rag`)
+
+The RAG engine parses your published Grav site pages, breaks them down into heading-aware sections, and stores them in a local SQLite vector database (`user/data/ai-chatbot/rag_index.sqlite`).
+
+### RAG Configuration Fields Matrix
+
+| Field Label | Setting Key | Default Value | Options / Help Guide |
+| :--- | :--- | :--- | :--- |
+| **Enable RAG Retrieval** | `rag_enabled` | `1` (Enabled) | Use SQLite vector search to inject relevant section chunks into prompts instead of full-site text. |
+| **Automatic Page Indexing** | `rag_indexing_enabled` | `1` (Enabled) | Enables automatic indexing on `onPageSaved`, `onPageDeleted`, and background cron runs. |
+| **RAG Embedding Engine** | `rag_embedding_provider` | `tfidf_local` | Drivers: `tfidf_local` (Free local BM25), `ollama` (Local Ollama), `gemini` (`text-embedding-004`), `openai` (`text-embedding-3-small`). |
+| **Embedding Model ID** | `rag_embedding_model` | `tfidf_local` | Model string (e.g., `nomic-embed-text`, `text-embedding-004`, `text-embedding-3-small`). |
+| **Top-K Chunks Count** | `rag_top_k` | `3` | Number of section chunks injected per prompt (Range: 1 - 10). |
+| **Min Similarity %** | `rag_min_similarity` | `65` | Minimum relevance threshold score % required to include a chunk (Range: 10 - 100%). |
+| **Background Cron Scheduler** | `rag_scheduler_enabled` | `1` (Enabled) | Automatically re-indexes site pages in background via Grav CMS Scheduler. |
+| **Scheduled Cron Expression**| `rag_scheduler_cron` | `0 2 * * *` | 5-field cron schedule expression (`0 2 * * *` = Daily at 2:00 AM). |
+| **Rebuild RAG Index Button** | `rebuild_rag_index_button` | *Interactive Button* | Click **`⚡ Rebuild RAG Vector Index Now`** to clear SQLite storage and re-index all site pages instantly. |
+
+---
 
 ### Does Installing the Plugin Add a Cron Schedule Automatically?
 
@@ -40,107 +76,23 @@ The **Grav CMS AI Chatbot Plugin** delivers a high-performance conversational AI
 > **YES and NO**:
 > 
 > 1. **Inside Grav CMS (AUTOMATIC)**:  
->    **Yes.** When you install and enable the plugin with `rag_scheduler_enabled: true`, the plugin automatically registers its background job (`ai-chatbot-rag-reindex`) with Grav's internal scheduler via the `onSchedulerInitialized` event hook. You will immediately see the job listed under **Grav Admin -> Tools -> Scheduler**.
+>    **Yes.** When the plugin is enabled with `rag_scheduler_enabled: 1`, it registers its background job (`ai-chatbot-rag-reindex`) automatically with Grav's internal scheduler via `onSchedulerInitialized`. You will see it listed under **Grav Admin -> Tools -> Scheduler**.
 > 
-> 2. **On the Linux Server / Hosting Level (ONE-TIME SETUP REQUIRED)**:  
->    **No.** Grav CMS relies on a single master system cron entry on your Linux server or Web Hosting CPanel to run its scheduler loop. If your server does not already have Grav's master cron job active, you must add it once.
+> 2. **On the Server Level (ONE-TIME SETUP REQUIRED)**:  
+>    **No.** Grav relies on a single master Linux system crontab entry to run its scheduler loop. If your server does not have Grav's master cron job active, you must add it once.
 
-### Step-by-Step Server Crontab Setup
+### Server Crontab Setup Guide
 
-To allow Grav (and the AI Chatbot background re-indexer) to execute scheduled tasks automatically:
-
-1. Open your Linux user crontab editor:
-   ```bash
-   crontab -e
-   ```
-2. Add the following master Grav scheduler entry (runs every minute to check if jobs are due):
-   ```bash
-   * * * * * cd /home/milkboy/Documents/web-app/personal-cv-site && php bin/grav scheduler 1>/dev/null 2>&1
-   ```
-3. Test Grav Scheduler execution manually via SSH CLI:
-   ```bash
-   php bin/grav scheduler -r
-   ```
-
----
-
-## 3. Deep Dive: RAG (Retrieval-Augmented Generation) & Page Indexing Engine
-
-### Architecture & How RAG Works
-
-Traditional AI chatbots inject the entire website content into every prompt, consuming thousands of tokens per request. 
-
-The RAG engine solves this by indexing your published site pages into a local SQLite vector database (`user/data/ai-chatbot/rag_index.sqlite`). When a visitor asks a question:
-1. The question vector or keywords are queried against local SQLite chunks in `< 1ms`.
-2. Only the Top-K (e.g. 2–3) most relevant paragraph sections are extracted.
-3. Only those specific sections are injected into the AI system prompt, achieving an **80%+ token reduction**.
-
-```
-+-----------------------------------------------------------------------------+
-|                            INGESTION PIPELINE                               |
-|                                                                             |
-|  Grav CMS Pages  --->  HTML/Markdown  --->  Heading-Aware  --->  Vector     |
-|  (Published &          Cleaner              Chunker              Embeddings |
-|   Routable)                                                      Generator  |
-|                                                                      |      |
-|                                                                      v      |
-|                                                            RAG Index Store  |
-|                                                            (SQLite Database)|
-+-----------------------------------------------------------------------------+
-                                                                       |
-+-----------------------------------------------------------------------------v
-|                             RETRIEVAL PIPELINE                              |
-|                                                                             |
-|  User Query  ---> Embed Query ---> Vector Cosine / ---> Top-K Chunks  --->  |
-|                                    BM25 Search         + Metadata           |
-|                                                                      |      |
-|                                                                      v      |
-|                                                            LLM Prompt       |
-|                                                            Injection        |
-+-----------------------------------------------------------------------------+
+Run `crontab -e` on your server terminal and add:
+```bash
+* * * * * cd /home/milkboy/Documents/web-app/personal-cv-site && php bin/grav scheduler 1>/dev/null 2>&1
 ```
 
 ---
 
-### Supported Embedding Drivers & Code Examples
+### RAG Architecture & Heading-Aware Chunking Example
 
-Configure the embedding driver in `user/config/plugins/ai-chatbot.yaml` or via Grav Admin (**Admin -> Plugins -> AI Chatbot -> RAG Settings**):
-
-#### Option A: Local TF-IDF / BM25 Driver (Default - Zero API Token Cost)
-```yaml
-rag_enabled: true
-rag_indexing_enabled: true
-rag_embedding_provider: tfidf_local
-rag_top_k: 3
-rag_min_similarity: 65
-```
-*Benefits*: 100% server-local execution, no paid API keys required, zero latency overhead.
-
-#### Option B: Local Ollama Driver
-```yaml
-rag_enabled: true
-rag_indexing_enabled: true
-rag_embedding_provider: ollama
-rag_embedding_model: nomic-embed-text
-rag_custom_endpoint: http://localhost:11434/api/embeddings
-```
-
-#### Option C: Google Gemini Driver
-```yaml
-rag_enabled: true
-rag_indexing_enabled: true
-rag_embedding_provider: gemini
-rag_embedding_model: text-embedding-004
-gemini_api_key: "YOUR_GEMINI_API_KEY"
-```
-
----
-
-### Heading-Aware Page Chunking Example
-
-The chunker (`classes/Rag/Chunker.php`) scans routable Grav pages by heading markers (`H1`, `H2`, `H3`).
-
-#### Example Page (`user/pages/02.docs/default.md`):
+#### Sample Page (`user/pages/02.docs/default.md`):
 ```markdown
 # Installation Guide
 
@@ -151,7 +103,7 @@ Ensure PHP 8.1+ and SQLite3 extensions are installed.
 Run `composer install` in your Grav root directory.
 ```
 
-#### Generated RAG Chunks stored in SQLite:
+#### Generated SQLite Vector Chunks:
 ```json
 [
   {
@@ -177,45 +129,18 @@ Run `composer install` in your Grav root directory.
 
 ---
 
-### Incremental SHA-256 Hash Caching
+## Section 3: ❓ FAQ Settings (`section_faq`)
 
-During background re-indexing, the system calculates the SHA-256 hash of each page section:
-1. It compares `$newHash` against `$storedHash` in `rag_index.sqlite`.
-2. If unchanged, **embedding generation is skipped**, consuming **0 API calls**.
-3. If modified, only the updated section is re-embedded.
+Pre-matches visitor questions against localized `/faq` pages with **0 AI API calls**.
 
----
+| Field Label | Setting Key | Default Value | Description & Options |
+| :--- | :--- | :--- | :--- |
+| **Enable FAQ Pre-Matching** | `faq_enabled` | `1` (Enabled) | Matches questions locally against `/faq` pages before invoking AI APIs. |
+| **Multilingual FAQ Matching** | `enable_multilingual_faq` | `1` (Enabled) | Matches language-specific FAQ files (e.g. `default.en.md`, `default.fr.md`). |
+| **FAQ Route** | `faq_route` | `/faq` | Relative page route path containing FAQ YAML definitions. |
+| **Similarity Threshold %** | `faq_similarity_threshold` | `70` | Text similarity sensitivity threshold (Range: 50% - 100%). |
 
-### Manual vs Automated Indexing Workflows
-
-#### 1. Event-Driven Auto-Indexing
-Whenever a page is published, modified, or deleted in Grav Admin, the plugin intercepts `onPageSaved` and `onPageDeleted` to update SQLite in real time.
-
-#### 2. Scheduled Background Indexing
-Configured via cron expression (`rag_scheduler_cron`, default: `0 2 * * *` [Daily at 2:00 AM]).
-
-#### 3. Manual Admin Rebuild
-Click **`⚡ Rebuild RAG Index`** under **Grav Admin -> Plugins -> AI Chatbot** to purge and re-index the database on demand.
-
----
-
-## 4. Grav Admin Configuration Options
-
-| Setting Group | Configuration Fields & Options |
-| :--- | :--- |
-| **RAG Retrieval & Vector Store** | Master Toggle (`rag_enabled`), Page Auto-Indexing (`rag_indexing_enabled`), Embedding Provider Select, Top-K Count, Min Similarity %, **Scheduler Cron**, **`⚡ Rebuild RAG Index` Button** |
-| **AI Provider Settings** | Master AI Switch (`ai_enabled`), Custom Offline Message (`ai_disabled_response_text`), Provider Select, API Keys, Model Name, **Live Test AI Connection Button** |
-| **FAQ Engine** | Enable FAQ Pre-Matching, Multilingual FAQ Support, FAQ Route (`/faq`), Similarity Sensitivity Threshold (%) |
-| **Contact Resolution** | Public Contact Route (`/contact`), Hidden Technical Contact Route (`/hidden-contacts`) |
-| **Widget UI Customization** | Presets (Glassmorphic Blue, Emerald Dark, etc.), Accent Color Picker, Screen Position, Quick Reply Suggestion Pills |
-| **Telemetry & Analytics** | Logging Toggle, Date Range Filter (7d, 30d, 90d, 180d, 365d, All), CSV/JSON Export Links |
-
----
-
-## 5. Semantic FAQ Pre-Matching Engine & YAML Examples
-
-Create a page at `/faq` (`user/pages/05.faq/default.md`) with frontmatter aliases:
-
+#### Sample FAQ Frontmatter (`user/pages/05.faq/default.md`):
 ```yaml
 ---
 title: Frequently Asked Questions
@@ -223,103 +148,112 @@ faqs:
   - question: "What are your business hours?"
     aliases:
       - "When are you open?"
-      - "What time do you open and close?"
       - "Operating hours"
-      - "Work schedule"
     answer: "We are open Monday through Friday from 9:00 AM to 5:00 PM EST."
-
-  - question: "Where is your office located?"
-    aliases:
-      - "What is your address?"
-      - "How do I get to your office?"
-      - "Location details"
-    answer: "Our main office is located at 123 Innovation Way, Tech Suite 400."
----
-```
-
-When a visitor types *"When are you open?"*, the bot returns the exact FAQ answer with **0 AI API calls**.
-
----
-
-## 6. Multi-Tier Contact Resolution & Hidden Contact Setup
-
-To provide secure engineering/support contacts for technical questions without exposing them on public pages, create a hidden page at `/hidden-contacts` (`user/pages/hidden-contacts/default.md`):
-
-```yaml
----
-title: Technical Support Contacts
-published: false
-routable: false
-technical_contacts:
-  - department: "DevOps & Cloud Infrastructure"
-    email: "devops-support@example.com"
-    telegram: "@devops_oncall"
-  - department: "Security & Encryption"
-    email: "security@example.com"
-    pgp_key_id: "0x9B8A7C6D5E4F3A2B"
 ---
 ```
 
 ---
 
-## 7. Widget Customization & Quick Reply Configuration
+## Section 4: 📞 Contact Settings (`section_contact`)
 
-Add customized quick reply suggestion pills in `user/config/plugins/ai-chatbot.yaml`:
+Multi-tier contact resolution for public and technical inquiries.
 
+| Field Label | Setting Key | Default Value | Description & Options |
+| :--- | :--- | :--- | :--- |
+| **Public Contact Route** | `contact_route` | `/contact` | Relative route to public contact page. |
+| **Enable Hidden Contacts** | `enable_hidden_contacts` | `1` (Enabled) | Reads hidden `/hidden-contacts` page for technical/engineering support inquiries. |
+| **Hidden Contact Route** | `hidden_contact_route` | `/hidden-contacts` | Route path for unpublished technical contact data. |
+
+---
+
+## Section 5: 🎨 UI & Chatbot Widget Settings (`section_ui`)
+
+Controls floating widget aesthetics, themes, page display visibility, and quick reply suggestion pills.
+
+| Field Label | Setting Key | Default Value | Description & Options |
+| :--- | :--- | :--- | :--- |
+| **Theme Preset** | `theme_preset` | `glass_blue` | Presets: `glass_blue` (Glassmorphic Blue), `emerald_dark` (Emerald Dark Mode), `purple_haze` (Purple Haze), `sunset_orange` (Sunset Orange), `custom` (Color Picker). |
+| **Widget Position** | `position` | `bottom-right` | Options: `bottom-right` or `bottom-left`. |
+| **Page Visibility Rule** | `display_mode` | `all` | Options: `all` (Show Everywhere), `selected_only` (Only Selected Routes), `exclude_selected` (Exclude Selected Routes). |
+| **Target Page Routes** | `display_pages` | `/\n/home\n/contact\n/faq` | Relative URL routes (one per line) used for page visibility rules. |
+| **Header Window Title** | `bot_title` | `Website Assistant` | Header text displayed at the top of the chat widget window. |
+| **Welcome Message** | `welcome_message` | *"Hello! How can I help..."* | Initial message displayed when opening the chat window. |
+| **Accent Color** | `accent_color` | `#3b82f6` | Hex color picker used when `theme_preset` is set to `custom`. |
+| **Enable Quick Replies** | `quick_replies_enabled` | `1` (Enabled) | Shows clickable suggestion pills inside the chat window. |
+| **Quick Reply Buttons List**| `quick_replies` | *List of pills* | Custom list of buttons (`label`, `type`, `action_or_prompt`). |
+
+#### Quick Replies YAML Snippet:
 ```yaml
-quick_reply_buttons:
+quick_replies:
   - label: "📝 Summarize Page"
-    prompt: "Can you provide a concise summary of this page?"
-  - label: "📞 Contact Support"
-    prompt: "How can I contact your engineering support team?"
-  - label: "❓ Business Hours"
-    prompt: "What are your operating hours?"
+    action_or_prompt: "summarize_page"
+  - label: "📞 Contact Owner"
+    action_or_prompt: "contact"
 ```
 
 ---
 
-## 8. Date Range Analytics & Data Export API Examples
+## Section 6: 🕒 Session Retention Settings (`section_session`)
 
-Export interaction telemetry programmatically via HTTP REST endpoints:
-
-- **Export 30-Day CSV Report**:
-  ```bash
-  curl -X GET "https://yoursite.com/chatbot-export?format=csv&range=30d" -o chatbot_report.csv
-  ```
-- **Export 90-Day JSON Analytics**:
-  ```bash
-  curl -X GET "https://yoursite.com/chatbot-export?format=json&range=90d" -o chatbot_analytics.json
-  ```
-- **Export All-Time Raw Interaction Logs**:
-  ```bash
-  curl -X GET "https://yoursite.com/chatbot-export?format=raw_interactions&range=all" -o raw_interactions.json
-  ```
+| Field Label | Setting Key | Default Value | Description & Options |
+| :--- | :--- | :--- | :--- |
+| **Session Retention Days** | `session_retention_days` | `7` | Days to retain visitor chat history in browser `localStorage` across refreshes and page transitions. |
 
 ---
 
-## 9. CLI Commands Reference & Examples
+## Section 7: 🛡️ Security & Limits Settings (`section_security`)
 
-Run commands via SSH terminal in your Grav root directory:
+| Field Label | Setting Key | Default Value | Description & Options |
+| :--- | :--- | :--- | :--- |
+| **Rate Limiting** | `rate_limit_enabled` | `1` (Enabled) | Protects against API quota exhaustion and spam attacks. |
+| **Max Requests** | `rate_limit_max_requests` | `10` | Maximum requests allowed per IP within the time window. |
+| **Window Duration (Sec)** | `rate_limit_window_seconds` | `60` | Time window duration in seconds (Default 60s). |
+| **Strict Site Scope** | `strict_site_scope` | `1` (Enabled) | Restricts AI answers strictly to your website scope. |
+| **Blacklist Guardrail** | `blacklist_filter_enabled` | `1` (Enabled) | Blocks queries containing forbidden terms before sending to AI API. |
+| **Blacklisted Vocabulary** | `blacklist_words` | `spam\nscam\nhack...` | List of restricted words/profanity (one per line). |
+| **Blacklist Response Text**| `blacklist_response_text` | *"⚠️ Safety Guardrail..."* | Warning message shown to visitors when restricted terms are detected. |
+| **Restrict Export Access** | `export_require_auth` | `1` (Enabled) | Requires user to be logged into Grav Admin to download CSV/JSON reports. |
+| **Whitelisted Export Users**| `export_allowed_users` | `admin\nmilkboy` | Authorized usernames allowed to download telemetry files (one per line). |
+
+---
+
+## Section 8: 📝 Logging & Cost Estimation Settings (`section_logging`)
+
+| Field Label | Setting Key | Default Value | Description & Options |
+| :--- | :--- | :--- | :--- |
+| **Logging Enabled** | `logging_enabled` | `1` (Enabled) | Logs visitor queries to `user/data/ai-chatbot/interactions.json`. |
+| **Log API Usage & Costs** | `log_api_usage` | `1` (Enabled) | Tracks token consumption and calculates estimated USD costs. |
+| **Log AI Server Responses**| `log_ai_responses` | `0` (Disabled) | Records raw AI payloads to `user/data/ai-chatbot/ai_responses.log`. |
+| **Input Token Price ($/1M)**| `cost_input_token_price_per_m` | `0.15` | Input price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.15). |
+| **Output Token Price ($/1M)**| `cost_output_token_price_per_m`| `0.60` | Output price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.60). |
+
+---
+
+## Section 9: 📊 AI Analytics & Performance Dashboard (`section_analytics`)
+
+Access visual dashboards under **Grav Admin -> Plugins -> AI Chatbot -> Section 9**:
+
+- **Update Chart Metrics Button**: Click **`🔄 Update & Regenerate Chart Metrics`** to sync live charts instantly.
+- **Visual SVG Graphs**: View daily interaction volume bar charts and query source ratios (FAQ Hits vs AI Calls vs Rate Limits).
+- **Export Links**:
+  - CSV Report: `/chatbot-export?format=csv&range=30d`
+  - JSON Analytics: `/chatbot-export?format=json&range=90d`
+  - Raw Interaction Logs: `/chatbot-export?format=raw_interactions&range=all`
+
+---
+
+## CLI Commands Reference
+
+Execute commands via SSH terminal in your Grav root directory:
 
 ```bash
 # 1. Force complete rebuild of RAG SQLite Vector Index
 php bin/plugin ai-chatbot index-rag --rebuild
 
-# 2. Run Grav Scheduler execution loop manually
+# 2. Execute Grav Scheduler background job loop manually
 php bin/grav scheduler -r
 
-# 3. Clear Grav site cache and chatbot data cache
+# 3. Clear Grav site cache and plugin data cache
 php bin/grav clear-site-cache
 ```
-
----
-
-## 10. Troubleshooting & FAQs
-
-### Q: Why is RAG background re-indexing not running?
-1. Verify `rag_scheduler_enabled: true` in plugin settings.
-2. Confirm server crontab includes `* * * * * cd /path/to/grav && php bin/grav scheduler 1>/dev/null 2>&1`.
-3. Inspect scheduler output logs at `user/data/ai-chatbot/rag_scheduler.log`.
-
-### Q: How do I verify SQLite RAG storage is active?
-Ensure `user/data/ai-chatbot/rag_index.sqlite` exists and has write permissions. You can click **`⚡ Rebuild RAG Index`** in Grav Admin to verify chunk generation statistics.
