@@ -6,6 +6,17 @@
 
 An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retrieval-Augmented Generation (RAG) vector search, multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, date range analytics filtering, and visual telemetry dashboards.
 
+## 🌐 Live Demo & Hardware Benchmark Test
+
+> [!TIP]
+> **Experience the Live Plugin in Action**:  
+> Test the live floating chatbot widget directly on **[https://www.milkboy.my.id](https://www.milkboy.my.id)**.
+
+> [!WARNING]
+> **Proof of Extreme Token Efficiency & Context Window Optimization**:  
+> The live demo backend on `milkboy.my.id` is powered by a custom Ollama endpoint running on a **janky old Intel Celeron N4100 low-power mini PC** serving `Qwen2.5-0.8B`!  
+> Because the RAG engine trims system prompt context down to 300–500 tokens, even ultra-low-spec hardware can process site queries in real time. Please expect slight hardware-bound processing latency when testing complex queries!
+
 ---
 
 ## 📘 Documentation & Guides
