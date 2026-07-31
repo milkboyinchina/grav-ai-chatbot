@@ -2,13 +2,20 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Grav CMS](https://img.shields.io/badge/Grav-1.7%2B-orange.svg)](https://getgrav.org)
-[![Version](https://img.shields.io/badge/Version-v1.4.3-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
+[![Version](https://img.shields.io/badge/Version-v1.5.0-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
 
-An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, date range analytics filtering, and visual telemetry dashboards.
+An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retrieval-Augmented Generation (RAG) vector search, multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, date range analytics filtering, and visual telemetry dashboards.
 
 ---
 
 ## 🌟 Core Features
+
+- 🧠 **Retrieval-Augmented Generation (RAG) Engine**:
+  - **Heading-Aware Page Chunking**: Automatically parses and splits published Grav pages along H1–H3 section boundaries.
+  - **SQLite Vector Database**: Local `rag_index.sqlite` storage supporting cosine similarity and term overlap searches.
+  - **Multi-Driver Embedding**: Supports Ollama (`nomic-embed-text`), Gemini (`text-embedding-004`), OpenAI (`text-embedding-3-small`), and zero-token local TF-IDF/BM25.
+  - **Grav Scheduler & Auto-Indexing**: Incremental SHA-256 hash checks and automated background cron re-indexing via Grav CMS Scheduler.
+  - 📉 **80%+ Token & Cost Reduction**: Drastically reduces LLM prompt size and cuts API costs. See [`BENCHMARK-RAG.md`](BENCHMARK-RAG.md) for full benchmarks.
 
 - ⚡ **Multi-Provider AI Engines**:
   - **Groq API** (Default: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
@@ -58,6 +65,22 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting multi
 
 ---
 
+## 📈 RAG Token Usage & Cost Optimization
+
+The built-in **RAG (Retrieval-Augmented Generation)** engine eliminates context window bloat and drastically optimizes token consumption by injecting only Top-K relevant section chunks into the LLM system prompt:
+
+| Optimization Metric | Without RAG (Legacy Full-Site Context) | With RAG (SQLite Vector Store) | Performance / Savings Impact |
+| :--- | :--- | :--- | :--- |
+| **Prompt Token Count** | **204 Tokens** *(scales with site size)* | **36 Tokens** *(constant size)* | **82.35% Token Savings** |
+| **Local Retrieval Latency** | 0.006 ms | **0.312 ms** | Sub-millisecond local vector lookup |
+| **Monthly Token Volume (10k queries)** | 2.04 Million Tokens | **0.36 Million Tokens** | **1.68 Million Tokens Saved** |
+| **Monthly API Cost** (@ $0.15/1M) | $0.3060 / month | **$0.0540 / month** | **82.35% Direct Cost Savings** |
+
+> [!TIP]
+> For complete technical benchmarks, token reduction breakdowns, and architectural benchmarks, refer to **[`BENCHMARK-RAG.md`](BENCHMARK-RAG.md)**.
+
+---
+
 ## 🚀 Installation & Setup
 
 ### 1. Plugin Installation
@@ -96,6 +119,7 @@ Navigate to **Grav Admin -> Plugins -> Grav AI Chatbot** to configure:
 
 | Setting Group | Configuration Fields |
 | :--- | :--- |
+| **RAG Retrieval & Vector Store** | Master RAG Toggle (`rag_enabled`), Page Auto-Indexing (`rag_indexing_enabled`), Embedding Provider (Ollama / Gemini / OpenAI / TF-IDF), Top-K Chunks, Min Similarity %, **Grav Scheduler Re-Indexing Cron**, **`⚡ Rebuild RAG Index` Button** |
 | **AI Provider Settings** | Enable AI Fallback (`ai_enabled`), **AI Disabled Response Message (`ai_disabled_response_text`)**, Provider Select, API Key, Model Identifier, Custom Endpoint, **Live Test AI Connection Button** |
 | **FAQ Settings** | Enable FAQ Pre-Matching, Multilingual FAQ Matching, FAQ Route (`/faq`), Similarity Sensitivity Threshold (%) |
 | **Contact Resolution** | Public Contact Route (`/contact`), Enable Hidden Contact Page, Hidden Contact Route (`/hidden-contacts`) |
