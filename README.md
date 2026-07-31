@@ -11,12 +11,13 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 > [!TIP]
 > **Experience the Live Plugin in Action**:  
 > Test the live floating chatbot widget directly on **[https://www.milkboy.my.id](https://www.milkboy.my.id)**.
+> Not using CDN, connection may be slow if you are not in SEA region. 
 
 > [!WARNING]
 > **Proof of Extreme Token Efficiency & Context Window Optimization**:  
-> The live demo backend on `milkboy.my.id` is powered by a custom Ollama endpoint running on a **janky old Intel Celeron N4100 low-power mini PC** serving `Qwen2.5-0.8B`!  
+> The live demo backend on `milkboy.my.id` is powered by a custom Ollama endpoint running on a **remote janky old Intel Celeron N4100 low-power mini PC** serving custom `Qwen2.5-0.8B`!  
 > Because the RAG engine trims system prompt context down to 300–500 tokens, even ultra-low-spec hardware can process site queries in real time. Please expect slight hardware-bound processing latency when testing complex queries (*your mileage may vary!*).
-
+> Don't judge me, there are token abuser around
 ---
 
 ## 📘 Documentation & Guides
