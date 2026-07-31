@@ -65,10 +65,10 @@ form:
           type: select
           label: PLUGIN_AI_CHATBOT.PROVIDER
           help: PLUGIN_AI_CHATBOT.PROVIDER_HELP
-          default: groq
+          default: gemini
           options:
+            gemini: Google Gemini API (Default Recommended Free Tier)
             groq: Groq API (Ultra-Fast Llama 3)
-            gemini: Google Gemini API
             openrouter: OpenRouter API
             openai: OpenAI API
             ollama: Ollama Engine (Local / Remote Self-Hosted AI)

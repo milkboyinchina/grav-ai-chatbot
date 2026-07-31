@@ -40,7 +40,7 @@ Controls your primary AI chat completion model, secret API authentication keys, 
 | :--- | :--- | :--- | :--- |
 | **Enable AI Fallback** | `ai_enabled` | `1` (Enabled) | Master toggle for cloud AI generation. When disabled, only local FAQ answers are delivered. |
 | **AI Disabled Message** | `ai_disabled_response_text` | *"AI assistant is currently disabled..."* | Text displayed to visitors when AI fallback is turned off. |
-| **AI Provider** | `provider` | `groq` | Select provider: `groq` (Groq Llama 3), `gemini` (Google Gemini), `openrouter` (OpenRouter API), `openai` (OpenAI), `ollama` (Local/Remote Ollama), `custom` (OpenAI-compatible server). |
+| **AI Provider** | `provider` | `gemini` | **Default Recommended**: `gemini` (Google Gemini API). Also supports `groq` (Groq Llama 3), `openrouter`, `openai`, `ollama`, or `custom`. |
 | **API Key** | `api_key` | *Blank* | **🔑 SHARED FIELD**: Secret API Key. Used for chat completions AND reused by RAG when cloud embedding is selected (`gemini` or `openai`). Leave blank for local Ollama/TF-IDF. |
 | **Model Identifier** | `model` | `gemini-2.0-flash` | Identifier string for chat completions (e.g., `gemini-2.0-flash`, `gpt-4o-mini`, `llama-3.3-70b-versatile`, `deepseek-r1`). |
 | **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Custom endpoint URL. Used for `custom` provider AND reused by RAG when `ollama` is selected for vector embeddings. |
@@ -48,6 +48,17 @@ Controls your primary AI chat completion model, secret API authentication keys, 
 | **Max Output Tokens** | `max_tokens` | `800` | Token limit for AI completion replies (Range: 50 - 4,000 tokens). |
 | **Max Input Tokens** | `max_input_tokens` | `500` | Maximum allowed tokens per user question (~2000 characters). |
 | **Context Window** | `context_window_tokens` | `8192` | Model token capacity (e.g., 8192, 16384, 128000). |
+
+---
+
+### 🌟 Why Google Gemini API (`gemini-2.0-flash`) is the Default Provider Choice
+
+> [!TIP]
+> **Why Google Gemini Free Tier is Best for Testing & Production**:
+> 1. **Free API Access (No Credit Card Required)**: Google AI Studio provides generous free tier rate limits (up to **15 Requests Per Minute (RPM)** and **1 Million Tokens Per Minute (TPM)**) for model `gemini-2.0-flash`.
+> 2. **Instant API Key Generation**: Developers can obtain a free API key instantly in under 30 seconds at [Google AI Studio](https://aistudio.google.com/).
+> 3. **High Intelligence & Speed**: `gemini-2.0-flash` offers sub-second latency and strong multimodal reasoning, making it ideal for testing live website queries without incurring monthly API bills.
+> 4. **Seamless RAG Integration**: Reuses the same Gemini API key for both AI chat completions (`gemini-2.0-flash`) and vector embeddings (`text-embedding-004`).
 
 ---
 
