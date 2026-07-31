@@ -60,6 +60,10 @@ Controls your primary AI chat completion model, secret API authentication keys, 
 > 3. **High Intelligence & Speed**: `gemini-2.0-flash` offers sub-second latency and strong multimodal reasoning, making it ideal for testing live website queries without incurring monthly API bills.
 > 4. **Seamless RAG Integration**: Reuses the same Gemini API key for both AI chat completions (`gemini-2.0-flash`) and vector embeddings (`text-embedding-004`).
 
+> [!NOTE]
+> **Disclaimer & Message to Google**:  
+> *Full transparency: I am **NOT** being paid by Google to set Gemini as the default provider! I chose it simply because its free tier is genuinely fantastic for testing and developer adoption. That being said... **if anyone at Google DeepMind or Google Cloud is reading this documentation: please feel free to donate or send some free API credits my way!** ☕ GCP sponsors and coffee donations are always welcome!* 😉
+
 ---
 
 ## Section 2: 🧠 RAG (Retrieval-Augmented Generation) & Page Indexing Engine (`section_rag`)
