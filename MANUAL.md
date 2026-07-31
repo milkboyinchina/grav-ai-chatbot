@@ -290,10 +290,10 @@ quick_replies:
 | Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
 | **Logging Enabled** | `logging_enabled` | `1` (Enabled) | Logs visitor queries to `user/data/ai-chatbot/interactions.json`. |
-| **Log API Usage & Costs** | `log_api_usage` | `1` (Enabled) | Tracks token consumption and calculates estimated USD costs. |
-| **Log AI Server Responses**| `log_ai_responses` | `0` (Disabled) | Records raw AI payloads to `user/data/ai-chatbot/ai_responses.log`. |
-| **Input Token Price ($/1M)**| `cost_input_token_price_per_m` | `0.15` | Input price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.15). |
-| **Output Token Price ($/1M)**| `cost_output_token_price_per_m`| `0.60` | Output price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.60). |
+| (WIP) **Log API Usage & Costs** | `log_api_usage` | `1` (Enabled) | Tracks token consumption and calculates estimated USD costs. |
+| (WIP) **Log AI Server Responses**| `log_ai_responses` | `0` (Disabled) | Records raw AI payloads to `user/data/ai-chatbot/ai_responses.log`. |
+| (WIP) **Input Token Price ($/1M)**| `cost_input_token_price_per_m` | `0.15` | Input price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.15). |
+| (WIP) **Output Token Price ($/1M)**| `cost_output_token_price_per_m`| `0.60` | Output price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.60). |
 
 ---
 
@@ -301,8 +301,8 @@ quick_replies:
 
 Access visual dashboards under **Grav Admin -> Plugins -> AI Chatbot -> Section 9**:
 
-- **Update Chart Metrics Button**: Click **`🔄 Update & Regenerate Chart Metrics`** to sync live charts instantly.
-- **Visual SVG Graphs**: View daily interaction volume bar charts and query source ratios (FAQ Hits vs AI Calls vs Rate Limits).
+- (WIP) **Update Chart Metrics Button**: Click **`🔄 Update & Regenerate Chart Metrics`** to sync live charts instantly.
+- (WIP) **Visual SVG Graphs**: View daily interaction volume bar charts and query source ratios (FAQ Hits vs AI Calls vs Rate Limits).
 - **Export Links**:
   - CSV Report: `/chatbot-export?format=csv&range=30d`
   - JSON Analytics: `/chatbot-export?format=json&range=90d`
