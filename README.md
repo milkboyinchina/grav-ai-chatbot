@@ -53,8 +53,10 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
   - Set a custom reply message (`ai_disabled_response_text`) to display when no local FAQ answer match is found and AI fallback is disabled.
   - **Uninterrupted FAQ Pre-Matching**: Local FAQ answers are always matched and delivered first with 0 AI API calls.
 
+<!--
 - 🔌 **Live AI Connection Test**:
   - Click **`[ 🔌 Test AI Connection ]`** in Grav Admin settings to test API keys and models live before saving configuration.
+-->
 
 - ❓ **Semantic FAQ Pre-Matching Engine**:
   - Pre-matches visitor questions against localized `/faq` pages.
@@ -63,10 +65,10 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
   - Interactive **Yes / No** confirmation buttons with automatic AI fallback escalation.
 
 - 📅 **Date Range Telemetry & Analytics Dashboard**:
-  - Filter interaction logs and graphs by date range: **Last 7 Days**, **Last 1 Month (30d)**, **Last 3 Months (90d)**, **Last 6 Months (180d)**, **Last 12 Months (365d)**, or **All Time**.
-  - **`[ 🔄 Refresh ]`** button for instant live data reloading without page refreshes.
-  - **Visual SVG Charts**: Daily interaction volume bar charts & query source distribution ratios.
-  - **Candidate FAQ Recommendations**: Automatically highlights frequent AI queries to add to `/faq`.
+  - (WIP)Filter interaction logs and graphs by date range: **Last 7 Days**, **Last 1 Month (30d)**, **Last 3 Months (90d)**, **Last 6 Months (180d)**, **Last 12 Months (365d)**, or **All Time**.
+  - (WIP)**`[ 🔄 Refresh ]`** button for instant live data reloading without page refreshes.
+  - (WIP)**Visual SVG Charts**: Daily interaction volume bar charts & query source distribution ratios.
+  - (WIP)**Candidate FAQ Recommendations**: Automatically highlights frequent AI queries to add to `/faq`.
 
 - 📥 **Export & Download Options**:
   - **CSV Report Download**: `/chatbot-export?format=csv&range=...`
