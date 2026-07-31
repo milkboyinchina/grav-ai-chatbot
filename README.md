@@ -8,6 +8,13 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 
 ---
 
+## 📘 Documentation & Guides
+
+- **[User & Administrator Manual (`MANUAL.md`)](MANUAL.md)**: Complete guide on setup, RAG engine, Grav Scheduler crontab configuration, CLI commands, and troubleshooting.
+- **[RAG Technical Plan & Benchmarks (`BENCHMARK-RAG.md`)](BENCHMARK-RAG.md)**: Token consumption matrices, latency benchmarks, and cost reduction analysis.
+
+---
+
 ## 🌟 Core Features
 
 - 🧠 **Retrieval-Augmented Generation (RAG) Engine**:
@@ -16,6 +23,10 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
   - **Multi-Driver Embedding**: Supports Ollama (`nomic-embed-text`), Gemini (`text-embedding-004`), OpenAI (`text-embedding-3-small`), and zero-token local TF-IDF/BM25.
   - **Grav Scheduler & Auto-Indexing**: Incremental SHA-256 hash checks and automated background cron re-indexing via Grav CMS Scheduler.
   - 📉 **80%+ Token & Cost Reduction**: Drastically reduces LLM prompt size and cuts API costs. See [`BENCHMARK-RAG.md`](BENCHMARK-RAG.md) for full benchmarks.
+
+- ⏰ **Automated Grav Scheduler Background Cron**:
+  - Registers job `ai-chatbot-rag-reindex` automatically with Grav CMS Scheduler.
+  - *Note*: Requires standard system crontab setup (`* * * * * cd /path/to/grav && php bin/grav scheduler`). See [`MANUAL.md`](MANUAL.md#2-grav-scheduler--automated-cron-setup) for details.
 
 - ⚡ **Multi-Provider AI Engines**:
   - **Groq API** (Default: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
@@ -47,7 +58,7 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 - 📥 **Export & Download Options**:
   - **CSV Report Download**: `/chatbot-export?format=csv&range=...`
   - **JSON Analytics Dataset**: `/chatbot-export?format=json&range=...`
-  - **Raw Interactions JSON Download**: `/chatbot-export?format=raw_interactions&range=...`
+  - **Raw Interactions JSON Download**: `/chatbot-export?format=raw_interactions&range=all`
 
 - 💬 **Customizable Quick Reply Buttons**:
   - Configure quick reply suggestion pills directly in Grav Admin (**`📝 Summarize Page`**, **`📞 Contact Owner`**, **`❓ Founding Date`**, or custom prompts).
@@ -77,7 +88,7 @@ The built-in **RAG (Retrieval-Augmented Generation)** engine eliminates context 
 | **Monthly API Cost** (@ $0.15/1M) | $0.3060 / month | **$0.0540 / month** | **82.35% Direct Cost Savings** |
 
 > [!TIP]
-> For complete technical benchmarks, token reduction breakdowns, and architectural benchmarks, refer to **[`BENCHMARK-RAG.md`](BENCHMARK-RAG.md)**.
+> For complete technical benchmarks, token reduction breakdowns, and architectural benchmarks, refer to **[`BENCHMARK-RAG.md`](BENCHMARK-RAG.md)**. For user instructions, refer to **[`MANUAL.md`](MANUAL.md)**.
 
 ---
 
