@@ -55,6 +55,7 @@ class Logger
             'question' => trim($entry['question'] ?? ''),
             'answer' => trim($entry['answer'] ?? ''),
             'source' => $entry['source'] ?? 'ai_api', // 'faq_match', 'ai_api', 'rate_limit', 'guardrail'
+            'source_page' => $entry['source_page'] ?? $_SERVER['HTTP_REFERER'] ?? $_SERVER['REQUEST_URI'] ?? '/',
             'provider' => $entry['provider'] ?? 'groq',
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
