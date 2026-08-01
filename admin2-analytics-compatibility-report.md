@@ -7,27 +7,62 @@
 
 ---
 
-## Live Browser Inspection Results (`http://localhost/admin/plugins/ai-chatbot`)
+## Live Browser Inspection vs Expected Data Comparison
 
-When opening the AI Chatbot configuration page inside Admin2 in a live browser session, the three telemetry fields display their static default fallback strings:
+When opening the AI Chatbot configuration page inside Admin2 (`http://localhost/admin/plugins/ai-chatbot`), the telemetry form fields display static placeholder text instead of live logged data.
 
-1. **📊 Interaction Summary Metrics**:
-   - **Rendered Browser Value**: `"Total Queries: 0 | FAQ Matches: 0 (0% Saved) | AI Calls: 0 | Total Tokens: 0 | Est. Cost: $0.0000"`
+Below is the side-by-side comparison of **what Admin2 rendered on screen** versus **what the fields should have displayed**:
 
-2. **📈 Visual Interaction Volume & Source Distribution Chart**:
-   - **Rendered Browser Value**:
-     ```text
-     📈 DAILY INTERACTION VOLUME:
-       (No interaction data logged yet)
+### 1. 📊 Interaction Summary Metrics (`analytics_summary_text`)
+- **Rendered Browser Value in Admin2**:
+  ```text
+  Total Queries: 0 | FAQ Matches: 0 (0% Saved) | AI Calls: 0 | Total Tokens: 0 | Est. Cost: $0.0000
+  ```
+- **Expected Real Live Data (What it should have displayed)**:
+  ```text
+  Total Queries: 59 | FAQ Matches: 24 (41% Saved) | AI Calls: 10 | Total Tokens: 4,827 | Est. Cost: $0.0009
+  ```
 
-     📊 QUERY SOURCE DISTRIBUTION RATIO:
-       ⚡ FAQ Matches (Free) : 0 (0%)
-       🤖 AI Model Calls     : 0 (0%)
-       🛡️ Rate Limit Shield  : 0 (0%)
-     ```
+---
 
-3. **🚨 AI Chatbot Live Error Log**:
-   - **Rendered Browser Value**: `"No error logs recorded. Plugin operating normally."`
+### 2. 📈 Visual Interaction Volume & Source Distribution Chart (`analytics_chart_display`)
+- **Rendered Browser Value in Admin2**:
+  ```text
+  📈 DAILY INTERACTION VOLUME:
+    (No interaction data logged yet)
+
+  📊 QUERY SOURCE DISTRIBUTION RATIO:
+    ⚡ FAQ Matches (Free) : 0 (0%)
+    🤖 AI Model Calls     : 0 (0%)
+    🛡️ Rate Limit Shield  : 0 (0%)
+  ```
+- **Expected Real Live Data (What it should have displayed)**:
+  ```text
+  📈 DAILY INTERACTION VOLUME:
+    2026-07-29 : ███████████ (13 queries)
+    2026-07-30 : ████████████████████ (24 queries)
+    2026-07-31 : ██████████ (12 queries)
+    2026-08-01 : ████████ (10 queries)
+
+  📊 QUERY SOURCE DISTRIBUTION RATIO:
+    ⚡ FAQ Matches (Free) : ████████ 24 (41%)
+    🤖 AI Model Calls     : ███ 10 (17%)
+    🛡️ Rate Limit Shield  :  0 (0%)
+  ```
+
+---
+
+### 3. 🚨 AI Chatbot Live Error Log (`ai_chatbot_error_log_display`)
+- **Rendered Browser Value in Admin2**:
+  ```text
+  No error logs recorded. Plugin operating normally.
+  ```
+- **Expected Real Live Data (What it should have displayed)**:
+  ```text
+  [2026-08-01 09:01:29 +00:00] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true...}
+  [2026-08-01 10:36:29 +00:00] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true...}
+  [2026-08-01 10:42:59 +00:00] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true...}
+  ```
 
 ---
 
@@ -56,11 +91,11 @@ While the embedded form textareas inside Admin2's settings page remain static du
 
 ---
 
-## Summary of Findings
+## Summary Table
 
-| Feature / Field | Classic Admin (`user/plugins/admin`) | Modern Admin2 (`user/plugins/admin2`) | Reason |
+| Field Name | Rendered in Admin2 Browser | Expected Live Value | Reason for Discrepancy |
 | :--- | :--- | :--- | :--- |
-| **Form Field Polling** | ✅ Updates live via `<script>` | ❌ Shows default text | SvelteKit strips inline `<script>` tags from form blueprints |
-| **JSON Export Endpoints** | ✅ Working | ✅ Working | Independent REST route |
-| **Interactions Log File** | ✅ Saved | ✅ Saved | File-system logger in PHP |
-| **Error Log File** | ✅ Saved | ✅ Saved | File-system logger in PHP |
+| **Summary Metrics** | `Total Queries: 0 ...` | `Total Queries: 59 ...` | SvelteKit SPA strips inline `<script>` poller from blueprints |
+| **ASCII Bar Chart** | `(No interaction data)` | `2026-07-29 : ████ (13)...` | SvelteKit SPA strips inline `<script>` poller from blueprints |
+| **Live Error Log** | `No error logs recorded` | Recorded log entries | SvelteKit SPA strips inline `<script>` poller from blueprints |
+| **JSON Export Endpoints** | ✅ Working (`/chatbot-export`) | ✅ Working | Direct REST route |
