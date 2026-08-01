@@ -9,9 +9,13 @@
 ## Environment & System Context
 
 - **CMS Platform**: Grav CMS `v2.0.12`
-- **Admin Interface**: Grav Admin2 SvelteKit SPA (`user/plugins/admin2`) alongside Classic Admin (`user/plugins/admin`)
-- **API Engine**: `grav-plugin-api`
-- **PHP Environment**: PHP 8.x inside Docker LAMP container (`grav-lamp-web`)
+- **Admin Interface**: Grav Admin2 SvelteKit SPA `v2.0.17` (`user/plugins/admin2`) alongside Classic Admin (`user/plugins/admin`)
+- **API Engine**: `grav-plugin-api` (`>=1.0.14`)
+- **PHP Version**: PHP `8.3.32`
+- **Webserver**: Apache `2.4.68` (Debian)
+- **Operating System**: Debian GNU/Linux `13.6` (trixie/testing)
+- **System Architecture**: `x86_64` (64-bit)
+- **Container Environment**: Docker LAMP Stack (`grav-lamp-web`)
 - **Active LLM Provider**: Local Ollama (`qwen2.5-fast:latest`)
 - **Supported AI Providers**: Ollama, Google Gemini, Groq, OpenRouter, OpenAI
 
