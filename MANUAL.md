@@ -43,7 +43,8 @@ Controls your primary AI chat completion model, secret API authentication keys, 
 | **AI Provider** | `provider` | `gemini` | **Default Recommended**: `gemini` (Google Gemini API). Also supports `groq` (Groq Llama 3), `openrouter`, `openai`, `ollama`, or `custom`. |
 | **API Key** | `api_key` | *Blank* | **🔑 SHARED FIELD**: Secret API Key. Used for chat completions AND reused by RAG when cloud embedding is selected (`gemini` or `openai`). Leave blank for local Ollama/TF-IDF. |
 | **Model Identifier** | `model` | `gemini-2.0-flash` | Identifier string for chat completions (e.g., `gemini-2.0-flash`, `gpt-4o-mini`, `llama-3.3-70b-versatile`, `deepseek-r1`). |
-| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Custom endpoint URL. Used for `custom` provider AND reused by RAG when `ollama` is selected for vector embeddings. |
+| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Primary endpoint URL. Required for `custom` provider and remote Ollama hosts (e.g., `http://100.100.75.77:11434/`). |
+| **Fallback Endpoint URL**| `fallback_endpoint` | *Blank* | **🔄 FAILOVER FIELD**: Optional secondary/fallback endpoint URL (e.g., `http://192.168.18.12:11434/`). Automatically retried if primary endpoint connection fails or times out (3s). |
 | **API Timeout (Sec)** | `api_timeout` | `30` | Maximum HTTP execution time in seconds (Range: 5 - 120s). |
 | **Max Output Tokens** | `max_tokens` | `800` | Token limit for AI completion replies (Range: 50 - 4,000 tokens). |
 | **Max Input Tokens** | `max_input_tokens` | `500` | Maximum allowed tokens per user question (~2000 characters). |

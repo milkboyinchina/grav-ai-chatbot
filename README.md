@@ -41,13 +41,13 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
   - Registers job `ai-chatbot-rag-reindex` automatically with Grav CMS Scheduler.
   - *Note*: Requires standard system crontab setup (`* * * * * cd /path/to/grav && php bin/grav scheduler`). See [`MANUAL.md`](MANUAL.md#2-grav-scheduler--automated-cron-setup) for details.
 
-- ⚡ **Multi-Provider AI Engines**:
+- ⚡ **Multi-Provider AI Engines & Dual-Endpoint Failover**:
   - **Groq API** (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
   - **Google Gemini API** (Default: `gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`).
     *(Disclaimer: Not sponsored by Google — please Google, donate some tokens! 😅)*
   - **OpenRouter API** (`google/gemini-flash-1.5`, `anthropic/claude-3.5-sonnet`).
   - **OpenAI API** (`gpt-4o-mini`, `gpt-4o`).
-  - **Custom Endpoints** (Local Ollama, vLLM, or self-hosted OpenAI-compatible servers).
+  - **Custom Endpoints & Configurable Failover** (Local Ollama, Tailscale VPN hosts, vLLM, or self-hosted OpenAI-compatible servers with **automatic primary & secondary endpoint failover**).
 
 - 🛡️ **Configurable AI Disabled Reply & Offline Fallback**:
   - Toggle AI generation on/off (`ai_enabled`).
