@@ -70,10 +70,12 @@ class AiChatbotPlugin extends Plugin
 
     /**
      * Add AI Chatbot entry to Grav Admin sidebar navigation menu.
+     *
+     * @param mixed $event
      */
-    public function onAdminMenu()
+    public function onAdminMenu($event = null)
     {
-        $this->grav['twig']->plugins_hook['nav']['ai-chatbot'] = [
+        $navItem = [
             'route' => 'plugins/ai-chatbot',
             'icon' => 'fa-robot',
             'title' => 'AI Chatbot',
@@ -81,14 +83,16 @@ class AiChatbotPlugin extends Plugin
             'priority' => 10
         ];
 
+        if (is_object($event) && method_exists($event, 'offsetGet') && isset($event['nav'])) {
+            $nav = $event['nav'];
+            $nav['ai-chatbot'] = $navItem;
+            $event['nav'] = $nav;
+        }
+
+        $this->grav['twig']->plugins_hook['nav']['ai-chatbot'] = $navItem;
+
         if (isset($this->grav['admin'])) {
-            $this->grav['admin']->sidebar['ai-chatbot'] = [
-                'route' => 'plugins/ai-chatbot',
-                'icon' => 'fa-robot',
-                'title' => 'AI Chatbot',
-                'authorize' => 'admin.plugins',
-                'priority' => 10
-            ];
+            $this->grav['admin']->sidebar['ai-chatbot'] = $navItem;
         }
     }
 
