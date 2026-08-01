@@ -7,6 +7,19 @@
 
 ---
 
+## 🖥️ System & Environment Details (Anonymized)
+
+- **CMS Platform**: Grav CMS `v1.7.x`
+- **Admin Interface**: Grav Admin2 SvelteKit SPA (`user/plugins/admin2`) & Classic Admin (`user/plugins/admin`)
+- **API Extension Plugin**: `grav-plugin-api`
+- **PHP Environment**: PHP `8.x` (CLI & FPM)
+- **Webserver Environment**: Docker LAMP Stack (`grav-lamp-web`)
+- **Host OS**: Linux (Ubuntu x86_64)
+- **Active AI Engine**: Ollama Local LLM (`qwen2.5-fast:latest`)
+- **Supported AI Providers**: Ollama, Google Gemini, Groq, OpenRouter, OpenAI
+
+---
+
 ## Live Browser Inspection vs Expected Data Comparison
 
 When opening the AI Chatbot configuration page inside Admin2 (`http://localhost/admin/plugins/ai-chatbot`), the telemetry form fields display static placeholder text instead of live logged data.
@@ -78,24 +91,41 @@ Admin2's Svelte components bind form inputs to settings stored in `user/config/p
 
 ---
 
-## Where Live Data IS Working & How to Access It
+## 💡 Recommendations for the Grav Admin2 Core Team
 
-While the embedded form textareas inside Admin2's settings page remain static due to SPA sanitization, all telemetry logging and data export pipelines are active and up to date:
+To help third-party plugin authors present live analytics, telemetry, and log feeds inside Admin2 cleanly, here are architectural recommendations for the `grav-plugin-admin2` development team:
 
-1. **Raw Interactions File**: Saved continuously in `user/data/ai-chatbot/interactions.json` (contains 59 logged queries, FAQ hit counts, token usage, and source page routes).
-2. **System Error Logs**: Logged in real time at `user/data/ai-chatbot/error.log`.
-3. **Live Export Endpoints**:
-   - CSV Spreadsheet: `http://localhost/chatbot-export?format=csv`
-   - JSON Telemetry: `http://localhost/chatbot-export?format=json`
-   - Raw Interactions: `http://localhost/chatbot-export?format=raw_interactions`
+1. **Hydrate Form Defaults from `onApiBlueprintResolved`**:
+   Ensure Svelte form components bind their initial state to the resolved `$event['fields']` defaults output by `onApiBlueprintResolved` backend PHP event listeners.
+2. **Native Reactive Telemetry Field Type (`type: dynamic_metrics`)**:
+   Introduce a native blueprint field type (e.g. `type: dynamic_metrics` or `type: api_fetch`) that accepts an API endpoint URL (`endpoint: /api/v1/...`) and polls it natively inside Svelte SPA reactive state, eliminating the need for inline `<script>` tags in YAML.
+3. **Web Component / Custom Svelte Slot Registry**:
+   Provide a clean JavaScript extension API allowing plugins to register custom Svelte components or Web Components (`window.__GRAV_ADMIN2_REGISTER_COMPONENT(...)`) for custom form fields and dashboard panels.
+
+---
+
+## 🛠️ What You Can Do in `ai-chatbot` (Without Modifying Admin2 Core)
+
+Without waiting for Admin2 core SPA updates, here is how you can access and monitor all live telemetry and error data:
+
+1. **Use Live REST Data Export Links**:
+   Access real-time generated telemetry data directly via standalone URL endpoints in your browser:
+   - **CSV Report**: `http://localhost/chatbot-export?format=csv`
+   - **JSON Telemetry**: `http://localhost/chatbot-export?format=json`
+   - **Raw Interactions**: `http://localhost/chatbot-export?format=raw_interactions`
+2. **Direct File Inspection**:
+   - Inspect raw query logs at `user/data/ai-chatbot/interactions.json`.
+   - Inspect system error logs at `user/data/ai-chatbot/error.log`.
+3. **Classic Admin Toggle**:
+   If live inline ASCII bar graphs and real-time form text updates are required on screen, access the configuration page via Classic Admin (`user/plugins/admin`) where inline JavaScript polling operates freely.
 
 ---
 
 ## Summary Table
 
-| Field Name | Rendered in Admin2 Browser | Expected Live Value | Reason for Discrepancy |
+| Feature / Field | Rendered in Admin2 Browser | Expected Live Value | Recommended Fix / Workaround |
 | :--- | :--- | :--- | :--- |
-| **Summary Metrics** | `Total Queries: 0 ...` | `Total Queries: 59 ...` | SvelteKit SPA strips inline `<script>` poller from blueprints |
-| **ASCII Bar Chart** | `(No interaction data)` | `2026-07-29 : ████ (13)...` | SvelteKit SPA strips inline `<script>` poller from blueprints |
-| **Live Error Log** | `No error logs recorded` | Recorded log entries | SvelteKit SPA strips inline `<script>` poller from blueprints |
-| **JSON Export Endpoints** | ✅ Working (`/chatbot-export`) | ✅ Working | Direct REST route |
+| **Summary Metrics** | `Total Queries: 0 ...` | `Total Queries: 59 ...` | Use `/chatbot-export?format=json` or Classic Admin |
+| **ASCII Bar Chart** | `(No interaction data)` | `2026-07-29 : ████ (13)...` | Use `/chatbot-export?format=json` or Classic Admin |
+| **Live Error Log** | `No error logs recorded` | Recorded log entries | Inspect `user/data/ai-chatbot/error.log` directly |
+| **JSON Export Endpoints** | ✅ Working (`/chatbot-export`) | ✅ Working | Direct REST route (Fully Functional) |
