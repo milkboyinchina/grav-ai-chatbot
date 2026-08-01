@@ -34,7 +34,13 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 
 ## Section 1: AI Provider Settings (`section_provider`)
 
-Controls your primary AI chat completion model, secret API authentication keys, model parameters, and offline fallback messages.
+### 📍 Accessing Admin Settings
+
+- **Admin2 (Modern SvelteKit Admin)**:
+  1. Click **Plugins** in the left sidebar menu (`/admin/plugins`).
+  2. Select **Grav AI Chatbot** from the installed plugins list (or navigate directly to `http://localhost/admin/plugins/ai-chatbot`).
+- **Classic Admin**:
+  1. Click **AI Chatbot** (🤖 `fa-robot` icon) in the left sidebar menu (`/admin/plugins/ai-chatbot`).
 
 | Field Label | Setting Key | Default Value | Options & Cross-Section Dependencies |
 | :--- | :--- | :--- | :--- |
