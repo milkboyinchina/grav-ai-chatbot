@@ -88,4 +88,33 @@ In `ai-chatbot.php`:
 - **`5e7e10a`**: `docs: add Admin2 and Classic Admin navigation steps to MANUAL.md`
 - **`f31485b`**: `fix: resolve unparsed translation string for API_KEY_HELP`
 - **`aafc512`**: `feat: implement Admin2 dashboard telemetry widget with last 5 query terms and menubar links`
-- **Pushed to GitHub**: [`github.com/milkboyinchina/grav-ai-chatbot`](https://github.com/milkboyinchina/grav-ai-chatbot)
+- **`db4d541`**: `docs: add [Admin2-Integration] inline code comments`
+- **`7554345`**: `docs: add admin2-dashboard-integration-implementation.md documentation to plugin repository`
+- **Pushed to GitHub**: [`github.com/milkboyinchina/grav-ai-chatbot/tree/dev`](https://github.com/milkboyinchina/grav-ai-chatbot/tree/dev)
+
+---
+
+## 6. Live Browser Verification Results (`http://localhost/admin/`)
+
+- **Verification Date**: August 1, 2026
+- **Tool**: `/browser` subagent automation suite
+- **Environment**: Grav Admin2 (`user/plugins/admin2`) on local Docker webserver (`grav-lamp-web`).
+
+### Verified Controls & UI Components:
+1. **Top-Header Menubar Actions**:
+   - Environment Selector (`Env: Default`)
+   - View Site Link (`View site`)
+   - Cache Clear Button & Options Dropdown (`Standard Cache`, `All Caches`, `Assets Only`, `Images Only`, `Tmp Only`)
+   - Dark / Light Mode Toggle Switch
+2. **Dashboard Widgets Grid (`http://localhost/admin/`)**:
+   - Stat Counters Bar (Pages, Users, Plugins, Active Theme)
+   - Page Views SVG Area Chart (Last 14 days)
+   - Updates & System Status Panel (Grav update availability, PHP version, Webserver specs)
+   - Disk Usage Storage Meter
+   - Recent Pages List
+   - News & Community Release Feed
+3. **AI Chatbot Plugin Configuration UI (`http://localhost/admin/plugins/ai-chatbot`)**:
+   - Dynamic blueprint form rendered cleanly inside Admin2 with tabbed navigation sections (`section_provider`, `section_faq`, `section_contact`, `section_ui`, `section_session`, `section_security`).
+   - Active toggle switches, text inputs, password masking for API key, and primary/secondary failover endpoint inputs (`custom_endpoint` & `fallback_endpoint`).
+4. **PHP Telemetry Verification**:
+   - Fired `onApiDashboardWidgets` event in PHP runtime — verified return of `ai-chatbot-analytics` telemetry payload containing query counters (59 total), FAQ cache hit ratio (40.7%), token efficiency, active model provider (`OLLAMA`), and **last 5 visitor queries with source page URIs**.
