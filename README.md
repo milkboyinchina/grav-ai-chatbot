@@ -23,6 +23,7 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 ## 📘 Documentation & Guides
 
 - **[User & Administrator Manual (`MANUAL.md`)](MANUAL.md)**: Complete guide on setup, RAG engine, Grav Scheduler crontab configuration, CLI commands, and troubleshooting.
+- **[How It Works Summary (`HOWITWORKS.md`)](HOWITWORKS.md)**: Technical overview of the 5-tier resolution pipeline, RAG ingestion, and execution flow.
 - **[RAG Technical Plan & Benchmarks (`BENCHMARK-RAG.md`)](BENCHMARK-RAG.md)**: Token consumption matrices, latency benchmarks, and cost reduction analysis.
 
 ---
