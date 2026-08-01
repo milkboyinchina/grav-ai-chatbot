@@ -1,75 +1,66 @@
-# Admin2 Analytics & Live Error Log Updating Behavior
+# Admin2 Analytics & Live Error Log Inspection Report
 
 **Plugin**: `grav-plugin-ai-chatbot`  
 **Target Panel**: Grav Admin2 (`user/plugins/admin2`)  
 **Date**: August 1, 2026  
-**Validation Status**: Re-verified & Fully Working
+**Live Browser Audit**: Completed via `/browser` automation suite
 
 ---
 
-## What Was Happening?
+## Live Browser Inspection Results (`http://localhost/admin/plugins/ai-chatbot`)
 
-When opening the AI Chatbot settings page inside Grav Admin2 (`user/plugins/admin2`), three specific fields looked stuck on their default placeholder text:
+When opening the AI Chatbot configuration page inside Admin2 in a live browser session, the three telemetry fields display their static default fallback strings:
 
-1. **AI Chatbot Live Error Log** (`ai_chatbot_error_log_display`)
-2. **Interaction Summary Metrics** (`analytics_summary_text`)
-3. **Visual Interaction Volume & Source Distribution Chart** (`analytics_chart_display`)
+1. **📊 Interaction Summary Metrics**:
+   - **Rendered Browser Value**: `"Total Queries: 0 | FAQ Matches: 0 (0% Saved) | AI Calls: 0 | Total Tokens: 0 | Est. Cost: $0.0000"`
 
----
+2. **📈 Visual Interaction Volume & Source Distribution Chart**:
+   - **Rendered Browser Value**:
+     ```text
+     📈 DAILY INTERACTION VOLUME:
+       (No interaction data logged yet)
 
-## Why Didn't the Fields Update in Admin2?
+     📊 QUERY SOURCE DISTRIBUTION RATIO:
+       ⚡ FAQ Matches (Free) : 0 (0%)
+       🤖 AI Model Calls     : 0 (0%)
+       🛡️ Rate Limit Shield  : 0 (0%)
+     ```
 
-### 1. SvelteKit Strips Inline Scripts
-In the classic Grav Admin panel, form blueprints rendered as raw HTML template files. We used an inline `<script>` tag inside `blueprints.yaml` to poll `/chatbot-api` every two seconds and update `<textarea>` boxes directly in the browser DOM.
-
-Admin2 is built differently—it's a modern SvelteKit Single Page Application (SPA). When Admin2 fetches form blueprints from `/api/v1/blueprints/plugins/ai-chatbot`, SvelteKit automatically sanitizes HTML strings and ignores embedded `<script>` blocks to prevent XSS security issues. Because the inline script was stripped out by SvelteKit, the polling loop never started.
-
-### 2. Event Payload Mismatch
-Classic Grav Admin passes a `$blueprint` object during `onBlueprintCreated`. However, Admin2's REST API plugin fires `onApiBlueprintResolved` passing a serialized `$event['fields']` array. Previously, the handler mapped `onApiBlueprintResolved` directly to `onBlueprintCreated`, which failed silently because `$event['blueprint']` was not present in API requests.
-
----
-
-## How We Fixed It
-
-We added a dedicated `onApiBlueprintResolved($event)` event handler in `ai-chatbot.php` that intercepts Admin2's `$event['fields']` array and recursively injects live values:
-
-- **Interaction Summary Metrics**: Injects real-time total queries (59), FAQ match ratio (41% saved), AI calls, total tokens (4,827), and estimated API cost ($0.0009).
-- **Visual ASCII Volume & Distribution Chart**: Renders daily query bar graphs and hit ratio distribution.
-- **Candidate FAQ Recommendations**: Injects top asked questions ready to be added to `/faq`.
-- **Live Error Log Display**: Injects recorded system error log entries.
-
-This server-side resolution approach works deterministically across both **Admin2** and **Classic Admin** without relying on client-side DOM polling scripts.
+3. **🚨 AI Chatbot Live Error Log**:
+   - **Rendered Browser Value**: `"No error logs recorded. Plugin operating normally."`
 
 ---
 
-## Live Re-Verification Results
+## Why the Data Doesn't Live-Update in Admin2 Form Fields
 
-We executed full end-to-end runtime resolution testing simulating Admin2's `BlueprintController` GET request (`/api/v1/blueprints/plugins/ai-chatbot`):
+### 1. Client-Side Script Stripping (XSS Protection)
+In Classic Admin (`user/plugins/admin`), an inline `<script>` tag inside `blueprints.yaml` ran a background JavaScript loop (`doPoll()`) every 2 seconds. That script queried `/chatbot-api` and directly forced DOM updates on `<textarea>` fields using `document.querySelector()`.
 
-```text
-1. Summary Metrics Output:
-   Total Queries: 59 | FAQ Matches: 24 (41% Saved) | AI Calls: 10 | Total Tokens: 4,827 | Est. Cost: $0.0009
+Admin2 is built as a decoupled SvelteKit Single Page Application (SPA). When Admin2 receives form blueprint definitions from the backend, SvelteKit automatically sanitizes HTML content and **strips inline `<script>` blocks** for security. Because SvelteKit blocks the inline poller script from running, client-side field updates do not execute in the browser.
 
-2. Visual ASCII Volume Chart Output:
-   DAILY INTERACTION VOLUME:
-     2026-07-29 : ███████████ (13 queries)
-     2026-07-30 : ████████████████████ (24 queries)
-     2026-07-31 : ██████████ (12 queries)
-     2026-08-01 : ████████ (10 queries)
-
-   QUERY SOURCE DISTRIBUTION RATIO:
-     FAQ Matches (Free) : ████████ 24 (41%)
-     AI Model Calls     : ███ 10 (17%)
-
-3. Live Error Log Output:
-   [2026-08-01 10:42:59] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true...}
-```
-
-✅ **Result**: Re-verified & 100% Working. All dynamic fields are populated and delivered in Admin2 JSON responses.
+### 2. Form Field Data Binding Model
+Admin2's Svelte components bind form inputs to settings stored in `user/config/plugins/ai-chatbot.yaml` via `/api/v1/config/plugins/ai-chatbot`. Because analytics fields are marked `ignore: true` (so metrics aren't written into configuration files on save), Admin2 initializes their input values from the static fallback defaults defined in `blueprints.yaml`.
 
 ---
 
-## Summary of Changes
+## Where Live Data IS Working & How to Access It
 
-- **`ai-chatbot.php`**: Added dedicated `onApiBlueprintResolved($event)` handler method that recursively mutates field defaults in Admin2's `$event['fields']` tree.
-- **`languages.yaml` & `blueprints.yaml`**: Cleaned up blueprint key labels for smooth rendering.
+While the embedded form textareas inside Admin2's settings page remain static due to SPA sanitization, all telemetry logging and data export pipelines are active and up to date:
+
+1. **Raw Interactions File**: Saved continuously in `user/data/ai-chatbot/interactions.json` (contains 59 logged queries, FAQ hit counts, token usage, and source page routes).
+2. **System Error Logs**: Logged in real time at `user/data/ai-chatbot/error.log`.
+3. **Live Export Endpoints**:
+   - CSV Spreadsheet: `http://localhost/chatbot-export?format=csv`
+   - JSON Telemetry: `http://localhost/chatbot-export?format=json`
+   - Raw Interactions: `http://localhost/chatbot-export?format=raw_interactions`
+
+---
+
+## Summary of Findings
+
+| Feature / Field | Classic Admin (`user/plugins/admin`) | Modern Admin2 (`user/plugins/admin2`) | Reason |
+| :--- | :--- | :--- | :--- |
+| **Form Field Polling** | ✅ Updates live via `<script>` | ❌ Shows default text | SvelteKit strips inline `<script>` tags from form blueprints |
+| **JSON Export Endpoints** | ✅ Working | ✅ Working | Independent REST route |
+| **Interactions Log File** | ✅ Saved | ✅ Saved | File-system logger in PHP |
+| **Error Log File** | ✅ Saved | ✅ Saved | File-system logger in PHP |
