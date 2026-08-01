@@ -6,6 +6,14 @@ namespace Grav\Plugin\AiChatbot;
 
 use Grav\Common\Grav;
 
+/**
+ * Admin2IntegrationService
+ *
+ * [Admin2-Integration] Handles Admin2 extension points including:
+ * 1. Dashboard Widget Payload (onApiDashboardWidgets)
+ * 2. Recent 5 Query Terms & Source Page Routes
+ * 3. Menubar Action Links & Notification Badges
+ */
 class Admin2IntegrationService
 {
     /** @var Grav */
