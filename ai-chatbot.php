@@ -66,7 +66,6 @@ class AiChatbotPlugin extends Plugin
             'onPageSaved' => ['onPageSaved', 0],
             'onPageDeleted' => ['onPageDeleted', 0],
             'onSchedulerInitialized' => ['onSchedulerInitialized', 0],
-            'onApiDashboardWidgets' => ['onApiDashboardWidgets', 0],
         ];
     }
 
@@ -239,7 +238,6 @@ class AiChatbotPlugin extends Plugin
     public function onPluginsInitialized()
     {
         $this->enable([
-            'onApiDashboardWidgets' => ['onApiDashboardWidgets', 0],
             'onApiBlueprintResolved' => ['onBlueprintCreated', 0],
         ]);
 
@@ -740,27 +738,6 @@ class AiChatbotPlugin extends Plugin
             );
             $job->at($cronExpr);
             $job->output('user/data/ai-chatbot/rag_scheduler.log');
-        } catch (\Throwable $t) {}
-    }
-
-    /**
-     * Contribute AI Chatbot & RAG Telemetry widget to Grav Admin2 Dashboard Grid.
-     * [Admin2-Integration] Handles onApiDashboardWidgets event.
-     *
-     * @param mixed $event
-     */
-    public function onApiDashboardWidgets($event): void
-    {
-        try {
-            // [Admin2-Integration] Load Admin2 integration service & fetch widget definition
-            require_once __DIR__ . '/classes/Admin2IntegrationService.php';
-            $service = new Admin2IntegrationService($this->grav);
-            $widget = $service->getDashboardWidgetDefinition();
-
-            // [Admin2-Integration] Push ai-chatbot-analytics widget to Admin2 dashboard grid
-            $widgets = $event['widgets'] ?? [];
-            $widgets[] = $widget;
-            $event['widgets'] = $widgets;
         } catch (\Throwable $t) {}
     }
 }
