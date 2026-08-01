@@ -62,6 +62,7 @@ class AiChatbotPlugin extends Plugin
             'onOutputGenerated' => ['onOutputGenerated', 0],
             'onAdminMenu' => ['onAdminMenu', 0],
             'onBlueprintCreated' => ['onBlueprintCreated', 0],
+            'onApiBlueprintResolved' => ['onBlueprintCreated', 0],
             'onPageSaved' => ['onPageSaved', 0],
             'onPageDeleted' => ['onPageDeleted', 0],
             'onSchedulerInitialized' => ['onSchedulerInitialized', 0],
@@ -239,6 +240,7 @@ class AiChatbotPlugin extends Plugin
     {
         $this->enable([
             'onApiDashboardWidgets' => ['onApiDashboardWidgets', 0],
+            'onApiBlueprintResolved' => ['onBlueprintCreated', 0],
         ]);
 
         if ($this->isAdmin()) {
