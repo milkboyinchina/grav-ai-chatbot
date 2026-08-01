@@ -22,6 +22,8 @@
 
 ## Live Browser Inspection vs Expected Data
 
+![Admin2 Live Browser Inspection Screenshot](admin2_analytics_inspection.png)
+
 When I open the AI Chatbot settings inside Admin2 (`http://localhost/admin/plugins/ai-chatbot`), three form fields display static placeholder text instead of live logged stats:
 
 ### 1. 📊 Interaction Summary Metrics (`analytics_summary_text`)
