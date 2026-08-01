@@ -5,6 +5,7 @@ provider: gemini
 api_key: ''
 model: 'gemini-2.0-flash'
 custom_endpoint: ''
+fallback_endpoint: ''
 api_timeout: 30
 max_tokens: 800
 max_input_tokens: 500

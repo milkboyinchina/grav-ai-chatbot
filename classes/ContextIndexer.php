@@ -110,7 +110,11 @@ class ContextIndexer
                 }
 
                 $title = $page->title();
-                $content = strip_tags($page->content());
+                try {
+                    $content = strip_tags($page->content());
+                } catch (\Throwable $t) {
+                    $content = strip_tags($page->rawMarkdown());
+                }
                 // Truncate individual page length to prevent excessive tokens
                 $cleanContent = trim(preg_replace('/\s+/', ' ', $content));
                 if (strlen($cleanContent) > 400) {

@@ -22,6 +22,7 @@ class AiClientFactory
         $apiKey = trim($config['api_key'] ?? '');
         $model = trim($config['model'] ?? '');
         $customEndpoint = trim($config['custom_endpoint'] ?? '');
+        $fallbackEndpoint = trim($config['fallback_endpoint'] ?? '');
         $timeout = (int)($config['api_timeout'] ?? 30);
         $maxTokens = (int)($config['max_tokens'] ?? 800);
         $contextWindowTokens = (int)($config['context_window_tokens'] ?? 8192);
@@ -76,7 +77,8 @@ class AiClientFactory
                     false,
                     $timeout,
                     $maxTokens,
-                    $contextWindowTokens
+                    $contextWindowTokens,
+                    $fallbackEndpoint
                 );
 
             case 'custom':
@@ -87,7 +89,8 @@ class AiClientFactory
                     false,
                     $timeout,
                     $maxTokens,
-                    $contextWindowTokens
+                    $contextWindowTokens,
+                    $fallbackEndpoint
                 );
 
             case 'gemini':
