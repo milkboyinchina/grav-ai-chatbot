@@ -1,56 +1,44 @@
-# Admin2 Compatibility Technical Report: Live Analytics, Error Logs & Metrics Data Updating Behavior
+# Admin2 Analytics & Live Error Log Updating Behavior
 
 **Plugin**: `grav-plugin-ai-chatbot`  
-**Target Admin**: Grav Admin2 (`user/plugins/admin2`)  
+**Target Panel**: Grav Admin2 (`user/plugins/admin2`)  
 **Date**: August 1, 2026  
-**Status**: Investigated & Diagnosed
 
 ---
 
-## 1. Executive Summary
+## What Was Happening?
 
-When viewing the AI Chatbot configuration page in **Admin2** (`user/plugins/admin2`), the following 3 fields appear frozen on default strings:
-- 🚨 **AI Chatbot Live Error Log** (`ai_chatbot_error_log_display`)
-- 📊 **Interaction Summary Metrics** (`analytics_summary_text`)
-- 📈 **Visual Interaction Volume & Source Distribution Chart** (`analytics_chart_display`)
+When opening the AI Chatbot settings page inside Grav Admin2 (`user/plugins/admin2`), three specific fields looked stuck on their default placeholder text:
 
-**Is Admin2 the reason data won't update?**  
-**YES.** Admin2's decoupled SvelteKit Single Page Application (SPA) architecture changes how blueprint form fields and client-side JavaScript execute compared to Classic Admin (`user/plugins/admin`).
+1. **AI Chatbot Live Error Log** (`ai_chatbot_error_log_display`)
+2. **Interaction Summary Metrics** (`analytics_summary_text`)
+3. **Visual Interaction Volume & Source Distribution Chart** (`analytics_chart_display`)
 
 ---
 
-## 2. Technical Root Cause Analysis
+## Why Didn't the Fields Update in Admin2?
 
-### A. SvelteKit SPA DOM Sanitization (Inline Script Stripping)
-- **Classic Admin Behavior**: In Classic Admin, blueprint form fields rendered raw Twig HTML into the DOM. The plugin embedded an inline `<script>` tag inside `blueprints.yaml` (`content: '<script>(function(){ doPoll()... })()</script>'`) that ran a 2-second background polling loop, fetching data from `/chatbot-api` and directly mutating DOM `<textarea>` elements via `document.querySelector()`.
-- **Admin2 SPA Behavior**: Admin2 fetches form blueprints over JSON API (`GET /api/v1/blueprints/plugins/ai-chatbot`) and renders them using Svelte components. To prevent XSS vulnerabilities, SvelteKit **sanitizes all HTML strings and ignores inline `<script>` tags** embedded in YAML blueprint content. As a result, the polling loop never starts in Admin2.
+### 1. SvelteKit Strips Inline Scripts
+In the classic Grav Admin panel, form blueprints rendered as raw HTML template files. We used an inline `<script>` tag inside `blueprints.yaml` to poll `/chatbot-api` every two seconds and update `<textarea>` boxes directly in the browser DOM.
 
-### B. Blueprint Event Resolution Scope
-- In Classic Admin, dynamic field values were injected via PHP event `onBlueprintCreated`.
-- In Admin2, blueprints are resolved via `grav-plugin-api` event `onApiBlueprintResolved` (`GET /api/v1/blueprints/plugins/*`). Without handling `onApiBlueprintResolved`, Admin2 serves raw static YAML blueprint default values.
+Admin2 is built differently—it's a modern SvelteKit Single Page Application (SPA). When Admin2 fetches form blueprints from `/api/v1/blueprints/plugins/ai-chatbot`, SvelteKit automatically sanitizes HTML strings and ignores embedded `<script>` blocks to prevent XSS security issues. Because the inline script was stripped out by SvelteKit, the polling loop never started.
 
----
-
-## 3. Compatibility & Resolution Strategy
-
-To ensure real-time analytics and log updates work seamlessly in **both** Classic Admin and Modern Admin2:
-
-### Strategy 1: Server-Side Blueprint Event Hook (`onApiBlueprintResolved`)
-By subscribing `onApiBlueprintResolved` in `ai-chatbot.php`, the PHP backend dynamically calculates and injects live error logs, summary metrics, and visual ASCII charts into the blueprint fields whenever Admin2 loads `/api/v1/blueprints/plugins/ai-chatbot`.
-
-### Strategy 2: Native Admin2 Telemetry Dashboard Widget (`ai-chatbot-analytics`)
-Admin2 users get live telemetry data via the newly implemented **`ai-chatbot-analytics`** widget (`onApiDashboardWidgets`), which streams live query volume, FAQ hit ratios, token cost savings, and the **last 5 visitor queries with source page URIs** over `/api/v1/dashboard/widgets`.
+### 2. Event Listener Scope
+Classic Grav Admin relied on the `onBlueprintCreated` PHP event hook to inject initial dynamic values into form fields. Admin2 uses the API plugin's `onApiBlueprintResolved` event when delivering blueprints over JSON. Without subscribing to this event, Admin2 would fall back to the plain text default strings defined in YAML.
 
 ---
 
-## 4. Implementation Fix
+## How We Fixed It
 
-1. **`ai-chatbot.php`**: Enable `onApiBlueprintResolved` event hook to populate real-time analytics data for Admin2 JSON blueprint requests.
-2. **`Admin2IntegrationService.php`**: Serve real-time telemetry metrics via the native Admin2 widget API.
+We updated `ai-chatbot.php` to subscribe to `onApiBlueprintResolved` alongside `onBlueprintCreated`.
+
+Now, whenever Admin2 requests the plugin's blueprint options via `/api/v1/blueprints/plugins/ai-chatbot`, our PHP backend automatically calculates the latest query totals, FAQ match ratios, estimated token costs, ASCII volume charts, and error log entries on the fly.
+
+This approach works reliably across both **Admin2** and **Classic Admin** without depending on client-side DOM manipulation scripts.
 
 ---
 
-## 5. Verification & Git Commit
+## Summary of Changes
 
-- **Documentation**: Report committed as `admin2-analytics-compatibility-report.md`.
-- **Repository**: [`github.com/milkboyinchina/grav-ai-chatbot`](https://github.com/milkboyinchina/grav-ai-chatbot)
+- **`ai-chatbot.php`**: Added `onApiBlueprintResolved` event listener to supply dynamic field values directly to Admin2 API blueprint requests.
+- **`languages.yaml` & `blueprints.yaml`**: Cleaned up blueprint key labels for smooth rendering.
