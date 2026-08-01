@@ -86,6 +86,37 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 
 ---
 
+### 🚀 How to Run RAG Indexing Manually
+
+There are 3 convenient ways to run or trigger the RAG page indexing process manually whenever you publish new content or change embedding configurations:
+
+#### Method 1: Via Grav Admin Panel (1-Click UI Button)
+1. Log into your Grav Admin panel.
+2. Navigate to **Plugins -> AI Chatbot**.
+3. Expand **Section 2: 🧠 RAG & Page Indexing Engine (`section_rag`)**.
+4. Scroll down to the **Rebuild RAG Index** field and click the **`⚡ Rebuild RAG Vector Index Now`** button.
+5. The system will clear existing chunks and re-index all published Grav pages instantly.
+
+#### Method 2: Via Terminal CLI Command (Recommended for Admins & Scripts)
+Open your terminal in the Grav root directory and run:
+
+```bash
+# Option A: Incremental Sync (Indexes new/modified pages, skips unchanged ones)
+php bin/plugin ai-chatbot index-rag
+
+# Option B: Complete Rebuild (Clears SQLite storage and re-indexes all pages from scratch)
+php bin/plugin ai-chatbot index-rag --rebuild
+```
+
+#### Method 3: Via Grav Scheduler Execution
+If background scheduler is enabled (`rag_scheduler_enabled: 1`), trigger all pending Grav scheduled jobs immediately via CLI:
+
+```bash
+php bin/grav scheduler -r
+```
+
+---
+
 ### 🎯 Which RAG Embedding Engine & Model Should You Choose (And Why?)
 
 The RAG engine supports 4 distinct embedding drivers. Choose the engine that best matches your hosting environment, budget, and privacy requirements:
@@ -315,12 +346,16 @@ Access visual dashboards under **Grav Admin -> Plugins -> AI Chatbot -> Section 
 Execute commands via SSH terminal in your Grav root directory:
 
 ```bash
-# 1. Force complete rebuild of RAG SQLite Vector Index
+# 1. Incremental RAG Indexing (Syncs new/modified pages, skips unchanged ones)
+php bin/plugin ai-chatbot index-rag
+
+# 2. Force complete rebuild of RAG SQLite Vector Index from scratch
 php bin/plugin ai-chatbot index-rag --rebuild
 
-# 2. Execute Grav Scheduler background job loop manually
+# 3. Execute Grav Scheduler background job loop manually
 php bin/grav scheduler -r
 
-# 3. Clear Grav site cache and plugin data cache
-php bin/grav clear-site-cache
+# 4. Clear Grav site cache and compiled asset cache
+php bin/grav clearcache
 ```
+
