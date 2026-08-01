@@ -78,7 +78,12 @@ When I open the AI Chatbot settings inside Admin2 (`http://localhost/admin/plugi
 - **What Admin2 Displays on Screen**:
   `No error logs recorded. Plugin operating normally.`
 - **Actual Live Data (What it should display)**:
-  Real-time system log trace lines recorded in `user/data/ai-chatbot/error.log`.
+  ```text
+  [2026-08-01 09:00:43 +00:00] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true,"provider":"ollama","model":"qwen2.5-fast:latest","custom_endpoint":"http://localhost:11434/","rag_enabled":true,"faq_enabled":true,"rate_limit_enabled":true,"export_allowed_users":"admin","session_retention_days":7,"logging_enabled":true}
+  [2026-08-01 09:01:29 +00:00] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true,"provider":"ollama","model":"qwen2.5-fast:latest","custom_endpoint":"http://localhost:11434/","rag_enabled":true,"faq_enabled":true,"rate_limit_enabled":true,"export_allowed_users":"admin","session_retention_days":7,"logging_enabled":true}
+  [2026-08-01 10:36:29 +00:00] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true,"provider":"ollama","model":"qwen2.5-fast:latest","custom_endpoint":"http://localhost:11434/","fallback_endpoint":"http://127.0.0.1:11434/","rag_enabled":true,"faq_enabled":true,"rate_limit_enabled":true,"export_allowed_users":"admin","session_retention_days":7,"logging_enabled":true}
+  [2026-08-01 10:42:59 +00:00] [ERROR] [CONFIG_DEBUG] LIVE_CONFIG_DUMP: {"enabled":true,"ai_enabled":true,"provider":"ollama","model":"qwen2.5-fast:latest","custom_endpoint":"http://localhost:11434/","fallback_endpoint":"http://127.0.0.1:11434/","rag_enabled":true,"faq_enabled":true,"rate_limit_enabled":true,"export_allowed_users":"admin","session_retention_days":7,"logging_enabled":true}
+  ```
 
 ---
 
