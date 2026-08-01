@@ -77,7 +77,7 @@ form:
         api_key:
           type: password
           label: PLUGIN_AI_CHATBOT.API_KEY
-          help: PLUGIN_AI_CHATBOT.API_KEY_HELP (Leave blank for local Ollama)
+          help: PLUGIN_AI_CHATBOT.API_KEY_HELP
           validate:
             required: false
 

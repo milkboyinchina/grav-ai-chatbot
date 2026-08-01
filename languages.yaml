@@ -9,7 +9,7 @@ en:
     PROVIDER: AI Provider Engine
     PROVIDER_HELP: Select your preferred AI provider model (Groq, Google Gemini, OpenRouter, OpenAI, or Custom)
     API_KEY: API Key
-    API_KEY_HELP: Enter your provider API Key securely
+    API_KEY_HELP: Enter your provider API Key securely (leave blank for local Ollama / self-hosted models)
     MODEL: Model Identifier
     MODEL_HELP: E.g. gemini-2.0-flash, gemini-2.0-flash-lite, llama-3.3-70b-versatile, gpt-4o-mini
     CUSTOM_ENDPOINT: Custom Base Endpoint URL
