@@ -17,7 +17,6 @@
 - **System Architecture**: `x86_64` (64-bit)
 - **Container Environment**: Docker LAMP Stack (`grav-lamp-web`)
 - **Active LLM Provider**: Local Ollama (`qwen2.5-fast:latest`)
-- **Supported AI Providers**: Ollama, Google Gemini, Groq, OpenRouter, OpenAI
 
 ---
 
@@ -62,33 +61,47 @@ When you open the AI Chatbot settings inside Admin2 (`http://localhost/admin/plu
 
 ## Why Doesn't the Text Update Live in Admin2?
 
-1. **SvelteKit Strips Inline Scripts**: In classic Grav Admin, we used an inline `<script>` poller in `blueprints.yaml` (`doPoll()`) that updated `<textarea>` fields in the DOM every 2 seconds. Admin2 is built as a SvelteKit SPA, which strips out inline `<script>` tags from form blueprints for security (XSS prevention).
-2. **Form State Binding**: Admin2 binds form field state to `user/config/plugins/ai-chatbot.yaml`. Because analytics fields are marked `ignore: true` (so metrics aren't saved into config files on save), Admin2 renders static default strings on screen.
+> **Disclaimer & Technical Context**:  
+> Please note that the explanations below represent my **primary technical suspicion** based on browser debugging and API response analysis. Since I have limited hands-on experience with SvelteKit internals and `grav-plugin-admin2` frontend architecture, the exact DOM rendering pipeline in Admin2 may behave slightly differently under the hood.
+
+1. **SvelteKit Strips Inline Scripts**: In classic Grav Admin, we used an inline `<script>` poller in `blueprints.yaml` (`doPoll()`) that updated `<textarea>` fields in the DOM every 2 seconds. Admin2 is built as a SvelteKit Single Page Application (SPA), which sanitizes HTML strings and ignores embedded `<script>` blocks from form blueprints for XSS security reasons.
+2. **Form State Binding**: Admin2 binds form field state to `user/config/plugins/ai-chatbot.yaml`. Because analytics fields are marked `ignore: true` (so live metrics aren't written into permanent configuration files on save), Admin2 initializes input values from the static fallback defaults defined in `blueprints.yaml`.
 
 ---
 
-## Features Already Implemented in `ai-chatbot`
+## Current Non-Optimal Workarounds
 
-You don't need to wait for Admin2 frontend updates to access your live analytics and log data. We have already built and enabled full telemetry pipelines directly in `ai-chatbot`:
+While embedded form textareas inside Admin2's settings page remain static due to SPA script sanitization, you do not need to wait for Admin2 core updates. You can access all live telemetry, metrics, and error logs right now using these practical workarounds:
 
-1. **Live REST Data Export Endpoints** (Implemented & Active):
+1. **Live REST Data Export Links**:
+   Access real-time generated telemetry data directly via standalone URL endpoints in your browser:
    - **CSV Spreadsheet Export**: `http://localhost/chatbot-export?format=csv`
    - **JSON Telemetry Dataset**: `http://localhost/chatbot-export?format=json`
    - **Raw Interactions Stream**: `http://localhost/chatbot-export?format=raw_interactions`
-2. **Direct File System Loggers** (Implemented & Active):
-   - Query logs saved in real time at `user/data/ai-chatbot/interactions.json`.
-   - System error logs recorded at `user/data/ai-chatbot/error.log`.
-3. **Backend Blueprint Resolver** (Implemented & Active):
-   - Subscribed `onApiBlueprintResolved` in `ai-chatbot.php` so all REST API requests dynamically receive calculated query metrics and ASCII graphs in the backend JSON payload.
-4. **Dual-Endpoint LLM Failover** (Implemented & Active):
-   - Configurable `custom_endpoint` and `fallback_endpoint` failover.
+2. **Direct File System Log Inspection**:
+   - View raw query logs at `user/data/ai-chatbot/interactions.json`.
+   - View system error logs at `user/data/ai-chatbot/error.log`.
+3. **Backend Blueprint Event Resolver**:
+   We subscribed `onApiBlueprintResolved` in `ai-chatbot.php` so all REST API requests dynamically receive calculated query metrics and ASCII graphs in the backend JSON payload.
+4. **Classic Admin View**:
+   If live inline ASCII bar graphs and real-time form text updates are needed directly on screen, access the plugin page via Classic Admin (`user/plugins/admin`) where inline JavaScript polling operates freely.
 
 ---
 
 ## Recommendations for the Grav Admin2 Core Team
 
-Here are suggestions for the `grav-plugin-admin2` developers to help third-party plugins render dynamic live metrics cleanly:
+Here are suggestions and reference examples for the `grav-plugin-admin2` developers to help third-party plugins render dynamic live metrics cleanly in future releases:
 
-- **Hydrate Defaults from `onApiBlueprintResolved`**: Ensure Svelte form controls bind initial state to the resolved `$event['fields']` default values returned by backend PHP event listeners.
-- **Add a Native Polling Field Type (`type: dynamic_metrics`)**: Introduce a native blueprint field type in Admin2 that accepts an API URL and polls it safely within Svelte SPA state, avoiding inline scripts.
-- **Web Component UI Slot Registry**: Provide a JavaScript extension API for plugins to register custom Web Components or Svelte components inside admin form tabs.
+### 1. Hydrate Form Defaults from `onApiBlueprintResolved`
+Ensure Svelte form controls bind initial state to the resolved `$event['fields']` default values returned by backend PHP event listeners in [`grav-plugin-api`](https://github.com/getgrav/grav-plugin-api).
+
+### 2. Add a Native Polling Field Type (`type: dynamic_metrics`)
+Introduce a native blueprint field type in Admin2 (e.g. `type: dynamic_metrics` or `type: api_fetch`) that accepts an API endpoint URL (`endpoint: /api/v1/...`) and polls it safely within Svelte SPA reactive state (`bind:value`), avoiding inline scripts entirely.  
+- **Reference**: [Svelte Form Data Binding & Reactive State Docs](https://svelte.dev/docs/svelte/bind)
+
+### 3. Web Component / UI Slot Registry
+Provide a JavaScript extension API allowing third-party plugins to register custom Svelte components or Web Components inside admin form tabs.
+- **Reference Repositories & Docs**:
+  - Grav Admin2 Repository: [`getgrav/grav-plugin-admin2`](https://github.com/getgrav/grav-plugin-admin2)
+  - Grav API Extension Plugin: [`getgrav/grav-plugin-api`](https://github.com/getgrav/grav-plugin-api)
+  - Grav Admin2 Issue Tracker & RFCs: [`getgrav/grav-plugin-admin2/issues`](https://github.com/getgrav/grav-plugin-admin2/issues)
