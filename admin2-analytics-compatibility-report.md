@@ -20,11 +20,32 @@
 
 ---
 
+## Affected Files & Code Locations in `ai-chatbot`
+
+Below are the specific plugin files, blueprint definitions, and event listener methods affected by the Admin2 SPA form rendering behavior:
+
+### 1. `blueprints.yaml` (Blueprint Definitions)
+- **Location**: [`user/plugins/ai-chatbot/blueprints.yaml`](file:///home/milkboy/Documents/web-app/personal-cv-site/user/plugins/ai-chatbot/blueprints.yaml#L581-L630)
+- **Affected Fields**:
+  - `ai_chatbot_error_log_display`: Live system error log textarea (`type: textarea`, `ignore: true`).
+  - `regenerate_metrics_button`: Embedded inline JavaScript poller (`content: '<script>(function(){ doPoll()... })()</script>'`).
+  - `analytics_summary_text`: Real-time query summary metrics field (`type: text`, `ignore: true`).
+  - `analytics_chart_display`: Visual ASCII volume bar graph textarea (`type: textarea`, `ignore: true`).
+  - `analytics_recommendations_text`: Candidate FAQ recommendations textarea (`type: textarea`, `ignore: true`).
+
+### 2. `ai-chatbot.php` (PHP Plugin Event Listeners)
+- **Location**: [`user/plugins/ai-chatbot/ai-chatbot.php`](file:///home/milkboy/Documents/web-app/personal-cv-site/user/plugins/ai-chatbot/ai-chatbot.php#L100-L320)
+- **Affected Methods**:
+  - `onBlueprintCreated($event)`: Injects dynamic metrics and error logs into `$blueprint` for Classic Admin rendering.
+  - `onApiBlueprintResolved($event)`: Injects dynamic metrics and error logs into `$event['fields']` array for Admin2 REST API responses (`GET /api/v1/blueprints/plugins/ai-chatbot`).
+
+---
+
 ## Live Browser Inspection vs Expected Data
 
-![Admin2 Live Browser Inspection Screenshot](admin2_analytics_inspection.png)
-
 When I open the AI Chatbot settings inside Admin2 (`http://localhost/admin/plugins/ai-chatbot`), three form fields display static placeholder text instead of live logged stats:
+
+![Admin2 Live Browser Inspection Screenshot](admin2_analytics_inspection.png)
 
 ### 1. 📊 Interaction Summary Metrics (`analytics_summary_text`)
 - **What Admin2 Displays on Screen**:
