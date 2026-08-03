@@ -480,6 +480,14 @@ class ChatbotHandler
                 $siteContext = $indexer->buildContextPrompt($currentRoute, $maxContextChars);
             }
 
+            $customSystemPrompt = trim($this->config['custom_system_prompt'] ?? '');
+            $maxChars = (int)($this->config['max_response_chars'] ?? 1000);
+            $defaultSystemPrompt = "Answer the user directly. Do not include any thinking process, reasoning steps, scratchpad, or internal monologue. If you do not understand the question or the input seems unclear, ask the user for clarification instead of analyzing the input internally. Keep your total response under approximately {max_response_chars} characters.";
+
+            $template = !empty($customSystemPrompt) ? $customSystemPrompt : $defaultSystemPrompt;
+            $systemRule = str_replace('{max_response_chars}', (string)$maxChars, $template);
+            $siteContext = trim($systemRule . "\n\n" . $siteContext);
+
             $messages = [];
             if (!empty($history) && is_array($history)) {
                 foreach ($history as $h) {
@@ -500,11 +508,42 @@ class ChatbotHandler
             $res = $client->generateResponse($siteContext, $messages);
 
             $answer = is_array($res) ? ($res['answer'] ?? '') : (string)$res;
+            
+            // Secondary safety net sanitization for CoT monologue
+            $answer = preg_replace('/<think>.*?<\/think>/s', '', $answer);
+            $answer = preg_replace('/<think>.*?$/s', '', $answer);
+            $trimmedAns = trim($answer);
+            if (preg_match('/^(?:Thinking Process|Thought|Thinking|Scratchpad|Internal Monologue|Reasoning|Analysis|Chain of Thought|Step-by-step|My reasoning):\s*[\s\S]*?\n\s*\n+(.*)/i', $trimmedAns, $matches)) {
+                $answer = trim($matches[1]);
+            } elseif (preg_match('/^(?:Thinking Process|Thought|Thinking|Scratchpad|Internal Monologue|Reasoning|Analysis|Chain of Thought|Step-by-step|My reasoning):\s*[\s\S]*/i', $trimmedAns)) {
+                $answer = '';
+            }
+            $trimmedAns2 = trim($answer);
+            if (preg_match('/^\d+\.\s*\*\*(?:Analyze|Determine|Formulate|Identify|Evaluate|Check|Understand|Plan|Assess|Consider|Review|Interpret)[^*]*\*\*[\s\S]*?\n\s*\n+(.*)/i', $trimmedAns2, $m2)) {
+                $answer = trim($m2[1]);
+            } elseif (preg_match('/^\d+\.\s*\*\*(?:Analyze|Determine|Formulate|Identify|Evaluate|Check|Understand|Plan|Assess|Consider|Review|Interpret)[^*]*\*\*/i', $trimmedAns2)) {
+                $answer = '';
+            }
+            // Self-referential monologue detector
+            $trimmedAns3 = trim($answer);
+            $selfRef = '/(?:re-reading|the input|the user|the request|the prompt|the question|looking at this|let me (?:think|analyze|consider|re-read|check)|I need to (?:figure|analyze|determine|understand)|what .+ asking|their (?:question|request|query|intent))/i';
+            $starters = '/^(?:Wait|Actually|Hmm|OK|Okay|So|Now|Let me|Alright|Right|First|Well),?\s/i';
+            if (preg_match($starters, $trimmedAns3) && preg_match($selfRef, $trimmedAns3)) {
+                if (preg_match('/\n\s*\n+((?!(?:Wait|Actually|Hmm|OK|Okay|So|Now|Let me|Alright|Right|First|Well),?\s).*)/si', $trimmedAns3, $m3)) {
+                    $candidate = trim($m3[1]);
+                    $answer = (!empty($candidate) && !preg_match($selfRef, $candidate)) ? $candidate : '';
+                } else {
+                    $answer = '';
+                }
+            }
+
             $promptTokens = is_array($res) ? (int)($res['prompt_tokens'] ?? 450) : 450;
             $completionTokens = is_array($res) ? (int)($res['completion_tokens'] ?? 120) : 120;
-            $success = is_array($res) ? !empty($res['success']) : !empty($answer);
+            
+            $apiSuccess = is_array($res) ? !empty($res['success']) : false;
+            $hasAnswer = !empty($answer);
 
-            if (!$success) {
+            if (!$apiSuccess) {
                 $errMsg = is_array($res) && !empty($res['error']) ? $res['error'] : 'Empty or invalid response from AI provider.';
                 $logger = new Logger($this->grav);
                 $logger->logError("AI Model Query Error [Provider: {$provider}, Model: {$model}]: {$errMsg}", 'AI_MODEL_API');
@@ -527,6 +566,44 @@ class ChatbotHandler
                     'http_code' => 500,
                     'success' => false,
                     'answer' => $customMsg
+                ];
+            }
+
+            if (!$hasAnswer) {
+                $cotMsg = $this->config['cot_empty_response_text'] 
+                    ?? "I'm sorry, I didn't quite understand that. Could you please rephrase your question?";
+                
+                $logger = new Logger($this->grav);
+                $logger->logError("AI Model response sanitized to empty (CoT only output) [Provider: {$provider}, Model: {$model}]", 'COT_SANITIZED');
+                
+                $logger->logInteraction([
+                    'question' => $question,
+                    'answer' => $cotMsg,
+                    'source' => 'ai_api',
+                    'provider' => $provider,
+                    'prompt_tokens' => $promptTokens,
+                    'completion_tokens' => $completionTokens
+                ]);
+
+                if (!empty($this->config['log_ai_responses'])) {
+                    $logger->logAiResponse([
+                        'provider' => $provider,
+                        'model' => $model,
+                        'success' => true,
+                        'question' => $question,
+                        'answer' => $cotMsg,
+                        'prompt_tokens' => $promptTokens,
+                        'completion_tokens' => $completionTokens,
+                        'error' => 'CoT Sanitized to Empty'
+                    ]);
+                }
+
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'answer' => $cotMsg,
+                    'source' => 'ai_api',
+                    'provider' => $provider
                 ];
             }
 

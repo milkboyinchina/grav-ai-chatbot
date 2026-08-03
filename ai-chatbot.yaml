@@ -10,6 +10,8 @@ api_timeout: 30
 max_tokens: 800
 max_input_tokens: 500
 context_window_tokens: 8192
+custom_system_prompt: ''
+max_response_chars: 1000
 rag_enabled: true
 rag_indexing_enabled: true
 rag_embedding_provider: tfidf_local
@@ -55,6 +57,7 @@ display_pages: "/\n/contact\n/faq"
 bot_title: 'Website Assistant'
 welcome_message: 'Hello! How can I help you with this website today?'
 custom_error_message: 'An unexpected connection error occurred. Please try again later.'
+cot_empty_response_text: "I'm sorry, I didn't quite understand that. Could you please rephrase your question?"
 accent_color: '#3b82f6'
 
 quick_replies_enabled: true

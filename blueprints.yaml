@@ -134,6 +134,22 @@ form:
           label: 🪟 Model Context Window Limit (Tokens)
           help: Total token context window capacity of the AI model (default 8192 tokens, e.g. 8192, 16384, 128000)
           default: 8192
+
+        custom_system_prompt:
+          type: textarea
+          label: 📜 Custom System Prompt / Instructions
+          help: Custom system rules for AI model. Leave blank to use default CoT suppression and character limit rules. Use {max_response_chars} as placeholder for soft limit.
+          default: "Answer the user directly. Do not include any thinking process, reasoning steps, scratchpad, or internal monologue. Keep your total response under approximately {max_response_chars} characters."
+
+        max_response_chars:
+          type: text
+          label: 📏 Max Response Characters (Soft Limit)
+          help: Soft guidance for maximum characters in AI replies (default 1000 characters).
+          default: 1000
+          validate:
+            type: int
+            min: 100
+            max: 20000
           validate:
             type: int
             min: 512
@@ -362,6 +378,12 @@ form:
           label: Custom Connection Error Response Message
           help: Custom message displayed in the chat window when a network connection or AI API error occurs
           default: 'An unexpected connection error occurred. Please try again later.'
+
+        cot_empty_response_text:
+          type: text
+          label: 🤖 AI Unclear Response Message
+          help: Message shown when the AI could not generate a clear answer (e.g. nonsensical input). Leave blank to use default.
+          default: "I'm sorry, I didn't quite understand that. Could you please rephrase your question?"
 
         accent_color:
           type: colorpicker

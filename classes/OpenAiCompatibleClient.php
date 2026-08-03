@@ -162,16 +162,92 @@ class OpenAiCompatibleClient implements AiClientInterface
             ];
         }
 
-        $content = $data['choices'][0]['message']['content'] ?? '';
+        $messageObj = $data['choices'][0]['message'] ?? [];
+        $rawContent = $messageObj['content'] ?? '';
+        $rawReasoning = $messageObj['reasoning'] ?? '';
+
+        $cleanContent = $this->sanitizeCotOutput($rawContent);
+        $answer = $cleanContent;
+
+        if (empty($answer) && !empty($rawReasoning)) {
+            try {
+                if (class_exists('Grav\Common\Grav')) {
+                    $logger = new Logger(\Grav\Common\Grav::instance());
+                    $logger->logError("AI Model returned empty content; fallback to reasoning applied [Model: {$this->model}].", 'AI_MODEL_API');
+                }
+            } catch (\Throwable $t) {}
+            $answer = $this->sanitizeCotOutput($rawReasoning);
+        }
+
         $promptTokens = (int)($data['usage']['prompt_tokens'] ?? 0);
         $completionTokens = (int)($data['usage']['completion_tokens'] ?? 0);
 
         return [
-            'success' => !empty($content),
-            'answer' => trim($content),
+            'success' => !empty($answer),
+            'answer' => $answer,
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
             'error' => null
         ];
+    }
+
+    private function sanitizeCotOutput(string $text): string
+    {
+        if (empty($text)) {
+            return '';
+        }
+
+        // Layer 1: Remove closed <think>...</think> tags
+        $text = preg_replace('/<think>.*?<\/think>/s', '', $text);
+
+        // Layer 2: Remove unclosed <think>... tags to end of string
+        $text = preg_replace('/<think>.*?$/s', '', $text);
+
+        $trimmed = trim($text);
+
+        // Layer 3: Header-based CoT monologue stripping
+        $monologueHeaders = '(?:Thinking Process|Thought|Thinking|Scratchpad|Internal Monologue|Reasoning|Analysis|Chain of Thought|Step-by-step|My reasoning)';
+
+        if (preg_match('/^' . $monologueHeaders . ':\s*[\s\S]*?\n\s*\n+(.*)/i', $trimmed, $matches)) {
+            $text = $matches[1];
+        } elseif (preg_match('/^' . $monologueHeaders . ':\s*[\s\S]*/i', $trimmed)) {
+            $text = '';
+        }
+
+        // Layer 4: Numbered analysis steps (e.g., "1. **Analyze...**", "2. **Determine Intent:**")
+        $trimmed2 = trim($text);
+        if (preg_match('/^\d+\.\s*\*\*(?:Analyze|Determine|Formulate|Identify|Evaluate|Check|Understand|Plan|Assess|Consider|Review|Interpret)[^*]*\*\*[\s\S]*?\n\s*\n+(.*)/i', $trimmed2, $m2)) {
+            if (!preg_match('/^\d+\.\s*\*\*/i', trim($m2[1]))) {
+                $text = $m2[1];
+            } else {
+                $text = $this->sanitizeCotOutput($m2[1]);
+            }
+        } elseif (preg_match('/^\d+\.\s*\*\*(?:Analyze|Determine|Formulate|Identify|Evaluate|Check|Understand|Plan|Assess|Consider|Review|Interpret)[^*]*\*\*/i', $trimmed2)) {
+            $text = '';
+        }
+
+        // Layer 5: General self-referential monologue detector
+        // Catches informal reasoning like "Wait, re-reading the input...", "Actually, looking at...",
+        // "Let me think...", "Hmm, the user is asking...", "OK so the user..."
+        $trimmed3 = trim($text);
+        $selfRefIndicators = '/(?:re-reading|the input|the user|the request|the prompt|the question|looking at this|let me (?:think|analyze|consider|re-read|check)|I need to (?:figure|analyze|determine|understand)|what .+ asking|their (?:question|request|query|intent))/i';
+        $monologueStarters = '/^(?:Wait|Actually|Hmm|OK|Okay|So|Now|Let me|Alright|Right|First|Well),?\s/i';
+
+        if (preg_match($monologueStarters, $trimmed3) && preg_match($selfRefIndicators, $trimmed3)) {
+            // The response starts with a thinking cue and references the user/input — it's internal monologue
+            // Try to extract an actual answer after a double-newline break
+            if (preg_match('/\n\s*\n+((?!(?:Wait|Actually|Hmm|OK|Okay|So|Now|Let me|Alright|Right|First|Well),?\s).*)/si', $trimmed3, $m3)) {
+                $candidate = trim($m3[1]);
+                if (!empty($candidate) && !preg_match($selfRefIndicators, $candidate)) {
+                    $text = $candidate;
+                } else {
+                    $text = '';
+                }
+            } else {
+                $text = '';
+            }
+        }
+
+        return trim($text);
     }
 }

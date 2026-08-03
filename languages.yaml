@@ -14,6 +14,10 @@ en:
     MODEL_HELP: E.g. gemini-2.0-flash, gemini-2.0-flash-lite, llama-3.3-70b-versatile, gpt-4o-mini
     CUSTOM_ENDPOINT: Custom Base Endpoint URL
     CUSTOM_ENDPOINT_HELP: E.g. https://openrouter.ai/api/v1 (only required for Custom provider)
+    CUSTOM_SYSTEM_PROMPT: Custom System Prompt / Instructions
+    CUSTOM_SYSTEM_PROMPT_HELP: Custom system instructions for AI model. If left empty, defaults to CoT suppression and character limit rules.
+    MAX_RESPONSE_CHARS: Max Response Characters (Soft Limit)
+    MAX_RESPONSE_CHARS_HELP: Soft guidance for maximum characters in AI replies (default 1000 characters).
     TEST_CONNECTION: Test AI API Connection
     TEST_CONNECTION_HELP: Test your API key and provider model configuration live before saving settings
     FAQ_SETTINGS: FAQ Pre-Matching Settings
@@ -62,6 +66,8 @@ en:
     NOTIFICATION_ENABLED_HELP: Shows pop-up message toast above launcher button
     NOTIFICATION_TEXT: Toast Notification Text
     NOTIFICATION_DELAY: Toast Delay (Seconds)
+    COT_EMPTY_RESPONSE_TEXT: AI Unclear Response Message
+    COT_EMPTY_RESPONSE_TEXT_HELP: Message shown when the AI could not generate a clear answer (e.g. nonsensical input).
 
 es:
   PLUGIN_AI_CHATBOT:
