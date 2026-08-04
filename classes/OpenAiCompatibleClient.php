@@ -77,6 +77,7 @@ class OpenAiCompatibleClient implements AiClientInterface
             'messages' => $formattedMessages,
             'temperature' => 0.4,
             'max_tokens' => $this->maxTokens,
+            'stream' => false, // Forces OmniRoute/LiteLLM to return standard JSON
             'options' => [
                 'num_ctx' => $this->contextWindowTokens,
                 'num_predict' => $this->maxTokens
@@ -150,6 +151,29 @@ class OpenAiCompatibleClient implements AiClientInterface
         }
 
         $data = json_decode($response, true);
+
+        // SSE Chunk Aggregator Fallback for OmniRoute/LiteLLM streaming
+        if (empty($data) && strpos($response, 'data:') !== false) {
+            $lines = explode("\n", $response);
+            $accumulatedContent = '';
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (strpos($line, 'data:') === 0 && $line !== 'data: [DONE]') {
+                    $jsonStr = trim(substr($line, 5));
+                    $chunk = json_decode($jsonStr, true);
+                    $delta = $chunk['choices'][0]['delta']['content'] ?? '';
+                    $accumulatedContent .= $delta;
+                }
+            }
+            if (!empty($accumulatedContent)) {
+                return [
+                    'success' => true,
+                    'answer' => $this->sanitizeCotOutput($accumulatedContent),
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0
+                ];
+            }
+        }
 
         if ($httpCode !== 200 || !empty($data['error'])) {
             $errorMsg = is_array($data['error'] ?? null) ? ($data['error']['message'] ?? 'Unknown Error') : ($data['error'] ?? "HTTP Error {$httpCode}");

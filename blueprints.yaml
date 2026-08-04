@@ -63,16 +63,16 @@ form:
 
         provider:
           type: select
-          label: PLUGIN_AI_CHATBOT.PROVIDER
-          help: PLUGIN_AI_CHATBOT.PROVIDER_HELP
-          default: gemini
+          label: 🤖 AI Provider Engine
+          help: Select your preferred AI provider
+          default: omniroute
           options:
-            gemini: Google Gemini API (Default Recommended Free Tier)
-            groq: Groq API (Ultra-Fast Llama 3)
-            openrouter: OpenRouter API
-            openai: OpenAI API
-            ollama: Ollama Engine (Local / Remote Self-Hosted AI)
-            custom: Custom OpenAI-Compatible Endpoint
+            omniroute: 🔀 OmniRoute AI Proxy / Gateway (OpenAI-Compatible)
+            ollama: 🦙 Ollama Local Host (v1 / Chat)
+            groq: ⚡ Groq Cloud (Llama-3.3-70b / Fast)
+            openrouter: 🌐 OpenRouter AI Gateway
+            openai: 🤖 OpenAI Official API (GPT-4o / GPT-4o-mini)
+            gemini: ♊ Google Gemini API
 
         api_key:
           type: password

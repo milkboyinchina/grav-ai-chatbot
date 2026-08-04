@@ -81,6 +81,18 @@ class AiClientFactory
                     $fallbackEndpoint
                 );
 
+            case 'omniroute':
+            case 'openai_compatible':
+                return new OpenAiCompatibleClient(
+                    $apiKey,
+                    $model,
+                    $customEndpoint,
+                    false,
+                    $timeout,
+                    $maxTokens,
+                    $contextWindowTokens,
+                    $fallbackEndpoint
+                );
             case 'custom':
                 return new OpenAiCompatibleClient(
                     $apiKey,
