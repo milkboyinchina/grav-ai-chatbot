@@ -41,24 +41,37 @@ export default class ChatbotMetricsElement extends HTMLElement {
     renderShell() {
         this.innerHTML = `
             <style>
+                :host {
+                    display: block;
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
                 .chatbot-metrics-container {
+                    box-sizing: border-box;
+                    width: 100%;
+                    max-width: 100%;
                     background: rgba(15, 23, 42, 0.85);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     padding: 16px;
                     color: #f8fafc;
                     font-family: system-ui, -apple-system, sans-serif;
-                    margin-bottom: 16px;
+                    margin: 8px 0 16px 0;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
                     backdrop-filter: blur(10px);
+                    overflow: hidden;
                 }
                 .chatbot-metrics-grid {
+                    box-sizing: border-box;
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
                     gap: 12px;
-                    margin-bottom: 16px;
+                    margin-bottom: 8px;
+                    width: 100%;
                 }
                 .chatbot-metric-card {
+                    box-sizing: border-box;
                     background: rgba(30, 41, 59, 0.7);
                     border: 1px solid rgba(255, 255, 255, 0.08);
                     border-radius: 8px;
@@ -84,12 +97,15 @@ export default class ChatbotMetricsElement extends HTMLElement {
                     color: #64748b;
                 }
                 .chatbot-metrics-header {
+                    box-sizing: border-box;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     margin-bottom: 12px;
                     padding-bottom: 8px;
                     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                    flex-wrap: wrap;
+                    gap: 8px;
                 }
                 .chatbot-metrics-title {
                     font-weight: 600;

@@ -41,23 +41,36 @@ export default class ChatbotLiveLogsElement extends HTMLElement {
     renderShell() {
         this.innerHTML = `
             <style>
+                :host {
+                    display: block;
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
                 .chatbot-logs-container {
+                    box-sizing: border-box;
+                    width: 100%;
+                    max-width: 100%;
                     background: #090d16;
                     border: 1px solid rgba(255, 255, 255, 0.12);
                     border-radius: 12px;
                     padding: 16px;
                     color: #e2e8f0;
                     font-family: 'Fira Code', 'Monaco', monospace;
-                    margin-bottom: 16px;
+                    margin: 8px 0 16px 0;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+                    overflow: hidden;
                 }
                 .chatbot-logs-header {
+                    box-sizing: border-box;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     margin-bottom: 12px;
                     padding-bottom: 8px;
                     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    flex-wrap: wrap;
+                    gap: 8px;
                 }
                 .chatbot-logs-title {
                     font-weight: 600;
@@ -68,15 +81,19 @@ export default class ChatbotLiveLogsElement extends HTMLElement {
                     color: #38bdf8;
                 }
                 .chatbot-logs-body {
+                    box-sizing: border-box;
+                    width: 100%;
+                    max-width: 100%;
                     background: #020617;
                     border: 1px solid rgba(255, 255, 255, 0.05);
                     border-radius: 8px;
                     padding: 12px;
-                    height: 240px;
+                    height: 220px;
                     overflow-y: auto;
                     font-size: 0.75rem;
                     line-height: 1.5;
                     white-space: pre-wrap;
+                    word-break: break-word;
                     color: #94a3b8;
                 }
             </style>
