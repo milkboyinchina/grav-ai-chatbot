@@ -68,7 +68,7 @@ class ChatbotHandler
                 return $this->testAiConnection($data);
             }
 
-            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs'];
+            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs'];
             if (empty($question) && !in_array($action, $nonQuestionActions, true)) {
                 return [
                     'http_code' => 400,
@@ -149,14 +149,38 @@ class ChatbotHandler
                 ];
             }
 
-            if ($action === 'get_live_logs') {
-                $logger = new Logger($this->grav);
-                $logs = $logger->getErrorLogs();
+            if ($action === 'get_security_logs') {
+                $data = SecurityGuardrail::getSecurityAuditData($this->grav);
                 return [
                     'http_code' => 200,
                     'success' => true,
-                    'logs' => $logs
+                    'data' => $data
                 ];
+            }
+
+            if ($action === 'release_ip_lockouts') {
+                SecurityGuardrail::releaseLockouts();
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'message' => 'Active IP lockouts released.'
+                ];
+            }
+
+            if ($action === 'clear_security_logs') {
+                SecurityGuardrail::releaseLockouts();
+                $logger = new Logger($this->grav);
+                $logger->clearLogs();
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'message' => 'Security audit logs cleared.'
+                ];
+            }
+
+            // Server-Side Input Query Truncation (Max 500 chars / ~125 tokens)
+            if (mb_strlen($question) > 500) {
+                $question = mb_substr($question, 0, 500);
             }
 
             // TIER 0: Security Guardrail Inspection & IP Cool-Off Protection

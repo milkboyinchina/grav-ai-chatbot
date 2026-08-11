@@ -260,6 +260,70 @@ class SecurityGuardrail
         self::saveViolationRecords($records);
     }
 
+    /**
+     * Get summary data and recent security audit logs for Admin 2 dashboard card.
+     */
+    public static function getSecurityAuditData(Grav $grav): array
+    {
+        $records = self::loadViolationRecords();
+        $now = time();
+        $activeLockouts = 0;
+        $totalViolations = 0;
+
+        foreach ($records as $ipHash => $data) {
+            if (!empty($data['locked_until']) && $data['locked_until'] > $now) {
+                $activeLockouts++;
+            }
+            if (!empty($data['timestamps'])) {
+                $totalViolations += count($data['timestamps']);
+            }
+        }
+
+        // Fetch recent security guardrail log entries from Logger
+        $logger = new Logger($grav);
+        $rawLogs = $logger->getErrorLogs();
+        $allLogs = is_string($rawLogs) ? array_filter(explode("\n", $rawLogs)) : (array)$rawLogs;
+        $securityLogs = [];
+
+        foreach (array_reverse($allLogs) as $logLine) {
+            $msg = is_array($logLine) ? ($logLine['message'] ?? '') : (string)$logLine;
+
+            if (str_contains($msg, 'Security Guardrail') || str_contains($msg, 'Security Scope')) {
+                // Extract IP Hash snippet
+                preg_match('/\[IP Hash:\s*([a-f0-9]+)\]/i', $msg, $matches);
+                $ipHash = !empty($matches[1]) ? $matches[1] : 'Anonymous';
+
+                // Extract timestamp
+                preg_match('/^\[(.*?)\]/i', $msg, $timeMatches);
+                $ts = !empty($timeMatches[1]) ? $timeMatches[1] : date('Y-m-d H:i:s');
+
+                $securityLogs[] = [
+                    'timestamp' => $ts,
+                    'ip_hash' => $ipHash,
+                    'reason' => preg_replace('/^\[.*?\]\s*\[ERROR\]\s*\[.*?\]\s*Security Guardrail Blocked Query \[IP Hash:\s*[a-f0-9]+\]:\s*/i', '', $msg),
+                    'status' => 'Blocked'
+                ];
+
+                if (count($securityLogs) >= 15) break;
+            }
+        }
+
+        return [
+            'threat_level' => $activeLockouts > 0 ? 'warning' : 'secure',
+            'active_lockouts' => $activeLockouts,
+            'total_violations' => max($totalViolations, count($securityLogs)),
+            'logs' => $securityLogs
+        ];
+    }
+
+    /**
+     * Release all active IP lockouts.
+     */
+    public static function releaseLockouts(): void
+    {
+        self::saveViolationRecords([]);
+    }
+
     protected static function loadViolationRecords(): array
     {
         $file = self::getRateLimitFile();

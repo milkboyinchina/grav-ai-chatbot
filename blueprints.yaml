@@ -539,6 +539,11 @@ form:
           help: "Enter authorized usernames (one per line or comma-separated) allowed to download interaction logs. Example: admin, milkboy"
           default: "admin\nmilkboy"
 
+        ai_chatbot_security_logs_display:
+          type: chatbot-security-logs
+          label: 🛡️ Real-Time Security & Threat Audit Dashboard
+          help: Live security violation audit logs, active IP lockouts, and threat status.
+
     section_logging:
       type: section
       title: PLUGIN_AI_CHATBOT.LOGGING_SETTINGS
