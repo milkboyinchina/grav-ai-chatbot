@@ -600,15 +600,6 @@ form:
           readonly: true
           ignore: true
 
-        ai_chatbot_error_log_display:
-          type: textarea
-          label: 🚨 AI Chatbot Live Error Log
-          help: Live error log entries recorded by the AI Chatbot plugin
-          default: "No error logs recorded. Plugin operating normally."
-          rows: 8
-          readonly: true
-          classes: grav-chatbot-error-log-field
-          ignore: true
 
         ai_chatbot_error_log_location:
           type: textarea
