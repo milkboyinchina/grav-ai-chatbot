@@ -20,11 +20,23 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 > Don't judge me, I'm not made of money.
 ---
 
-## 📘 Documentation & Guides
-
 - **[User & Administrator Manual (`MANUAL.md`)](MANUAL.md)**: Complete guide on setup, RAG engine, Grav Scheduler crontab configuration, CLI commands, and troubleshooting.
+- **[Developer & API Guide (`DEVELOPER.md`)](DEVELOPER.md)**: Complete technical specification covering REST API endpoints, Admin 2 Svelte 5 Web Component field contracts, and security architecture.
 - **[How It Works Summary (`HOWITWORKS.md`)](HOWITWORKS.md)**: Technical overview of the 5-tier resolution pipeline, RAG ingestion, and execution flow.
 - **[RAG Technical Plan & Benchmarks (`BENCHMARK-RAG.md`)](BENCHMARK-RAG.md)**: Token consumption matrices, latency benchmarks, and cost reduction analysis.
+
+---
+
+## 🛡️ Security Guardrails & Defense Architecture
+
+The plugin includes a multi-layered security hardening suite protecting against **Prompt Injections**, **Jailbreaks**, **XSS Script Injections**, **SQL Injection**, **Credential Stuffing**, and **Data Leaks**:
+
+- 🔒 **Strict Read-Only Scope Boundary (`user/pages/` & RAG Only)**: Restricts chatbot knowledge strictly to public pages in `user/pages/` and its RAG vector embeddings (`user/data/ai-chatbot/rag_index.json`). Chatbot has zero access to server files, credentials, or `user/config/`.
+- 🔤 **Leetspeak & Unicode Normalization**: Automatically normalizes obfuscation tricks (e.g. `h4ck` $\rightarrow$ `hack`, `byp4ss` $\rightarrow$ `bypass`, `@dmin` $\rightarrow$ `admin`, zero-width spaces) prior to pattern inspection.
+- 🛡️ **5-Category Defense Matrix**: Automatically blocks Prompt Injections, Jailbreaks, XSS vectors (`<script`, `onerror=`), SQL Injection (`union select`, `drop table`), Credential Probes (`.env`, `user/config`), and System Commands (`cat /etc/passwd`).
+- ⏱️ **Server-Side Token Flooding Defense**: Enforces strict server-side input truncation (**Max 500 characters / ~125 tokens**) before invoking LLM API providers.
+- 🔑 **Credential Stuffing Cool-Off Protection**: Tracks security guardrail violations by anonymized IP hash. 5 violations within 60s trigger a **15-minute temporary IP lockout** (`429 Security Cool-Off`).
+- 📊 **Real-Time Admin 2 Security Audit Dashboard (`<chatbot-security-logs>`)**: Renders real-time threat meter, live audit violation logs, and admin lockout release controls in Grav Admin 2.
 
 ---
 
