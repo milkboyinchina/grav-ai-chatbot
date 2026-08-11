@@ -77,11 +77,21 @@ The plugin includes a multi-layered security hardening suite protecting against 
   - Matching questions return instant answers with **0 AI API calls**, saving quota.
   - Interactive **Yes / No** confirmation buttons with automatic AI fallback escalation.
 
-- 📅 **Date Range Telemetry & Analytics Dashboard**:
-  - (WIP)Filter interaction logs and graphs by date range: **Last 7 Days**, **Last 1 Month (30d)**, **Last 3 Months (90d)**, **Last 6 Months (180d)**, **Last 12 Months (365d)**, or **All Time**.
-  - (WIP)**`[ 🔄 Refresh ]`** button for instant live data reloading without page refreshes.
-  - (WIP)**Visual SVG Charts**: Daily interaction volume bar charts & query source distribution ratios.
-  - (WIP)**Candidate FAQ Recommendations**: Automatically highlights frequent AI queries to add to `/faq`.
+- 📊 **Real-Time Interaction Metrics & Analytics Dashboard (`<chatbot-metrics>`)**:
+  - **Live KPI Metrics**: Total Conversations, Completion Tokens, Estimated API Cost (USD), and Active AI Engine Provider.
+  - **Date Range Telemetry Filter**: Filter metrics and graphs by **Last 7 Days**, **Last 30 Days**, **Last 90 Days**, **Last 180 Days**, **Last 365 Days**, or **All Time**.
+  - **Live Data Refresh**: Real-time **`[ 🔄 Refresh ]`** action for live metric updates without page reloads.
+
+- 💡 **Candidate FAQ Recommendations Engine (`FaqRecommender.php`)**:
+  - Automatically analyzes visitor interaction logs to detect recurring AI queries (`source === 'ai_api'`).
+  - Performs string similarity clustering (**75% threshold**) to group questions asked 2+ times with different phrasing.
+  - Suggests candidate questions and AI answers to add to local `/faq` for **$0 cost savings**!
+
+- 🚨 **Live Error Log Viewer (`<chatbot-live-logs>`)**:
+  - Real-time error log viewer embedded directly in Grav Admin 2 with card border overflow protection.
+
+- 🛡️ **Real-Time Security & Threat Audit Dashboard (`<chatbot-security-logs>`)**:
+  - Live threat meter (`🟢 System Secure` / `⚠️ Active Lockout`), blocked threat feed, and one-click IP lockout release actions.
 
 - 📥 **Export & Download Options**:
   - **CSV Report Download**: `/chatbot-export?format=csv&range=...`
