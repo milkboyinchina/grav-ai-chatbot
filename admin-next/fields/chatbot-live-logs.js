@@ -5,7 +5,7 @@
  *
  * @license GPL-3.0-or-later
  */
-class ChatbotLiveLogsElement extends HTMLElement {
+export default class ChatbotLiveLogsElement extends HTMLElement {
     constructor() {
         super();
         this.pollInterval = null;
@@ -113,4 +113,8 @@ class ChatbotLiveLogsElement extends HTMLElement {
 
 if (!customElements.get('chatbot-live-logs')) {
     customElements.define('chatbot-live-logs', ChatbotLiveLogsElement);
+}
+
+if (typeof window !== 'undefined') {
+    window.ChatbotLiveLogsElement = ChatbotLiveLogsElement;
 }

@@ -5,7 +5,7 @@
  *
  * @license GPL-3.0-or-later
  */
-class ChatbotMetricsElement extends HTMLElement {
+export default class ChatbotMetricsElement extends HTMLElement {
     constructor() {
         super();
         this.pollInterval = null;
@@ -162,4 +162,8 @@ class ChatbotMetricsElement extends HTMLElement {
 
 if (!customElements.get('chatbot-metrics')) {
     customElements.define('chatbot-metrics', ChatbotMetricsElement);
+}
+
+if (typeof window !== 'undefined') {
+    window.ChatbotMetricsElement = ChatbotMetricsElement;
 }
