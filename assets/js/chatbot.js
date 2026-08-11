@@ -311,7 +311,7 @@
       escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
       escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
-      escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      escaped = escaped.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
       escaped = escaped.replace(/\n/g, '<br>');
 
       return escaped;

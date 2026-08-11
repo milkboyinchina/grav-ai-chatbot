@@ -159,29 +159,35 @@ class ChatbotHandler
                 ];
             }
 
-            // TIER 0: Blacklisted Words Guardrail Check
+            // TIER 0: Security Guardrail Inspection & IP Cool-Off Protection
+            $ipHash = hash('sha256', $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+
+            if (SecurityGuardrail::isIpLockedOut($ipHash)) {
+                $blockMsg = "⚠️ Security Protection: Excessive security violations detected from your network. Access is temporarily locked out for 15 minutes. Please try again later.";
+                return [
+                    'http_code' => 429,
+                    'success' => false,
+                    'answer' => $blockMsg,
+                    'source' => 'security_cooloff'
+                ];
+            }
+
             if ($this->config['blacklist_filter_enabled'] ?? true) {
-                $rawBlacklist = $this->config['blacklist_words'] ?? "spam, scam, hack, exploit, bypass, admin_password, secret_token, leak, porn, casino, gambling, illegal";
-                $words = array_filter(array_map('trim', preg_split('/[\r\n,]+/', strtolower($rawBlacklist))));
+                $guardrail = new SecurityGuardrail($this->grav, $this->config);
+                $inspection = $guardrail->inspect($question);
 
-                $qLower = strtolower($question);
-                $matchedWord = null;
+                if (!$inspection['allowed']) {
+                    SecurityGuardrail::recordViolation($ipHash);
 
-                foreach ($words as $word) {
-                    if (!empty($word) && preg_match('/\b' . preg_quote($word, '/') . '\b/i', $qLower)) {
-                        $matchedWord = $word;
-                        break;
-                    }
-                }
-
-                if ($matchedWord) {
-                    $blockMsg = $this->config['blacklist_response_text'] ?? "Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
+                    $blockMsg = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
+                    
                     $logger = new Logger($this->grav);
+                    $logger->logError("Security Guardrail Blocked Query [IP Hash: " . substr($ipHash, 0, 8) . "]: " . $inspection['reason'] . " (Raw: {$question})");
                     $logger->logInteraction([
                         'question' => $question,
                         'answer' => $blockMsg,
                         'source' => 'guardrail',
-                        'provider' => 'safety_filter',
+                        'provider' => 'security_filter',
                         'prompt_tokens' => 0,
                         'completion_tokens' => 0
                     ]);

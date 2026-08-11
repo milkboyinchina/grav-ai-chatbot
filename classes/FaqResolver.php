@@ -17,11 +17,12 @@ class FaqResolver
     protected int $threshold;
     protected bool $enableMultilingual;
 
-    // Synonym map for intent normalization
+    // Synonym map for intent normalization (Multilingual English & Indonesian)
     protected array $synonymGroups = [
-        'founding' => ['established', 'founded', 'started', 'launched', 'created', 'incorporation', 'incorporated', 'opened', 'setup', 'origin', 'beginning', 'operations', 'around', 'heritage'],
-        'company' => ['company', 'business', 'organization', 'brand', 'firm', 'agency', 'enterprise'],
-        'date' => ['when', 'year', 'date', 'how long', 'how many years', 'far back', 'doors']
+        'founding' => ['established', 'founded', 'started', 'launched', 'created', 'incorporation', 'incorporated', 'opened', 'setup', 'origin', 'beginning', 'operations', 'around', 'heritage', 'didirikan', 'berdiri', 'sejak', 'awal', 'sejarah', 'buka'],
+        'company' => ['company', 'business', 'organization', 'brand', 'firm', 'agency', 'enterprise', 'perusahaan', 'bisnis', 'organisasi'],
+        'date' => ['when', 'year', 'date', 'how long', 'how many years', 'far back', 'doors', 'kapan', 'tahun', 'sejak kapan', 'berapa lama', 'buka jam'],
+        'contact' => ['contact', 'email', 'phone', 'location', 'address', 'reach', 'kontak', 'hubungi', 'telepon', 'alamat', 'surel']
     ];
 
     public function __construct(Grav $grav, array $config = [])

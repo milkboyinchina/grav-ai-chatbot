@@ -33,10 +33,8 @@ hidden_contact_route: /hidden-contacts
 rate_limit_enabled: true
 rate_limit_max_requests: 10
 rate_limit_window_seconds: 60
-strict_site_scope: true
-
 blacklist_filter_enabled: true
-blacklist_words: "spam\nscam\nhack\nexploit\nbypass\nadmin_password\nsecret_token\nleak\nporn\ncasino\ngambling\nillegal"
+blacklist_words: "spam\nscam\nhack\nexploit\nbypass\nadmin_password\nsecret_token\nauth_token\nsession_key\nprivate_key\nid_rsa\nleak\nporn\ncasino\ngambling\nillegal\nignore previous instructions\nforget all prior instructions\noverride system prompt\nsystem prompt\njailbreak\ndan mode\ndeveloper mode\npretend you are\nreveal system prompt\nshow your rules\n<script\njavascript:\nonerror=\nonload=\neval(\nexec(\ndocument.cookie\nwindow.localStorage\nfetch(\n<iframe\n<svg/onload\n<img src=x\nunion select\ndrop table\ninsert into\nupdate users\ndelete from\nor 1=1\ninformation_schema\nsys.tables\n; --\netc/passwd\netc/shadow\ndocker.sock\n.env\napi_key\nvps_root\nconfig.php\nsystem.yaml\nuser/config\ncat /etc/passwd\nrm -rf\nchmod 777\nwget http\ncurl -O\nnc -e\n/bin/sh\n/bin/bash\nsudo su\npowershell -e"
 blacklist_response_text: "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language."
 
 export_require_auth: true
