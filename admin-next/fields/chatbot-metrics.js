@@ -160,8 +160,12 @@ export default class ChatbotMetricsElement extends HTMLElement {
     }
 }
 
-if (!customElements.get('chatbot-metrics')) {
-    customElements.define('chatbot-metrics', ChatbotMetricsElement);
+try {
+    if (typeof customElements !== 'undefined' && !customElements.get('chatbot-metrics')) {
+        customElements.define('chatbot-metrics', ChatbotMetricsElement);
+    }
+} catch (e) {
+    // Ignore double registration in Admin 2 ES module runner
 }
 
 if (typeof window !== 'undefined') {

@@ -111,8 +111,12 @@ export default class ChatbotLiveLogsElement extends HTMLElement {
     }
 }
 
-if (!customElements.get('chatbot-live-logs')) {
-    customElements.define('chatbot-live-logs', ChatbotLiveLogsElement);
+try {
+    if (typeof customElements !== 'undefined' && !customElements.get('chatbot-live-logs')) {
+        customElements.define('chatbot-live-logs', ChatbotLiveLogsElement);
+    }
+} catch (e) {
+    // Ignore double registration in Admin 2 ES module runner
 }
 
 if (typeof window !== 'undefined') {
