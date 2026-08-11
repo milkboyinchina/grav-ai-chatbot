@@ -1,14 +1,28 @@
 /**
  * ChatbotMetricsElement
  * Native Grav Admin 2 Web Component for real-time AI Chatbot analytics metrics.
- * Auto-discovered by Admin 2 convention at user/plugins/ai-chatbot/admin-next/fields/chatbot-metrics.js
+ * Conforms strictly to Grav 2.0 API Developer Guide specification.
  *
  * @license GPL-3.0-or-later
  */
+const TAG = (typeof window !== 'undefined' && window.__GRAV_FIELD_TAG) ? window.__GRAV_FIELD_TAG : 'chatbot-metrics';
+
 export default class ChatbotMetricsElement extends HTMLElement {
     constructor() {
         super();
         this.pollInterval = null;
+    }
+
+    set field(f) {
+        this._field = f;
+    }
+
+    set value(v) {
+        this._value = v;
+    }
+
+    get value() {
+        return this._value;
     }
 
     connectedCallback() {
@@ -99,7 +113,7 @@ export default class ChatbotMetricsElement extends HTMLElement {
                 <div class="chatbot-metrics-header">
                     <div class="chatbot-metrics-title">
                         <span>📊 Real-Time AI Chatbot Metrics</span>
-                        <span class="chatbot-metrics-badge">Live Admin 2</span>
+                        <span class="chatbot-metrics-badge">Grav 2.0 API</span>
                     </div>
                     <div style="font-size:0.75rem; color:#94a3b8;" id="chatbot-metrics-updated">Updating...</div>
                 </div>
@@ -131,7 +145,11 @@ export default class ChatbotMetricsElement extends HTMLElement {
 
     async fetchMetrics() {
         try {
-            const res = await fetch('/chatbot-api?action=get_metrics&t=' + Date.now());
+            const headers = {};
+            if (typeof window !== 'undefined' && window.__GRAV_API_TOKEN) {
+                headers['X-API-Token'] = window.__GRAV_API_TOKEN;
+            }
+            const res = await fetch('/chatbot-api?action=get_metrics&t=' + Date.now(), { headers });
             if (!res.ok) return;
             const data = await res.json();
 
@@ -161,13 +179,9 @@ export default class ChatbotMetricsElement extends HTMLElement {
 }
 
 try {
-    if (typeof customElements !== 'undefined' && !customElements.get('chatbot-metrics')) {
-        customElements.define('chatbot-metrics', ChatbotMetricsElement);
+    if (typeof customElements !== 'undefined' && !customElements.get(TAG)) {
+        customElements.define(TAG, ChatbotMetricsElement);
     }
 } catch (e) {
-    // Ignore double registration in Admin 2 ES module runner
-}
-
-if (typeof window !== 'undefined') {
-    window.ChatbotMetricsElement = ChatbotMetricsElement;
+    // Ignore duplicate registration
 }

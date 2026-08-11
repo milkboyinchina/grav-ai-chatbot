@@ -1,14 +1,28 @@
 /**
  * ChatbotLiveLogsElement
  * Native Grav Admin 2 Web Component for streaming AI Chatbot live error & interaction log feeds.
- * Auto-discovered by Admin 2 convention at user/plugins/ai-chatbot/admin-next/fields/chatbot-live-logs.js
+ * Conforms strictly to Grav 2.0 API Developer Guide specification.
  *
  * @license GPL-3.0-or-later
  */
+const TAG = (typeof window !== 'undefined' && window.__GRAV_FIELD_TAG) ? window.__GRAV_FIELD_TAG : 'chatbot-live-logs';
+
 export default class ChatbotLiveLogsElement extends HTMLElement {
     constructor() {
         super();
         this.pollInterval = null;
+    }
+
+    set field(f) {
+        this._field = f;
+    }
+
+    set value(v) {
+        this._value = v;
+    }
+
+    get value() {
+        return this._value;
     }
 
     connectedCallback() {
@@ -65,9 +79,6 @@ export default class ChatbotLiveLogsElement extends HTMLElement {
                     white-space: pre-wrap;
                     color: #94a3b8;
                 }
-                .chatbot-log-entry-error { color: #f87171; }
-                .chatbot-log-entry-info { color: #34d399; }
-                .chatbot-log-entry-warn { color: #fbbf24; }
             </style>
             <div class="chatbot-logs-container">
                 <div class="chatbot-logs-header">
@@ -93,7 +104,11 @@ export default class ChatbotLiveLogsElement extends HTMLElement {
 
     async fetchLogs() {
         try {
-            const res = await fetch('/chatbot-api?action=get_live_logs&t=' + Date.now());
+            const headers = {};
+            if (typeof window !== 'undefined' && window.__GRAV_API_TOKEN) {
+                headers['X-API-Token'] = window.__GRAV_API_TOKEN;
+            }
+            const res = await fetch('/chatbot-api?action=get_live_logs&t=' + Date.now(), { headers });
             if (!res.ok) return;
             const data = await res.json();
 
@@ -112,13 +127,9 @@ export default class ChatbotLiveLogsElement extends HTMLElement {
 }
 
 try {
-    if (typeof customElements !== 'undefined' && !customElements.get('chatbot-live-logs')) {
-        customElements.define('chatbot-live-logs', ChatbotLiveLogsElement);
+    if (typeof customElements !== 'undefined' && !customElements.get(TAG)) {
+        customElements.define(TAG, ChatbotLiveLogsElement);
     }
 } catch (e) {
-    // Ignore double registration in Admin 2 ES module runner
-}
-
-if (typeof window !== 'undefined') {
-    window.ChatbotLiveLogsElement = ChatbotLiveLogsElement;
+    // Ignore duplicate registration
 }
