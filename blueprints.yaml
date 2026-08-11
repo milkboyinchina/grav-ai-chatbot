@@ -624,6 +624,16 @@ form:
       title: AI Analytics & Performance Dashboard
       underline: true
       fields:
+        analytics_live_metrics:
+          type: chatbot-metrics
+          label: 📊 Real-Time Interaction Metrics & Analytics
+          help: Live visual analytics metrics powered by custom Admin 2 Web Component.
+
+        analytics_live_logs:
+          type: chatbot-live-logs
+          label: 📜 Live Error & Security Audit Log
+          help: Real-time streaming log output feed.
+
         regenerate_metrics_button:
           type: display
           label: 🔄 Live Dashboard Metrics & Automatic Sync

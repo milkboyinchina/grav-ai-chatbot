@@ -30,7 +30,7 @@ class ChatbotHandler
     {
         try {
             $question = trim($data['question'] ?? $data['message'] ?? '');
-            $action = trim($data['action'] ?? 'query');
+            $action = trim($data['action'] ?? $_GET['action'] ?? 'query');
             $messagesHistory = $data['history'] ?? [];
             $currentRoute = $data['current_route'] ?? '/';
 
@@ -68,7 +68,8 @@ class ChatbotHandler
                 return $this->testAiConnection($data);
             }
 
-            if (empty($question) && $action !== 'summarize_page' && $action !== 'rebuild_rag_index') {
+            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs'];
+            if (empty($question) && !in_array($action, $nonQuestionActions, true)) {
                 return [
                     'http_code' => 400,
                     'success' => false,
@@ -126,6 +127,35 @@ class ChatbotHandler
                     'http_code' => 200,
                     'success' => $res['success'] ?? false,
                     'message' => $res['message'] ?? ($res['error'] ?? 'RAG index update complete.')
+                ];
+            }
+
+            if ($action === 'get_metrics') {
+                $generator = new AnalyticsReportGenerator($this->grav);
+                $analytics = $generator->getDashboardAnalyticsData();
+                $summary = $analytics['summary'] ?? [];
+
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'provider' => $this->config['provider'] ?? 'omniroute',
+                    'model' => $this->config['model'] ?? 'chatbot',
+                    'stats' => [
+                        'total_queries' => $summary['total_queries'] ?? 0,
+                        'completion_tokens' => $summary['total_tokens'] ?? 0,
+                        'estimated_cost' => $summary['total_cost_usd'] ?? 0.0
+                    ],
+                    'analytics' => $analytics
+                ];
+            }
+
+            if ($action === 'get_live_logs') {
+                $logger = new Logger($this->grav);
+                $logs = $logger->getErrorLogs();
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'logs' => $logs
                 ];
             }
 
