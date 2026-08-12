@@ -22,6 +22,7 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 
 - **[User & Administrator Manual (`MANUAL.md`)](MANUAL.md)**: Complete guide on setup, RAG engine, Grav Scheduler crontab configuration, CLI commands, and troubleshooting.
 - **[Developer & API Guide (`DEVELOPER.md`)](DEVELOPER.md)**: Complete technical specification covering REST API endpoints, Admin 2 Svelte 5 Web Component field contracts, and security architecture.
+- **[Security Policy & Vulnerability Disclosure (`SECURITY.md`)](SECURITY.md)**: Threat model, 5-layer security architecture, supported versions, and private vulnerability disclosure procedures.
 - **[How It Works Summary (`HOWITWORKS.md`)](HOWITWORKS.md)**: Technical overview of the 5-tier resolution pipeline, RAG ingestion, and execution flow.
 - **[RAG Technical Plan & Benchmarks (`BENCHMARK-RAG.md`)](BENCHMARK-RAG.md)**: Token consumption matrices, latency benchmarks, and cost reduction analysis.
 
