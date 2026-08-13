@@ -15,64 +15,72 @@
   }
 
   function findTargetInputs(name) {
-    const exactSelectors = [
-      `input[name="data[${name}]"]`,
-      `select[name="data[${name}]"]`,
-      `[data-field="${name}"] input`,
-      `[data-field="${name}"] select`,
-      `input[name="${name}"]`,
-      `select[name="${name}"]`,
-      `#${name}`,
-      `#data\\[${name}\\]`
-    ];
-
-    for (const sel of exactSelectors) {
-      const found = deepQueryOuter(sel);
-      if (found.length > 0) {
-        return found;
-      }
-    }
-
-    const attrMatches = deepQueryOuter('input, select').filter(el => {
-      const n = (el.name || '').toLowerCase();
-      const id = (el.id || '').toLowerCase();
-      const df = (el.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
-      const ph = (el.placeholder || '').toLowerCase();
-
-      if (name === 'api_key') {
-        return (n.includes('api_key') || id.includes('api_key') || df.includes('api_key') || ph.includes('api key') || ph.includes('secret token'));
-      }
-      if (name === 'custom_endpoint') {
-        return (n.includes('custom_endpoint') || id.includes('custom_endpoint') || df.includes('custom_endpoint') || ph.includes('110.120'));
-      }
-      if (name === 'fallback_endpoint') {
-        return (n.includes('fallback_endpoint') || id.includes('fallback_endpoint') || df.includes('fallback_endpoint'));
-      }
-      if (name === 'model') {
-        return (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini-3.1'));
-      }
-      return false;
-    });
-
-    if (attrMatches.length > 0) {
-      return attrMatches;
-    }
-
-    const labels = deepQueryOuter('label, span, div, .form-label');
-    for (const lbl of labels) {
-      const txt = (lbl.textContent || '').toLowerCase();
-      const isMatch = (name === 'api_key' && (txt.includes('api key') || txt.includes('secret token'))) ||
-                      (name === 'model' && (txt.includes('model identifier') || txt.includes('model'))) ||
-                      (name === 'custom_endpoint' && (txt.includes('custom url') || txt.includes('custom endpoint'))) ||
-                      (name === 'fallback_endpoint' && txt.includes('fallback endpoint'));
-
-      if (isMatch) {
-        const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
-        if (parent) {
-          const inps = deepQueryOuter('input, select', parent);
-          if (inps.length > 0) return inps;
+    if (name === 'model') {
+      const candidates = deepQueryOuter('input[name="data[model]"], [data-field="model"] input, #model, #data\\[model\\]');
+      for (const el of candidates) {
+        const fieldAttr = (el.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
+        const nameAttr = (el.name || '').toLowerCase();
+        if ((fieldAttr === 'model' || nameAttr === 'data[model]' || nameAttr === 'model') &&
+            !fieldAttr.includes('operations') && !fieldAttr.includes('context') && !fieldAttr.includes('timeout') &&
+            !fieldAttr.includes('tokens') && !fieldAttr.includes('key') && !fieldAttr.includes('endpoint')) {
+          return [el];
         }
       }
+
+      const labels = deepQueryOuter('label, span, div, .form-label');
+      for (const lbl of labels) {
+        const txt = (lbl.textContent || '').toLowerCase().trim();
+        if (txt === 'model identifier' || txt === 'model identifier *' || (txt.includes('model identifier') && !txt.includes('context') && !txt.includes('tools'))) {
+          const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
+          if (parent) {
+            const inps = deepQueryOuter('input', parent);
+            if (inps.length > 0) return [inps[0]];
+          }
+        }
+      }
+
+      return [];
+    }
+
+    if (name === 'api_key') {
+      const exactSelectors = [
+        'input[name="data[api_key]"]',
+        '[data-field="api_key"] input',
+        '#data\\[api_key\\]',
+        '#api_key'
+      ];
+      for (const sel of exactSelectors) {
+        const found = deepQueryOuter(sel);
+        if (found.length > 0) return [found[0]];
+      }
+
+      const labels = deepQueryOuter('label, span, div, .form-label');
+      for (const lbl of labels) {
+        const txt = (lbl.textContent || '').toLowerCase().trim();
+        if (txt.includes('api key') || txt.includes('secret token')) {
+          const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
+          if (parent) {
+            const inps = deepQueryOuter('input', parent);
+            if (inps.length > 0) return [inps[0]];
+          }
+        }
+      }
+
+      return [];
+    }
+
+    if (name === 'custom_endpoint' || name === 'fallback_endpoint') {
+      const exactSelectors = [
+        `input[name="data[${name}]"]`,
+        `[data-field="${name}"] input`,
+        `#data\\[${name}\\]`,
+        `#${name}`
+      ];
+      for (const sel of exactSelectors) {
+        const found = deepQueryOuter(sel);
+        if (found.length > 0) return [found[0]];
+      }
+      return [];
     }
 
     return [];
