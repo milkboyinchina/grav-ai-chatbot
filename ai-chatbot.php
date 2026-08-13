@@ -518,8 +518,6 @@ class AiChatbotPlugin extends Plugin
         $data = json_decode($rawInput, true) ?: $_POST;
 
         $cfg = $this->config->get('plugins.ai-chatbot', []);
-        $logger = new Logger($this->grav);
-        $logger->logError("LIVE_CONFIG_DUMP: " . json_encode($cfg), 'CONFIG_DEBUG');
 
         $handler = new ChatbotHandler($this->grav, $cfg);
         $response = $handler->processRequest($data);
