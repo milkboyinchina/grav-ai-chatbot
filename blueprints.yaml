@@ -75,46 +75,43 @@ form:
             gemini: ♊ Google Gemini API
 
         api_key:
-          type: password
+          type: text
           label: PLUGIN_AI_CHATBOT.API_KEY
           help: PLUGIN_AI_CHATBOT.API_KEY_HELP
+          placeholder: 'Enter API Key or Secret Token (optional for local endpoints)...'
           validate:
             required: false
 
         model:
           type: text
           label: PLUGIN_AI_CHATBOT.MODEL
-          help: Model identifier (e.g. gemini-2.0-flash, gpt-4o-mini, llama3.2, mistral, deepseek-r1)
-          default: gemini-2.0-flash
+          help: Model identifier (e.g. gemini-3.1-flash-lite, gpt-4o-mini, llama3.3, mistral, deepseek-r1)
+          default: gemini-3.1-flash-lite
+
+        model_operations:
+          type: display
+          label: 🛠️ Model Tools & Live Health Check
+          markdown: true
+          content: '<div style="margin-top: 4px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"><button type="button" id="grav-chatbot-fetch-models-btn" class="button btn btn-secondary" style="background:#4f46e5; color:#fff; font-weight:600; padding:7px 14px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-refresh"></i> 🔄 Retrieve Active Models from API</button><button type="button" id="grav-chatbot-test-model-btn" class="button btn btn-primary" style="background:#059669; color:#fff; font-weight:600; padding:7px 14px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-heartbeat"></i> ⚡ Test Model Health</button></div><div id="grav-chatbot-model-status" style="margin-top:10px; display:none; padding:10px 14px; border-radius:6px; font-weight:600;"></div><div id="grav-chatbot-model-select-wrapper" style="margin-top:10px; display:none;"><label style="font-weight:600; font-size:13px;">Available Provider Models (Click to select):</label><select id="grav-chatbot-model-select" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px; font-family:monospace; background:#f8fafc; font-size:13px;"></select></div><script>(function(){function g(i){return document.querySelector("[name=\"data["+i+"]\"]")||document.getElementById("data["+i+"]")||document.getElementsByName("data["+i+"]")[0]}var fetchBtn=document.getElementById("grav-chatbot-fetch-models-btn");var testBtn=document.getElementById("grav-chatbot-test-model-btn");var statusEl=document.getElementById("grav-chatbot-model-status");var selWrapper=document.getElementById("grav-chatbot-model-select-wrapper");var selEl=document.getElementById("grav-chatbot-model-select");if(fetchBtn){fetchBtn.addEventListener("click",function(){var p=(g("provider")||{}).value||"omniroute";var k=(g("api_key")||{}).value||"";var e=(g("custom_endpoint")||{}).value||"";fetchBtn.disabled=true;statusEl.style.display="block";statusEl.style.background="#f3f4f6";statusEl.style.color="#1f2937";statusEl.innerHTML="⏳ Querying active model list from provider API...";fetch("/chatbot-api?t="+Date.now(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"fetch_models",provider:p,api_key:k,custom_endpoint:e})}).then(function(r){return r.json()}).then(function(d){fetchBtn.disabled=false;if(d.success&&d.models&&d.models.length){statusEl.style.background="#d1fae5";statusEl.style.color="#065f46";statusEl.innerHTML="✅ Successfully retrieved "+d.models.length+" active models!";selWrapper.style.display="block";selEl.innerHTML=d.models.map(function(m){return\'<option value="\'+m+\'">\'+m+"</option>"}).join("");selEl.onchange=function(){var mEl=g("model");if(mEl){mEl.value=selEl.value}}}else{statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML="❌ "+(d.message||"Failed to retrieve models")}}).catch(function(err){fetchBtn.disabled=false;statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML="❌ Error: "+err.message})})}if(testBtn){testBtn.addEventListener("click",function(){var p=(g("provider")||{}).value||"omniroute";var k=(g("api_key")||{}).value||"";var m=(g("model")||{}).value||"gemini-3.1-flash-lite";var e=(g("custom_endpoint")||{}).value||"";var fb=(g("fallback_endpoint")||{}).value||"";testBtn.disabled=true;statusEl.style.display="block";statusEl.style.background="#f3f4f6";statusEl.style.color="#1f2937";statusEl.innerHTML="⏳ Sending live health check ping to model \'"+m+"\'...";fetch("/chatbot-api?t="+Date.now(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"test_model_health",provider:p,api_key:k,model:m,custom_endpoint:e,fallback_endpoint:fb})}).then(function(r){return r.json()}).then(function(d){testBtn.disabled=false;if(d.success){statusEl.style.background="#d1fae5";statusEl.style.color="#065f46";statusEl.innerHTML=d.message}else{statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML=d.message}}).catch(function(err){testBtn.disabled=false;statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML="❌ Connection Error: "+err.message})})}})();</script>'
+          ignore: true
 
         custom_endpoint:
           type: text
-          label: 🌐 Custom Base Endpoint URL
-          help: Custom endpoint URL (e.g. http://100.100.27.122:20128/v1). Required when using Custom OpenAI-Compatible or remote Ollama hosts.
-          default: ''
+          label: 🌐 OpenAI Compatible URL
+          help: Primary endpoint URL when using Custom OpenAI-Compatible (e.g. http://110.120.130.140:20128). Mandatory for Custom OpenAI-Compatible.
+          default: http://110.120.130.140:20128
+          placeholder: http://110.120.130.140:20128
           show_on: "provider: omniroute,ollama,custom"
           validate:
             required: false
 
-        enable_fallback_endpoint:
-          type: toggle
-          label: 🔄 Enable Secondary/Fallback Endpoint (Failover)
-          help: Enable optional secondary fallback endpoint URL for failover when primary endpoint fails or times out.
-          highlight: 0
-          default: 0
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-          show_on: "provider: omniroute,ollama,custom"
-          validate:
-            type: bool
-
         fallback_endpoint:
           type: text
-          label: 🔄 Secondary/Fallback Endpoint URL
-          help: Optional secondary/fallback endpoint URL (e.g. http://192.168.18.12:11434/v1). Automatically retried if primary endpoint connection fails or times out.
+          label: 🔄 Fallback Endpoint URL
+          help: Not required. Leave Blank if Not Needed
+          placeholder: Not required. Leave Blank if Not Needed
           default: ''
-          show_on: "enable_fallback_endpoint: 1"
+          show_on: "provider: omniroute,ollama,custom"
           validate:
             required: false
 

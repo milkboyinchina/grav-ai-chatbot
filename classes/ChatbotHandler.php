@@ -68,7 +68,15 @@ class ChatbotHandler
                 return $this->testAiConnection($data);
             }
 
-            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs'];
+            if ($action === 'fetch_models') {
+                return $this->fetchModels($data);
+            }
+
+            if ($action === 'test_model_health') {
+                return $this->testModelHealth($data);
+            }
+
+            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs', 'fetch_models', 'test_model_health'];
             if (empty($question) && !in_array($action, $nonQuestionActions, true)) {
                 return [
                     'http_code' => 400,
@@ -425,6 +433,182 @@ class ChatbotHandler
                 'http_code' => 500,
                 'success' => false,
                 'message' => $errMsg
+            ];
+        }
+    }
+
+    /**
+     * Retrieve active model list from provider's API endpoint.
+     */
+    protected function fetchModels(array $data): array
+    {
+        $provider = strtolower($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
+        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+
+        try {
+            $models = [];
+            if ($provider === 'gemini') {
+                if (empty($apiKey)) {
+                    return ['http_code' => 400, 'success' => false, 'message' => 'API Key is required to fetch Gemini models.'];
+                }
+                $url = "https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}";
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode === 200 && !empty($response)) {
+                    $json = json_decode($response, true);
+                    foreach ($json['models'] ?? [] as $m) {
+                        $name = str_replace('models/', '', $m['name'] ?? '');
+                        if (!empty($name) && str_contains($name, 'gemini')) {
+                            $models[] = $name;
+                        }
+                    }
+                }
+            } else {
+                // OpenAI Compatible / Groq / OpenRouter / Ollama / Custom
+                $endpoint = '';
+                if ($provider === 'groq') {
+                    $endpoint = 'https://api.groq.com/openai/v1/models';
+                } elseif ($provider === 'openrouter') {
+                    $endpoint = 'https://openrouter.ai/api/v1/models';
+                } elseif ($provider === 'openai') {
+                    $endpoint = 'https://api.openai.com/v1/models';
+                } else {
+                    // omniroute / ollama / custom
+                    $base = $customEndpoint ?: 'http://110.120.130.140:20128';
+                    $base = rtrim($base, '/');
+                    if (str_ends_with($base, '/v1')) {
+                        $endpoint = "{$base}/models";
+                    } else {
+                        $endpoint = "{$base}/v1/models";
+                    }
+                }
+
+                $headers = ['Content-Type: application/json'];
+                if (!empty($apiKey)) {
+                    $headers[] = "Authorization: Bearer {$apiKey}";
+                }
+
+                $ch = curl_init($endpoint);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER => $headers,
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if (($httpCode === 200 || $httpCode === 201) && !empty($response)) {
+                    $json = json_decode($response, true);
+                    foreach ($json['data'] ?? [] as $m) {
+                        if (!empty($m['id'])) {
+                            $models[] = $m['id'];
+                        }
+                    }
+                }
+            }
+
+            if (empty($models)) {
+                $defaults = [
+                    'gemini' => ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+                    'groq' => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+                    'openai' => ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
+                    'openrouter' => ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
+                    'omniroute' => ['gemini-3.1-flash-lite', 'gpt-4o-mini', 'llama3.3', 'qwen2.5-coder', 'deepseek-r1']
+                ];
+                $models = $defaults[$provider] ?? ['gemini-3.1-flash-lite', 'gpt-4o-mini', 'llama3.3'];
+            }
+
+            return [
+                'http_code' => 200,
+                'success' => true,
+                'provider' => $provider,
+                'models' => array_values(array_unique($models)),
+                'message' => 'Successfully fetched ' . count($models) . ' active models from provider API.'
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'http_code' => 500,
+                'success' => false,
+                'message' => 'Failed to fetch models: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Send a live health check ping request to specific upstream AI model endpoint.
+     */
+    protected function testModelHealth(array $data): array
+    {
+        $provider = strtolower($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
+        $model = trim($data['model'] ?? $this->config['model'] ?? 'gemini-3.1-flash-lite');
+        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+        $fallbackEndpoint = trim($data['fallback_endpoint'] ?? $this->config['fallback_endpoint'] ?? '');
+
+        if (empty($model)) {
+            return [
+                'http_code' => 400,
+                'success' => false,
+                'message' => 'Please specify a Model Identifier to test.'
+            ];
+        }
+
+        $startTime = microtime(true);
+        try {
+            $client = AiClientFactory::create([
+                'provider' => $provider,
+                'api_key' => $apiKey,
+                'model' => $model,
+                'custom_endpoint' => $customEndpoint,
+                'fallback_endpoint' => $fallbackEndpoint,
+                'api_timeout' => 12,
+                'max_tokens' => 10
+            ]);
+
+            $res = $client->generateResponse('Ping health check.', [
+                ['role' => 'user', 'content' => 'health_check']
+            ]);
+
+            $latencyMs = (int)round((microtime(true) - $startTime) * 1000);
+            $success = is_array($res) ? !empty($res['success']) : false;
+
+            if ($success) {
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'model' => $model,
+                    'latency_ms' => $latencyMs,
+                    'message' => "✅ Model '{$model}' is awake, responsive, and handling requests properly ({$latencyMs}ms)."
+                ];
+            }
+
+            $errMsg = is_array($res) && !empty($res['error']) ? $res['error'] : 'Received empty ping payload.';
+            return [
+                'http_code' => 500,
+                'success' => false,
+                'model' => $model,
+                'latency_ms' => $latencyMs,
+                'message' => "❌ Model '{$model}' health test failed ({$latencyMs}ms): {$errMsg}"
+            ];
+        } catch (\Throwable $e) {
+            $latencyMs = (int)round((microtime(true) - $startTime) * 1000);
+            return [
+                'http_code' => 500,
+                'success' => false,
+                'model' => $model,
+                'latency_ms' => $latencyMs,
+                'message' => "❌ Model '{$model}' health test failed ({$latencyMs}ms): " . $e->getMessage()
             ];
         }
     }

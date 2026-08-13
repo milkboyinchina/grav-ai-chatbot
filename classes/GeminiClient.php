@@ -14,10 +14,10 @@ class GeminiClient implements AiClientInterface
     protected int $timeout;
     protected int $maxTokens;
 
-    public function __construct(string $apiKey, string $model = 'gemini-2.0-flash', int $timeout = 30, int $maxTokens = 800)
+    public function __construct(string $apiKey, string $model = 'gemini-3.1-flash-lite', int $timeout = 30, int $maxTokens = 800)
     {
         $this->apiKey = $apiKey;
-        $this->model = $model ?: 'gemini-2.0-flash';
+        $this->model = $model ?: 'gemini-3.1-flash-lite';
         $this->timeout = max(5, $timeout);
         $this->maxTokens = max(50, $maxTokens);
     }
