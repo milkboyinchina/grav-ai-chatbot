@@ -1,132 +1,105 @@
 (function () {
-    function g(i) {
-        return document.querySelector('[name="data[' + i + ']"]') ||
-            document.getElementById('data[' + i + ']') ||
-            document.getElementsByName('data[' + i + ']')[0];
+  function getFormFieldVal(name) {
+    if (typeof document === 'undefined') return '';
+
+    if (name === 'provider') {
+      const selects = Array.from(document.querySelectorAll('select'));
+      for (const sel of selects) {
+        const n = (sel.name || '').toLowerCase();
+        const id = (sel.id || '').toLowerCase();
+        const df = (sel.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
+        if (n.includes('provider') || id.includes('provider') || df.includes('provider')) {
+          if (sel.value) return sel.value.trim();
+        }
+      }
+      return 'gemini';
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        var fetchBtn = document.getElementById('grav-chatbot-fetch-models-btn');
-        var testBtn = document.getElementById('grav-chatbot-test-model-btn');
-        var statusEl = document.getElementById('grav-chatbot-model-status');
-        var selWrapper = document.getElementById('grav-chatbot-model-select-wrapper');
-        var selEl = document.getElementById('grav-chatbot-model-select');
+    const directSelectors = [
+      `input[name="data[${name}]"]`,
+      `select[name="data[${name}]"]`,
+      `input[name="${name}"]`,
+      `select[name="${name}"]`,
+      `#${name}`,
+      `[data-field="${name}"] input`,
+      `[data-field="${name}"] select`
+    ];
+    for (const sel of directSelectors) {
+      const el = document.querySelector(sel);
+      if (el && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
+        return el.value.trim();
+      }
+    }
 
-        if (fetchBtn) {
-            fetchBtn.addEventListener('click', function () {
-                var p = (g('provider') || {}).value || 'omniroute';
-                var k = (g('api_key') || {}).value || '';
-                var e = (g('custom_endpoint') || {}).value || '';
+    const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
+    for (const input of allInputs) {
+      const n = (input.name || '').toLowerCase();
+      const id = (input.id || '').toLowerCase();
+      const ph = (input.placeholder || '').toLowerCase();
+      const df = (input.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
 
-                fetchBtn.disabled = true;
-                if (statusEl) {
-                    statusEl.style.display = 'block';
-                    statusEl.style.background = '#f3f4f6';
-                    statusEl.style.color = '#1f2937';
-                    statusEl.innerHTML = '⏳ Querying active model list from provider API...';
-                }
+      let isMatch = false;
+      if (name === 'api_key' && (n.includes('key') || id.includes('key') || df.includes('key') || ph.includes('key') || ph.includes('token'))) {
+        isMatch = true;
+      } else if (name === 'custom_endpoint' && (n.includes('custom') || id.includes('custom') || df.includes('custom') || ph.includes('custom') || ph.includes('110.120'))) {
+        isMatch = true;
+      } else if (name === 'fallback_endpoint' && (n.includes('fallback') || id.includes('fallback') || df.includes('fallback'))) {
+        isMatch = true;
+      } else if (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt'))) {
+        isMatch = true;
+      }
 
-                fetch('/chatbot-api?t=' + Date.now(), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'fetch_models',
-                        provider: p,
-                        api_key: k,
-                        custom_endpoint: e
-                    })
-                })
-                    .then(function (r) { return r.json(); })
-                    .then(function (d) {
-                        fetchBtn.disabled = false;
-                        if (d.success && d.models && d.models.length) {
-                            if (statusEl) {
-                                statusEl.style.background = '#d1fae5';
-                                statusEl.style.color = '#065f46';
-                                statusEl.innerHTML = '✅ Successfully retrieved ' + d.models.length + ' active models!';
-                            }
-                            if (selWrapper && selEl) {
-                                selWrapper.style.display = 'block';
-                                selEl.innerHTML = d.models.map(function (m) {
-                                    return '<option value="' + m + '">' + m + '</option>';
-                                }).join('');
-                                selEl.onchange = function () {
-                                    var mEl = g('model');
-                                    if (mEl) {
-                                        mEl.value = selEl.value;
-                                    }
-                                };
-                            }
-                        } else {
-                            if (statusEl) {
-                                statusEl.style.background = '#fee2e2';
-                                statusEl.style.color = '#991b1b';
-                                statusEl.innerHTML = '❌ ' + (d.message || 'Failed to retrieve models');
-                            }
-                        }
-                    })
-                    .catch(function (err) {
-                        fetchBtn.disabled = false;
-                        if (statusEl) {
-                            statusEl.style.background = '#fee2e2';
-                            statusEl.style.color = '#991b1b';
-                            statusEl.innerHTML = '❌ Error: ' + err.message;
-                        }
-                    });
-            });
+      if (isMatch && input.value !== undefined && input.value !== null && input.value.trim() !== '') {
+        return input.value.trim();
+      }
+    }
+
+    return '';
+  }
+
+  function setFormFieldVal(name, val) {
+    if (typeof document === 'undefined') return;
+    const directSelectors = [
+      `input[name="data[${name}]"]`,
+      `select[name="data[${name}]"]`,
+      `input[name="${name}"]`,
+      `select[name="${name}"]`,
+      `#${name}`,
+      `[data-field="${name}"] input`,
+      `[data-field="${name}"] select`
+    ];
+
+    let found = false;
+    for (const sel of directSelectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        el.value = val;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        found = true;
+      }
+    }
+
+    if (!found) {
+      const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
+      for (const input of allInputs) {
+        const n = (input.name || '').toLowerCase();
+        const id = (input.id || '').toLowerCase();
+        const ph = (input.placeholder || '').toLowerCase();
+        const df = (input.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
+
+        const isMatch = (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt')));
+        if (isMatch) {
+          input.value = val;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
         }
+      }
+    }
+  }
 
-        if (testBtn) {
-            testBtn.addEventListener('click', function () {
-                var p = (g('provider') || {}).value || 'omniroute';
-                var k = (g('api_key') || {}).value || '';
-                var m = (g('model') || {}).value || 'gemini-3.1-flash-lite';
-                var e = (g('custom_endpoint') || {}).value || '';
-                var fb = (g('fallback_endpoint') || {}).value || '';
-
-                testBtn.disabled = true;
-                if (statusEl) {
-                    statusEl.style.display = 'block';
-                    statusEl.style.background = '#f3f4f6';
-                    statusEl.style.color = '#1f2937';
-                    statusEl.innerHTML = "⏳ Sending live health check ping to model '" + m + "'...";
-                }
-
-                fetch('/chatbot-api?t=' + Date.now(), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'test_model_health',
-                        provider: p,
-                        api_key: k,
-                        model: m,
-                        custom_endpoint: e,
-                        fallback_endpoint: fb
-                    })
-                })
-                    .then(function (r) { return r.json(); })
-                    .then(function (d) {
-                        testBtn.disabled = false;
-                        if (statusEl) {
-                            if (d.success) {
-                                statusEl.style.background = '#d1fae5';
-                                statusEl.style.color = '#065f46';
-                            } else {
-                                statusEl.style.background = '#fee2e2';
-                                statusEl.style.color = '#991b1b';
-                            }
-                            statusEl.innerHTML = d.message;
-                        }
-                    })
-                    .catch(function (err) {
-                        testBtn.disabled = false;
-                        if (statusEl) {
-                            statusEl.style.background = '#fee2e2';
-                            statusEl.style.color = '#991b1b';
-                            statusEl.innerHTML = '❌ Connection Error: ' + err.message;
-                        }
-                    });
-            });
-        }
-    });
+  window.GravChatbotModelTools = {
+    getVal: getFormFieldVal,
+    setVal: setFormFieldVal
+  };
 })();

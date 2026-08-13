@@ -29,20 +29,67 @@ class ChatbotModelTools extends HTMLElement {
   _getFormFieldVal(name) {
     if (typeof document === 'undefined') return '';
 
+    // Provider check
     if (name === 'provider') {
-      const selEl = document.querySelector('select[name="data[provider]"], select[name="provider"], [data-field="provider"] select');
-      if (selEl && selEl.value) {
-        return selEl.value.trim();
-      }
-      const providerField = document.querySelector('[data-field="provider"]');
-      if (providerField) {
-        const sel = providerField.querySelector('select');
-        if (sel && sel.value) return sel.value.trim();
+      const selects = Array.from(document.querySelectorAll('select'));
+      for (const sel of selects) {
+        const n = (sel.name || '').toLowerCase();
+        const id = (sel.id || '').toLowerCase();
+        const df = (sel.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
+        if (n.includes('provider') || id.includes('provider') || df.includes('provider')) {
+          if (sel.value) return sel.value.trim();
+        }
       }
       return 'gemini';
     }
 
-    const selectors = [
+    // Direct selectors first
+    const directSelectors = [
+      `input[name="data[${name}]"]`,
+      `select[name="data[${name}]"]`,
+      `input[name="${name}"]`,
+      `select[name="${name}"]`,
+      `#${name}`,
+      `[data-field="${name}"] input`,
+      `[data-field="${name}"] select`
+    ];
+    for (const sel of directSelectors) {
+      const el = document.querySelector(sel);
+      if (el && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
+        return el.value.trim();
+      }
+    }
+
+    // Flexible multi-attribute scanner across all inputs
+    const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
+    for (const input of allInputs) {
+      const n = (input.name || '').toLowerCase();
+      const id = (input.id || '').toLowerCase();
+      const ph = (input.placeholder || '').toLowerCase();
+      const df = (input.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
+
+      let isMatch = false;
+      if (name === 'api_key' && (n.includes('key') || id.includes('key') || df.includes('key') || ph.includes('key') || ph.includes('token'))) {
+        isMatch = true;
+      } else if (name === 'custom_endpoint' && (n.includes('custom') || id.includes('custom') || df.includes('custom') || ph.includes('custom') || ph.includes('110.120'))) {
+        isMatch = true;
+      } else if (name === 'fallback_endpoint' && (n.includes('fallback') || id.includes('fallback') || df.includes('fallback'))) {
+        isMatch = true;
+      } else if (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt'))) {
+        isMatch = true;
+      }
+
+      if (isMatch && input.value !== undefined && input.value !== null && input.value.trim() !== '') {
+        return input.value.trim();
+      }
+    }
+
+    return '';
+  }
+
+  _setFormFieldVal(name, val) {
+    if (typeof document === 'undefined') return;
+    const directSelectors = [
       `input[name="data[${name}]"]`,
       `select[name="data[${name}]"]`,
       `input[name="${name}"]`,
@@ -52,14 +99,33 @@ class ChatbotModelTools extends HTMLElement {
       `[data-field="${name}"] select`
     ];
 
-    for (const sel of selectors) {
+    let found = false;
+    for (const sel of directSelectors) {
       const el = document.querySelector(sel);
-      if (el && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
-        return el.value.trim();
+      if (el) {
+        el.value = val;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        found = true;
       }
     }
 
-    return '';
+    if (!found) {
+      const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
+      for (const input of allInputs) {
+        const n = (input.name || '').toLowerCase();
+        const id = (input.id || '').toLowerCase();
+        const ph = (input.placeholder || '').toLowerCase();
+        const df = (input.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
+
+        const isMatch = (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt')));
+        if (isMatch) {
+          input.value = val;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
   }
 
   async _testApiKey() {
@@ -160,20 +226,7 @@ class ChatbotModelTools extends HTMLElement {
           selectWrapper.style.display = 'block';
           selectEl.innerHTML = data.models.map(m => `<option value="${m}">${m}</option>`).join('');
           selectEl.onchange = () => {
-            const selectors = [
-              '[name="data[model]"]',
-              '[name="model"]',
-              '#model',
-              'input[name*="model"]'
-            ];
-            for (const sel of selectors) {
-              const el = document.querySelector(sel);
-              if (el) {
-                el.value = selectEl.value;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-            }
+            this._setFormFieldVal('model', selectEl.value);
           };
         }
       } else {

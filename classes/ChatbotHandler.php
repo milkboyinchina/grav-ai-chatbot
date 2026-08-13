@@ -454,8 +454,14 @@ class ChatbotHandler
     protected function testApiKey(array $data): array
     {
         $provider = $this->sanitizeProvider($data['provider'] ?? $this->config['provider'] ?? 'gemini');
-        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
-        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+        $apiKey = trim($data['api_key'] ?? '');
+        if (empty($apiKey)) {
+            $apiKey = trim($this->config['api_key'] ?? '');
+        }
+        $customEndpoint = trim($data['custom_endpoint'] ?? '');
+        if (empty($customEndpoint)) {
+            $customEndpoint = trim($this->config['custom_endpoint'] ?? '');
+        }
 
         if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
             return [
@@ -597,8 +603,14 @@ class ChatbotHandler
     protected function fetchModels(array $data): array
     {
         $provider = $this->sanitizeProvider($data['provider'] ?? $this->config['provider'] ?? 'gemini');
-        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
-        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+        $apiKey = trim($data['api_key'] ?? '');
+        if (empty($apiKey)) {
+            $apiKey = trim($this->config['api_key'] ?? '');
+        }
+        $customEndpoint = trim($data['custom_endpoint'] ?? '');
+        if (empty($customEndpoint)) {
+            $customEndpoint = trim($this->config['custom_endpoint'] ?? '');
+        }
 
         if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
             return [
@@ -707,10 +719,22 @@ class ChatbotHandler
     protected function testModelHealth(array $data): array
     {
         $provider = $this->sanitizeProvider($data['provider'] ?? $this->config['provider'] ?? 'gemini');
-        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
-        $model = trim($data['model'] ?? $this->config['model'] ?? 'gemini-3.1-flash-lite');
-        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
-        $fallbackEndpoint = trim($data['fallback_endpoint'] ?? $this->config['fallback_endpoint'] ?? '');
+        $apiKey = trim($data['api_key'] ?? '');
+        if (empty($apiKey)) {
+            $apiKey = trim($this->config['api_key'] ?? '');
+        }
+        $model = trim($data['model'] ?? '');
+        if (empty($model)) {
+            $model = trim($this->config['model'] ?? 'gemini-3.1-flash-lite');
+        }
+        $customEndpoint = trim($data['custom_endpoint'] ?? '');
+        if (empty($customEndpoint)) {
+            $customEndpoint = trim($this->config['custom_endpoint'] ?? '');
+        }
+        $fallbackEndpoint = trim($data['fallback_endpoint'] ?? '');
+        if (empty($fallbackEndpoint)) {
+            $fallbackEndpoint = trim($this->config['fallback_endpoint'] ?? '');
+        }
 
         if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
             return [
