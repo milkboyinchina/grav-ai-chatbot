@@ -279,10 +279,10 @@ class ChatbotModelTools extends HTMLElement {
 
       const data = await res.json();
       if (data.success && data.models && data.models.length) {
-        this._models = data.models;
+        this._models = data.models.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         this._isManualMode = false;
         if (!this._selectedModel) {
-          this._selectedModel = data.models[0];
+          this._selectedModel = this._models[0];
         }
         this._status = { type: 'success', message: `✅ Successfully retrieved ${data.models.length} active models!` };
         this._currentStep = 3; // Advance to Step 3 on success
@@ -584,6 +584,25 @@ class ChatbotModelTools extends HTMLElement {
           box-sizing: border-box;
         }
 
+        .btn-toggle-prominent {
+          background: #eff6ff;
+          color: #1d4ed8;
+          border: 1.5px solid #3b82f6;
+          font-weight: 700;
+          font-size: 12px;
+          padding: 6px 12px;
+          border-radius: 6px;
+          box-shadow: 0 1px 3px rgba(59, 130, 246, 0.15);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-toggle-prominent:hover {
+          background: #dbeafe;
+          border-color: #2563eb;
+          color: #1e40af;
+        }
+
         select:focus, input[type="text"]:focus {
           outline: none;
           border-color: #4f46e5;
@@ -635,7 +654,7 @@ class ChatbotModelTools extends HTMLElement {
             </div>
             ${status.type === 'error' ? `
               <div style="margin-top:12px;" class="btn-group">
-                <button type="button" id="btn-manual-2" class="btn-warning">✍️ Enter Model Manually</button>
+                <button type="button" id="btn-manual-2" class="btn-toggle-prominent">✍️ Enter Model Manually</button>
               </div>
             ` : ''}
           </div>
@@ -653,15 +672,15 @@ class ChatbotModelTools extends HTMLElement {
                 <select id="wizard-select-model">
                   ${this._models.map(m => `<option value="${m}" ${m === activeSelectedModel ? 'selected' : ''}>${m}</option>`).join('')}
                 </select>
-                <div style="margin-top:6px;">
-                  <button type="button" id="btn-toggle-manual" class="btn-secondary" style="font-size:11px; padding:4px 8px;">✍️ Switch to Unlisted / Custom Model Input</button>
+                <div style="margin-top:8px;">
+                  <button type="button" id="btn-toggle-manual" class="btn-toggle-prominent">✍️ Switch to Unlisted / Custom Model Input</button>
                 </div>
               ` : `
                 <label>Enter Custom / Unlisted Model ID:</label>
                 <input type="text" id="wizard-input-model" placeholder="e.g. gemini-3.1-flash-lite, gpt-4o-mini, llama3.3" value="${activeSelectedModel || 'gemini-3.1-flash-lite'}" />
                 ${this._models.length > 0 ? `
-                  <div style="margin-top:6px;">
-                    <button type="button" id="btn-toggle-select" class="btn-secondary" style="font-size:11px; padding:4px 8px;">📋 Choose from Retrieved Models List (${this._models.length})</button>
+                  <div style="margin-top:8px;">
+                    <button type="button" id="btn-toggle-select" class="btn-toggle-prominent">📋 Choose from Retrieved Models List (${this._models.length})</button>
                   </div>
                 ` : ''}
               `}

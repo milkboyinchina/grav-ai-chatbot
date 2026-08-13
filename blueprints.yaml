@@ -68,11 +68,11 @@ form:
           default: omniroute
           options:
             omniroute: 🤖 Custom OpenAI-Compatible
-            ollama: 🦙 Ollama Local Host (v1 / Chat)
-            groq: ⚡ Groq Cloud (Llama-3.3-70b / Fast)
-            openrouter: 🌐 OpenRouter AI Gateway
-            openai: 🤖 OpenAI Official API (GPT-4o / GPT-4o-mini)
             gemini: ♊ Google Gemini API
+            groq: ⚡ Groq Cloud (Llama-3.3-70b / Fast)
+            ollama: 🦙 Ollama Local Host (v1 / Chat)
+            openai: 🤖 OpenAI Official API (GPT-4o / GPT-4o-mini)
+            openrouter: 🌐 OpenRouter AI Gateway
 
         api_key:
           type: text
