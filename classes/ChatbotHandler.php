@@ -68,6 +68,10 @@ class ChatbotHandler
                 return $this->testAiConnection($data);
             }
 
+            if ($action === 'test_api_key') {
+                return $this->testApiKey($data);
+            }
+
             if ($action === 'fetch_models') {
                 return $this->fetchModels($data);
             }
@@ -76,7 +80,7 @@ class ChatbotHandler
                 return $this->testModelHealth($data);
             }
 
-            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs', 'fetch_models', 'test_model_health'];
+            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs', 'fetch_models', 'test_model_health', 'test_api_key'];
             if (empty($question) && !in_array($action, $nonQuestionActions, true)) {
                 return [
                     'http_code' => 400,
@@ -438,6 +442,113 @@ class ChatbotHandler
     }
 
     /**
+     * Test API Key authentication with provider API endpoint.
+     */
+    protected function testApiKey(array $data): array
+    {
+        $provider = strtolower($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
+        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+
+        if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
+            return [
+                'http_code' => 400,
+                'success' => false,
+                'message' => '❌ Custom URL is mandatory when using Custom OpenAI-Compatible or Ollama.'
+            ];
+        }
+
+        if (empty($apiKey) && in_array($provider, ['groq', 'gemini', 'openai', 'openrouter'], true)) {
+            return [
+                'http_code' => 400,
+                'success' => false,
+                'message' => "❌ API Key is required for provider '{$provider}'."
+            ];
+        }
+
+        try {
+            if ($provider === 'gemini') {
+                $url = "https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}";
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 8,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode === 200) {
+                    return [
+                        'http_code' => 200,
+                        'success' => true,
+                        'message' => "✅ Google Gemini API Key is Valid & Authenticated!"
+                    ];
+                }
+
+                $json = json_decode($response, true);
+                $err = $json['error']['message'] ?? "HTTP {$httpCode} Authentication Failed";
+                return [
+                    'http_code' => 401,
+                    'success' => false,
+                    'message' => "❌ Gemini API Key test failed: {$err}"
+                ];
+            } else {
+                $endpoint = '';
+                if ($provider === 'groq') {
+                    $endpoint = 'https://api.groq.com/openai/v1/models';
+                } elseif ($provider === 'openrouter') {
+                    $endpoint = 'https://openrouter.ai/api/v1/models';
+                } elseif ($provider === 'openai') {
+                    $endpoint = 'https://api.openai.com/v1/models';
+                } else {
+                    $base = rtrim($customEndpoint, '/');
+                    $endpoint = str_ends_with($base, '/v1') ? "{$base}/models" : "{$base}/v1/models";
+                }
+
+                $headers = ['Content-Type: application/json'];
+                if (!empty($apiKey)) {
+                    $headers[] = "Authorization: Bearer {$apiKey}";
+                }
+
+                $ch = curl_init($endpoint);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER => $headers,
+                    CURLOPT_TIMEOUT => 8,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode === 200 || $httpCode === 201) {
+                    return [
+                        'http_code' => 200,
+                        'success' => true,
+                        'message' => "✅ API Key is Valid & Authenticated against " . strtoupper($provider) . " API!"
+                    ];
+                }
+
+                $json = json_decode($response, true);
+                $err = $json['error']['message'] ?? $json['message'] ?? "HTTP {$httpCode} Authentication Failed";
+                return [
+                    'http_code' => 401,
+                    'success' => false,
+                    'message' => "❌ API Key test failed (" . strtoupper($provider) . "): {$err}"
+                ];
+            }
+        } catch (\Throwable $e) {
+            return [
+                'http_code' => 500,
+                'success' => false,
+                'message' => "❌ API Key verification error: " . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
      * Retrieve active model list from provider's API endpoint.
      */
     protected function fetchModels(array $data): array
@@ -445,6 +556,14 @@ class ChatbotHandler
         $provider = strtolower($data['provider'] ?? $this->config['provider'] ?? 'gemini');
         $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+
+        if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
+            return [
+                'http_code' => 400,
+                'success' => false,
+                'message' => '❌ Custom URL is mandatory when using Custom OpenAI-Compatible or Ollama.'
+            ];
+        }
 
         try {
             $models = [];
@@ -482,14 +601,8 @@ class ChatbotHandler
                 } elseif ($provider === 'openai') {
                     $endpoint = 'https://api.openai.com/v1/models';
                 } else {
-                    // omniroute / ollama / custom
-                    $base = $customEndpoint ?: 'http://110.120.130.140:20128';
-                    $base = rtrim($base, '/');
-                    if (str_ends_with($base, '/v1')) {
-                        $endpoint = "{$base}/models";
-                    } else {
-                        $endpoint = "{$base}/v1/models";
-                    }
+                    $base = rtrim($customEndpoint, '/');
+                    $endpoint = str_ends_with($base, '/v1') ? "{$base}/models" : "{$base}/v1/models";
                 }
 
                 $headers = ['Content-Type: application/json'];
@@ -524,9 +637,9 @@ class ChatbotHandler
                     'groq' => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
                     'openai' => ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
                     'openrouter' => ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
-                    'omniroute' => ['gemini-3.1-flash-lite', 'gpt-4o-mini', 'llama3.3', 'qwen2.5-coder', 'deepseek-r1']
+                    'omniroute' => ['gemini/gemini-3.1-flash-lite', 'gemini/gemini-2.5-flash', 'openai/gpt-4o-mini', 'llama3.3', 'qwen2.5-coder']
                 ];
-                $models = $defaults[$provider] ?? ['gemini-3.1-flash-lite', 'gpt-4o-mini', 'llama3.3'];
+                $models = $defaults[$provider] ?? ['gemini/gemini-3.1-flash-lite', 'gpt-4o-mini', 'llama3.3'];
             }
 
             return [
@@ -555,6 +668,14 @@ class ChatbotHandler
         $model = trim($data['model'] ?? $this->config['model'] ?? 'gemini-3.1-flash-lite');
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
         $fallbackEndpoint = trim($data['fallback_endpoint'] ?? $this->config['fallback_endpoint'] ?? '');
+
+        if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
+            return [
+                'http_code' => 400,
+                'success' => false,
+                'message' => '❌ Custom URL is mandatory when using Custom OpenAI-Compatible or Ollama.'
+            ];
+        }
 
         if (empty($model)) {
             return [

@@ -1,6 +1,0 @@
-{% extends "forms/field.html.twig" %}
-
-{% block field %}
-    {% do assets.addJs('plugin://ai-chatbot/admin-next/fields/chatbot-metrics.js', {'group': 'bottom', 'priority': 100}) %}
-    <chatbot-metrics></chatbot-metrics>
-{% endblock %}

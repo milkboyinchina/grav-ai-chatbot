@@ -60,41 +60,12 @@ class AiChatbotPlugin extends Plugin
             'onPageNotFound' => ['onPageNotFound', 1000],
             'onPageInitialized' => ['onPageInitialized', 1000],
             'onOutputGenerated' => ['onOutputGenerated', 0],
-            'onAdminMenu' => ['onAdminMenu', 0],
             'onBlueprintCreated' => ['onBlueprintCreated', 0],
             'onApiBlueprintResolved' => ['onApiBlueprintResolved', 0],
             'onPageSaved' => ['onPageSaved', 0],
             'onPageDeleted' => ['onPageDeleted', 0],
             'onSchedulerInitialized' => ['onSchedulerInitialized', 0],
         ];
-    }
-
-    /**
-     * Add AI Chatbot entry to Grav Admin sidebar navigation menu.
-     *
-     * @param mixed $event
-     */
-    public function onAdminMenu($event = null)
-    {
-        $navItem = [
-            'route' => 'plugins/ai-chatbot',
-            'icon' => 'fa-robot',
-            'title' => 'AI Chatbot',
-            'authorize' => 'admin.plugins',
-            'priority' => 10
-        ];
-
-        if (is_object($event) && method_exists($event, 'offsetGet') && isset($event['nav'])) {
-            $nav = $event['nav'];
-            $nav['ai-chatbot'] = $navItem;
-            $event['nav'] = $nav;
-        }
-
-        $this->grav['twig']->plugins_hook['nav']['ai-chatbot'] = $navItem;
-
-        if (isset($this->grav['admin'])) {
-            $this->grav['admin']->sidebar['ai-chatbot'] = $navItem;
-        }
     }
 
     /**
@@ -783,26 +754,6 @@ class AiChatbotPlugin extends Plugin
         $assets->addJs('plugin://ai-chatbot/assets/js/admin-analytics.js');
         $assets->addJs('plugin://ai-chatbot/assets/js/admin-model-tools.js');
         $assets->addJs('plugin://ai-chatbot/admin-next/fields/chatbot-model-tools.js');
-
-        if (isset($this->grav['twig']->plugins_hook['nav'])) {
-            $this->grav['twig']->plugins_hook['nav']['ai-chatbot'] = [
-                'route' => 'plugins/ai-chatbot',
-                'icon' => 'fa-robot',
-                'title' => 'AI Chatbot',
-                'authorize' => 'admin.plugins',
-                'priority' => 10
-            ];
-        }
-
-        if (isset($this->grav['admin'])) {
-            $this->grav['admin']->sidebar['ai-chatbot'] = [
-                'route' => 'plugins/ai-chatbot',
-                'icon' => 'fa-robot',
-                'title' => 'AI Chatbot',
-                'authorize' => 'admin.plugins',
-                'priority' => 10
-            ];
-        }
     }
 
     /**

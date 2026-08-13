@@ -95,8 +95,8 @@ form:
 
         custom_endpoint:
           type: text
-          label: 🌐 OpenAI Compatible URL
-          help: Primary endpoint URL when using Custom OpenAI-Compatible (e.g. http://110.120.130.140:20128). Mandatory for Custom OpenAI-Compatible.
+          label: 🌐 Custom URL
+          help: Custom endpoint URL. Only required when using Ollama (v1 / Chat) or Custom OpenAI-Compatible (e.g. http://110.120.130.140:20128).
           default: http://110.120.130.140:20128
           placeholder: http://110.120.130.140:20128
           show_on: "provider: omniroute,ollama,custom"

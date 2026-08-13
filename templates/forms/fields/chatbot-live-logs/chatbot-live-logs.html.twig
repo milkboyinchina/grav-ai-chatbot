@@ -1,6 +1,0 @@
-{% extends "forms/field.html.twig" %}
-
-{% block field %}
-    {% do assets.addJs('plugin://ai-chatbot/admin-next/fields/chatbot-live-logs.js', {'group': 'bottom', 'priority': 100}) %}
-    <chatbot-live-logs></chatbot-live-logs>
-{% endblock %}
