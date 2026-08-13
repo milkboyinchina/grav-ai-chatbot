@@ -1,9 +1,50 @@
 (function () {
+  function deepQueryAll(selector, root = document) {
+    let results = Array.from(root.querySelectorAll(selector));
+    const allHosts = root.querySelectorAll('*');
+    for (const host of allHosts) {
+      if (host.shadowRoot) {
+        results = results.concat(deepQueryAll(selector, host.shadowRoot));
+      }
+    }
+    return results;
+  }
+
+  function findTargetInputs(name) {
+    const results = [];
+
+    const directInputs = deepQueryAll(
+      `input[name="data[${name}]"], select[name="data[${name}]"], input[name="${name}"], select[name="${name}"], #${name}, [data-field="${name}"] input, [data-field="${name}"] select, input[name*="${name}"], select[name*="${name}"], [data-field*="${name}"] input`
+    );
+    results.push(...directInputs);
+
+    if (results.length === 0) {
+      const labels = deepQueryAll('label, span, div, .form-label');
+      for (const lbl of labels) {
+        const txt = (lbl.textContent || '').toLowerCase();
+        if (txt.includes('model identifier') || (name === 'model' && txt.includes('model'))) {
+          const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
+          if (parent) {
+            const inps = deepQueryAll('input, select', parent);
+            results.push(...inps);
+          }
+        }
+      }
+    }
+
+    if (results.length === 0) {
+      const phInputs = deepQueryAll('input[placeholder*="gemini"], input[placeholder*="gpt"], input[placeholder*="llama"]');
+      results.push(...phInputs);
+    }
+
+    return Array.from(new Set(results));
+  }
+
   function getFormFieldVal(name) {
     if (typeof document === 'undefined') return '';
 
     if (name === 'provider') {
-      const selects = Array.from(document.querySelectorAll('select'));
+      const selects = deepQueryAll('select');
       for (const sel of selects) {
         const n = (sel.name || '').toLowerCase();
         const id = (sel.id || '').toLowerCase();
@@ -15,42 +56,10 @@
       return 'gemini';
     }
 
-    const directSelectors = [
-      `input[name="data[${name}]"]`,
-      `select[name="data[${name}]"]`,
-      `input[name="${name}"]`,
-      `select[name="${name}"]`,
-      `#${name}`,
-      `[data-field="${name}"] input`,
-      `[data-field="${name}"] select`
-    ];
-    for (const sel of directSelectors) {
-      const el = document.querySelector(sel);
+    const inputs = findTargetInputs(name);
+    for (const el of inputs) {
       if (el && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
         return el.value.trim();
-      }
-    }
-
-    const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
-    for (const input of allInputs) {
-      const n = (input.name || '').toLowerCase();
-      const id = (input.id || '').toLowerCase();
-      const ph = (input.placeholder || '').toLowerCase();
-      const df = (input.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
-
-      let isMatch = false;
-      if (name === 'api_key' && (n.includes('key') || id.includes('key') || df.includes('key') || ph.includes('key') || ph.includes('token'))) {
-        isMatch = true;
-      } else if (name === 'custom_endpoint' && (n.includes('custom') || id.includes('custom') || df.includes('custom') || ph.includes('custom') || ph.includes('110.120'))) {
-        isMatch = true;
-      } else if (name === 'fallback_endpoint' && (n.includes('fallback') || id.includes('fallback') || df.includes('fallback'))) {
-        isMatch = true;
-      } else if (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt'))) {
-        isMatch = true;
-      }
-
-      if (isMatch && input.value !== undefined && input.value !== null && input.value.trim() !== '') {
-        return input.value.trim();
       }
     }
 
@@ -60,44 +69,17 @@
   function setFormFieldVal(name, val) {
     if (typeof document === 'undefined') return;
 
-    let targetInputs = Array.from(document.querySelectorAll(
-      `input[name="data[${name}]"], select[name="data[${name}]"], input[name="${name}"], select[name="${name}"], #${name}, [data-field="${name}"] input, [data-field="${name}"] select`
-    ));
-
-    if (targetInputs.length === 0) {
-      const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
-      for (const input of allInputs) {
-        const n = (input.name || '').toLowerCase();
-        const id = (input.id || '').toLowerCase();
-        const ph = (input.placeholder || '').toLowerCase();
-        const df = (input.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
-
-        const isMatch = (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt')));
-        if (isMatch) {
-          targetInputs.push(input);
-        }
-      }
-    }
-
-    if (targetInputs.length === 0) {
-      const labels = Array.from(document.querySelectorAll('label, span, div, .form-label'));
-      for (const lbl of labels) {
-        const txt = (lbl.textContent || '').toLowerCase();
-        if (txt.includes('model identifier') || txt.includes('model')) {
-          const parent = lbl.closest('.form-field, .field, .form-group, div');
-          if (parent) {
-            const inp = parent.querySelector('input, select');
-            if (inp) targetInputs.push(inp);
-          }
-        }
-      }
-    }
-
+    const targetInputs = findTargetInputs(name);
     for (const el of targetInputs) {
-      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-      if (nativeSetter) {
-        nativeSetter.call(el, val);
-      } else {
+      try {
+        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set ||
+                             Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
+        if (nativeSetter) {
+          nativeSetter.call(el, val);
+        } else {
+          el.value = val;
+        }
+      } catch (e) {
         el.value = val;
       }
 
