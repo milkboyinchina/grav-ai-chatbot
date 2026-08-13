@@ -118,15 +118,60 @@ class ChatbotModelTools extends HTMLElement {
     if (typeof document === 'undefined') return '';
 
     if (name === 'provider') {
-      const selects = this._deepQueryOuter('select');
-      for (const sel of selects) {
-        const n = (sel.name || '').toLowerCase();
-        const id = (sel.id || '').toLowerCase();
-        const df = (sel.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
-        if (n.includes('provider') || id.includes('provider') || df.includes('provider')) {
-          if (sel.value) return sel.value.trim();
+      const exactSelects = this._deepQueryOuter('select[name="data[provider]"], [data-field="provider"] select, select[name="provider"], #provider, #data\\[provider\\]');
+      for (const sel of exactSelects) {
+        if (sel.value) return sel.value.trim().toLowerCase();
+        if (sel.selectedIndex >= 0 && sel.options[sel.selectedIndex]) {
+          const optVal = (sel.options[sel.selectedIndex].value || '').trim().toLowerCase();
+          if (optVal) return optVal;
+          const optTxt = (sel.options[sel.selectedIndex].textContent || '').trim().toLowerCase();
+          if (optTxt.includes('groq')) return 'groq';
+          if (optTxt.includes('openrouter')) return 'openrouter';
+          if (optTxt.includes('openai')) return 'openai';
+          if (optTxt.includes('gemini')) return 'gemini';
+          if (optTxt.includes('ollama')) return 'ollama';
+          if (optTxt.includes('custom') || optTxt.includes('omniroute')) return 'omniroute';
         }
       }
+
+      const labels = this._deepQueryOuter('label, span, div, .form-label');
+      for (const lbl of labels) {
+        const txt = (lbl.textContent || '').toLowerCase();
+        if (txt.includes('ai provider engine') || txt.includes('select your preferred ai provider')) {
+          const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
+          if (parent) {
+            const sel = this._deepQueryOuter('select', parent)[0];
+            if (sel) {
+              if (sel.value) return sel.value.trim().toLowerCase();
+              if (sel.selectedIndex >= 0 && sel.options[sel.selectedIndex]) {
+                const optVal = (sel.options[sel.selectedIndex].value || '').trim().toLowerCase();
+                if (optVal) return optVal;
+                const optTxt = (sel.options[sel.selectedIndex].textContent || '').trim().toLowerCase();
+                if (optTxt.includes('groq')) return 'groq';
+                if (optTxt.includes('openrouter')) return 'openrouter';
+                if (optTxt.includes('openai')) return 'openai';
+                if (optTxt.includes('gemini')) return 'gemini';
+                if (optTxt.includes('ollama')) return 'ollama';
+                if (optTxt.includes('custom') || optTxt.includes('omniroute')) return 'omniroute';
+              }
+            }
+          }
+        }
+      }
+
+      const allSelects = this._deepQueryOuter('select');
+      for (const sel of allSelects) {
+        if (sel.selectedIndex >= 0 && sel.options[sel.selectedIndex]) {
+          const optTxt = (sel.options[sel.selectedIndex].textContent || '').trim().toLowerCase();
+          if (optTxt.includes('groq cloud') || optTxt.includes('groq')) return 'groq';
+          if (optTxt.includes('openrouter ai') || optTxt.includes('openrouter')) return 'openrouter';
+          if (optTxt.includes('openai official')) return 'openai';
+          if (optTxt.includes('google gemini') || optTxt.includes('gemini')) return 'gemini';
+          if (optTxt.includes('ollama local') || optTxt.includes('ollama')) return 'ollama';
+          if (optTxt.includes('custom openai') || optTxt.includes('omniroute')) return 'omniroute';
+        }
+      }
+
       return 'gemini';
     }
 
@@ -174,7 +219,7 @@ class ChatbotModelTools extends HTMLElement {
       return;
     }
 
-    this._status = { type: 'info', message: '⏳ Verifying API Key authentication...' };
+    this._status = { type: 'info', message: `⏳ Verifying API Key authentication against ${provider.toUpperCase()}...` };
     this._render();
 
     try {
@@ -212,7 +257,7 @@ class ChatbotModelTools extends HTMLElement {
     const apiKey = this._getFormFieldVal('api_key');
     const customEndpoint = this._getFormFieldVal('custom_endpoint');
 
-    this._status = { type: 'info', message: '⏳ Querying active model list from provider API...' };
+    this._status = { type: 'info', message: `⏳ Querying active model list from ${provider.toUpperCase()} API...` };
     this._render();
 
     try {
@@ -260,7 +305,7 @@ class ChatbotModelTools extends HTMLElement {
     this._testedModel = model;
     this._selectedModel = model;
     this._testedHealthSuccess = false;
-    this._status = { type: 'info', message: `⏳ Sending live health check ping to model '${model}'...` };
+    this._status = { type: 'info', message: `⏳ Sending live health check ping to model '${model}' via ${provider.toUpperCase()}...` };
     this._render();
 
     try {
