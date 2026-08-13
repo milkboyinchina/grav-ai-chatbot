@@ -89,11 +89,9 @@ form:
           default: gemini-3.1-flash-lite
 
         model_operations:
-          type: display
+          type: chatbot-model-tools
           label: 🛠️ Model Tools & Live Health Check
-          markdown: true
-          content: '<div style="margin-top: 4px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"><button type="button" id="grav-chatbot-fetch-models-btn" class="button btn btn-secondary" style="background:#4f46e5; color:#fff; font-weight:600; padding:7px 14px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-refresh"></i> 🔄 Retrieve Active Models from API</button><button type="button" id="grav-chatbot-test-model-btn" class="button btn btn-primary" style="background:#059669; color:#fff; font-weight:600; padding:7px 14px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-heartbeat"></i> ⚡ Test Model Health</button></div><div id="grav-chatbot-model-status" style="margin-top:10px; display:none; padding:10px 14px; border-radius:6px; font-weight:600;"></div><div id="grav-chatbot-model-select-wrapper" style="margin-top:10px; display:none;"><label style="font-weight:600; font-size:13px;">Available Provider Models (Click to select):</label><select id="grav-chatbot-model-select" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px; font-family:monospace; background:#f8fafc; font-size:13px;"></select></div>'
-          ignore: true
+          help: Retrieve active models from provider API and perform live model health checks.
 
         custom_endpoint:
           type: text

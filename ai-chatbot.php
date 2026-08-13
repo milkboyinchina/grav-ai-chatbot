@@ -782,6 +782,7 @@ class AiChatbotPlugin extends Plugin
         $assets->addCss('plugin://ai-chatbot/assets/css/admin-analytics.css');
         $assets->addJs('plugin://ai-chatbot/assets/js/admin-analytics.js');
         $assets->addJs('plugin://ai-chatbot/assets/js/admin-model-tools.js');
+        $assets->addJs('plugin://ai-chatbot/admin-next/fields/chatbot-model-tools.js');
 
         if (isset($this->grav['twig']->plugins_hook['nav'])) {
             $this->grav['twig']->plugins_hook['nav']['ai-chatbot'] = [
