@@ -1,13 +1,17 @@
 (function () {
-  function deepQueryAll(selector, root = document) {
-    let results = Array.from(root.querySelectorAll(selector));
+  function deepQueryOuter(selector, root = document) {
+    let elements = Array.from(root.querySelectorAll(selector)).filter(el => {
+      const container = document.querySelector('chatbot-model-tools');
+      return !container || (!container.contains(el) && el.getRootNode() !== container.shadowRoot);
+    });
     const allHosts = root.querySelectorAll('*');
     for (const host of allHosts) {
-      if (host.shadowRoot) {
-        results = results.concat(deepQueryAll(selector, host.shadowRoot));
+      const container = document.querySelector('chatbot-model-tools');
+      if (host !== container && host.shadowRoot) {
+        elements = elements.concat(deepQueryOuter(selector, host.shadowRoot));
       }
     }
-    return results;
+    return elements;
   }
 
   function findTargetInputs(name) {
@@ -23,13 +27,38 @@
     ];
 
     for (const sel of exactSelectors) {
-      const found = deepQueryAll(sel);
+      const found = deepQueryOuter(sel);
       if (found.length > 0) {
         return found;
       }
     }
 
-    const labels = deepQueryAll('label, span, div, .form-label');
+    const attrMatches = deepQueryOuter('input, select').filter(el => {
+      const n = (el.name || '').toLowerCase();
+      const id = (el.id || '').toLowerCase();
+      const df = (el.closest('[data-field]')?.getAttribute('data-field') || '').toLowerCase();
+      const ph = (el.placeholder || '').toLowerCase();
+
+      if (name === 'api_key') {
+        return (n.includes('api_key') || id.includes('api_key') || df.includes('api_key') || ph.includes('api key') || ph.includes('secret token'));
+      }
+      if (name === 'custom_endpoint') {
+        return (n.includes('custom_endpoint') || id.includes('custom_endpoint') || df.includes('custom_endpoint') || ph.includes('110.120'));
+      }
+      if (name === 'fallback_endpoint') {
+        return (n.includes('fallback_endpoint') || id.includes('fallback_endpoint') || df.includes('fallback_endpoint'));
+      }
+      if (name === 'model') {
+        return (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini-3.1'));
+      }
+      return false;
+    });
+
+    if (attrMatches.length > 0) {
+      return attrMatches;
+    }
+
+    const labels = deepQueryOuter('label, span, div, .form-label');
     for (const lbl of labels) {
       const txt = (lbl.textContent || '').toLowerCase();
       const isMatch = (name === 'api_key' && (txt.includes('api key') || txt.includes('secret token'))) ||
@@ -40,7 +69,7 @@
       if (isMatch) {
         const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
         if (parent) {
-          const inps = deepQueryAll('input, select', parent);
+          const inps = deepQueryOuter('input, select', parent);
           if (inps.length > 0) return inps;
         }
       }
@@ -53,7 +82,7 @@
     if (typeof document === 'undefined') return '';
 
     if (name === 'provider') {
-      const selects = deepQueryAll('select');
+      const selects = deepQueryOuter('select');
       for (const sel of selects) {
         const n = (sel.name || '').toLowerCase();
         const id = (sel.id || '').toLowerCase();
