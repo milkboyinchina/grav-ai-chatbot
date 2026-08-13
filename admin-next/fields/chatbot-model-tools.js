@@ -43,49 +43,58 @@ class ChatbotModelTools extends HTMLElement {
   }
 
   _findTargetInputs(name) {
-    const results = [];
+    // 1. Exact attribute matching (priority 1)
+    const exactSelectors = [
+      `input[name="data[${name}]"]`,
+      `select[name="data[${name}]"]`,
+      `[data-field="${name}"] input`,
+      `[data-field="${name}"] select`,
+      `input[name="${name}"]`,
+      `select[name="${name}"]`,
+      `#${name}`,
+      `#data\\[${name}\\]`
+    ];
 
-    // 1. Direct attribute matching across all shadow roots
-    const directInputs = this._deepQueryAll(
-      `input[name="data[${name}]"], select[name="data[${name}]"], input[name="${name}"], select[name="${name}"], #${name}, [data-field="${name}"] input, [data-field="${name}"] select, input[name*="${name}"], select[name*="${name}"], [data-field*="${name}"] input`
-    );
-    results.push(...directInputs);
+    for (const sel of exactSelectors) {
+      const found = this._deepQueryAll(sel);
+      if (found.length > 0) {
+        return found;
+      }
+    }
 
-    // 2. Proximity label search across all shadow roots
-    if (results.length === 0) {
-      const labels = this._deepQueryAll('label, span, div, .form-label');
-      for (const lbl of labels) {
-        const txt = (lbl.textContent || '').toLowerCase();
-        if (txt.includes('model identifier') || (name === 'model' && txt.includes('model'))) {
-          const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
-          if (parent) {
-            const inps = this._deepQueryAll('input, select', parent);
-            results.push(...inps);
-          }
+    // 2. Specific label proximity search (priority 2)
+    const labels = this._deepQueryAll('label, span, div, .form-label');
+    for (const lbl of labels) {
+      const txt = (lbl.textContent || '').toLowerCase();
+      const isMatch = (name === 'api_key' && (txt.includes('api key') || txt.includes('secret token'))) ||
+                      (name === 'model' && (txt.includes('model identifier') || txt.includes('model'))) ||
+                      (name === 'custom_endpoint' && (txt.includes('custom url') || txt.includes('custom endpoint'))) ||
+                      (name === 'fallback_endpoint' && txt.includes('fallback endpoint'));
+
+      if (isMatch) {
+        const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
+        if (parent) {
+          const inps = this._deepQueryAll('input, select', parent);
+          if (inps.length > 0) return inps;
         }
       }
     }
 
-    // 3. Sibling lookup directly preceding <chatbot-model-tools>
-    if (results.length === 0) {
-      let prev = this.previousElementSibling;
-      while (prev) {
-        const inps = this._deepQueryAll('input, select', prev);
-        if (inps.length > 0) {
-          results.push(...inps);
-          break;
-        }
-        prev = prev.previousElementSibling;
-      }
+    // 3. Sibling lookup directly preceding <chatbot-model-tools> (priority 3)
+    let prev = this.previousElementSibling;
+    while (prev) {
+      const inps = this._deepQueryAll('input, select', prev);
+      if (inps.length > 0) return inps;
+      prev = prev.previousElementSibling;
     }
 
-    // 4. Fallback search for placeholder containing model identifiers
-    if (results.length === 0) {
+    // 4. Fallback search for placeholder containing model identifiers (priority 4)
+    if (name === 'model') {
       const phInputs = this._deepQueryAll('input[placeholder*="gemini"], input[placeholder*="gpt"], input[placeholder*="llama"]');
-      results.push(...phInputs);
+      if (phInputs.length > 0) return phInputs;
     }
 
-    return Array.from(new Set(results));
+    return [];
   }
 
   _getFormFieldVal(name) {

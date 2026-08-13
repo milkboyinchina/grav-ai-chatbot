@@ -11,33 +11,42 @@
   }
 
   function findTargetInputs(name) {
-    const results = [];
+    const exactSelectors = [
+      `input[name="data[${name}]"]`,
+      `select[name="data[${name}]"]`,
+      `[data-field="${name}"] input`,
+      `[data-field="${name}"] select`,
+      `input[name="${name}"]`,
+      `select[name="${name}"]`,
+      `#${name}`,
+      `#data\\[${name}\\]`
+    ];
 
-    const directInputs = deepQueryAll(
-      `input[name="data[${name}]"], select[name="data[${name}]"], input[name="${name}"], select[name="${name}"], #${name}, [data-field="${name}"] input, [data-field="${name}"] select, input[name*="${name}"], select[name*="${name}"], [data-field*="${name}"] input`
-    );
-    results.push(...directInputs);
+    for (const sel of exactSelectors) {
+      const found = deepQueryAll(sel);
+      if (found.length > 0) {
+        return found;
+      }
+    }
 
-    if (results.length === 0) {
-      const labels = deepQueryAll('label, span, div, .form-label');
-      for (const lbl of labels) {
-        const txt = (lbl.textContent || '').toLowerCase();
-        if (txt.includes('model identifier') || (name === 'model' && txt.includes('model'))) {
-          const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
-          if (parent) {
-            const inps = deepQueryAll('input, select', parent);
-            results.push(...inps);
-          }
+    const labels = deepQueryAll('label, span, div, .form-label');
+    for (const lbl of labels) {
+      const txt = (lbl.textContent || '').toLowerCase();
+      const isMatch = (name === 'api_key' && (txt.includes('api key') || txt.includes('secret token'))) ||
+                      (name === 'model' && (txt.includes('model identifier') || txt.includes('model'))) ||
+                      (name === 'custom_endpoint' && (txt.includes('custom url') || txt.includes('custom endpoint'))) ||
+                      (name === 'fallback_endpoint' && txt.includes('fallback endpoint'));
+
+      if (isMatch) {
+        const parent = lbl.closest('.form-field, .field, .form-group, div, fieldset') || lbl.parentElement;
+        if (parent) {
+          const inps = deepQueryAll('input, select', parent);
+          if (inps.length > 0) return inps;
         }
       }
     }
 
-    if (results.length === 0) {
-      const phInputs = deepQueryAll('input[placeholder*="gemini"], input[placeholder*="gpt"], input[placeholder*="llama"]');
-      results.push(...phInputs);
-    }
-
-    return Array.from(new Set(results));
+    return [];
   }
 
   function getFormFieldVal(name) {
