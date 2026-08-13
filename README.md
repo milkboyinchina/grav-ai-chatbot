@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Grav CMS](https://img.shields.io/badge/Grav-2.0%2B-orange.svg)](https://getgrav.org)
-[![Version](https://img.shields.io/badge/Version-v1.5.0-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
+[![Version](https://img.shields.io/badge/Version-v2.0.0-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
 
 An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retrieval-Augmented Generation (RAG) vector search, multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, date range analytics filtering, and visual telemetry dashboards.
 

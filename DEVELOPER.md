@@ -110,16 +110,24 @@ Grav Admin 2 renders custom blueprint fields as native Web Components. Component
 
 1. **Dynamic Custom Element Tag Name**:
    ```javascript
-   const TAG = (typeof window !== 'undefined' && window.__GRAV_FIELD_TAG) ? window.__GRAV_FIELD_TAG : 'chatbot-security-logs';
+   const TAG = (typeof window !== 'undefined' && window.__GRAV_FIELD_TAG) ? window.__GRAV_FIELD_TAG : 'chatbot-model-tools';
    customElements.define(TAG, CustomFieldClass);
    ```
 
-2. **Container Layout & Overflow Protection**:
+2. **Outer Shadow DOM Traversal (`_deepQueryOuter`)**:
+   - Web Components must query outer document shadow roots using `_deepQueryOuter(selector, root)` while explicitly excluding `this` and `this.shadowRoot` to avoid matching internal component elements (such as hint banners containing target field text).
+   - Target input finders (`_findTargetInputs`) must return strictly **1 single target input element** (`[found[0]]`) with negative attribute filters (`!fieldAttr.includes('operations')`) to prevent field overwrite collisions.
+
+3. **3-Level Live Provider Detector Contract**:
+   - Detects unsaved dropdown options across 3 fallback levels: (1) Direct select value/index, (2) `"AI Provider Engine"` label proximity, (3) Option text keywords (`"groq"`, `"openrouter"`, `"openai"`, `"gemini"`, `"ollama"`, `"custom"`/`"omniroute"`).
+
+4. **Container Layout & Overflow Protection**:
    - Apply `:host { display: block; width: 100%; max-width: 100%; box-sizing: border-box; }`.
    - Set `box-sizing: border-box`, `max-width: 100%`, and `word-break: break-word` on inner card containers so components stay strictly bounded within card borders.
 
-3. **Authentication Header**:
+5. **Authentication Header & API Key Security**:
    - Include `X-API-Token: window.__GRAV_API_TOKEN` header on all HTTP requests targeting `/chatbot-api`.
+   - **API Key Confidentiality**: `api_key` is processed strictly server-to-server via PHP cURL and is **NEVER** exposed to client JS, HTML DOM attributes, or disk error log files.
 
 ---
 
