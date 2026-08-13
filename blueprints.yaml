@@ -14,7 +14,7 @@ docs: https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/README.md
 license: GPL-3.0-or-later
 
 dependencies:
-  - { name: grav, version: '>=1.7.0' }
+  - { name: grav, version: '>=2.0.0' }
 
 form:
   validation: loose

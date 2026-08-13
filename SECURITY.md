@@ -74,7 +74,7 @@ graph TD
 
 ## 🛠️ Security Best Practices for Site Administrators
 
-1. **Keep Grav & PHP Updated**: Ensure your web server runs PHP 8.3+ and Grav CMS 1.7+.
+1. **Keep Grav & PHP Updated**: Ensure your web server runs PHP 8.3+ and Grav CMS 2.0+.
 2. **Enable Blacklisted Words Filter**: Maintain `blacklist_filter_enabled: true` in plugin configuration.
 3. **Restrict Export Downloads**: Enable `export_require_auth: true` and specify whitelisted usernames (`export_allowed_users`) allowed to download interaction logs.
 4. **Monitor Admin 2 Security Logs**: Periodically review the `<chatbot-security-logs>` card in Grav Admin 2 to audit blocked threat attempts and active IP lockouts.
