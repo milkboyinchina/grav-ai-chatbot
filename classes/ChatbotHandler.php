@@ -514,12 +514,8 @@ class ChatbotHandler
                 $json = json_decode($response, true);
                 $err = $json['error']['message'] ?? "HTTP {$httpCode} Authentication Failed";
 
-                if ($httpCode === 400 || $httpCode === 403 || str_contains(strtolower($err), 'api key not valid') || str_contains(strtolower($err), 'invalid')) {
-                    $err .= " (Note: Official Google Gemini API keys start with 'AIzaSy...'. If you are using OmniRoute or a custom proxy API key like 'AQ.Ab...', please select '🤖 Custom OpenAI-Compatible' as the AI Provider Engine).";
-                }
-
                 return [
-                    'http_code' => 401,
+                    'http_code' => $httpCode,
                     'success' => false,
                     'message' => "❌ Gemini API Key test failed: {$err}"
                 ];

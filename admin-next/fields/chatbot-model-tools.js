@@ -134,8 +134,11 @@ class ChatbotModelTools extends HTMLElement {
     const apiKey = this._getFormFieldVal('api_key');
     const customEndpoint = this._getFormFieldVal('custom_endpoint');
 
-    this._status = { type: 'info', message: '⏳ Verifying API Key authentication...' };
-    this._render();
+    if (!apiKey && ['gemini', 'groq', 'openai', 'openrouter'].includes(provider)) {
+      this._status = { type: 'error', message: '❌ API Key is missing. Please enter your API Key into the API Key field above before testing.' };
+      this._render();
+      return;
+    }
 
     try {
       const headers = { 'Content-Type': 'application/json' };
