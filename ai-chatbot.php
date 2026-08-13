@@ -151,15 +151,17 @@ class AiChatbotPlugin extends Plugin
 
                 $chartStr = implode("\n", $chartLines);
 
-                // Read full site URL from site.yaml or fallback to rootUrl(true)
+                // Read site URL from site.yaml or relative root
                 $siteUrl = rtrim($this->config->get('site.url') ?: $this->grav['uri']->rootUrl(true), '/');
-                if (empty($siteUrl) || $siteUrl === '/') {
-                    $siteUrl = 'http://localhost';
+                if (empty($siteUrl) || $siteUrl === '/' || str_contains($siteUrl, 'localhost')) {
+                    $csvUrl = "/chatbot-export?format=csv";
+                    $jsonUrl = "/chatbot-export?format=json";
+                    $rawUrl = "/chatbot-export?format=raw_interactions";
+                } else {
+                    $csvUrl = "{$siteUrl}/chatbot-export?format=csv";
+                    $jsonUrl = "{$siteUrl}/chatbot-export?format=json";
+                    $rawUrl = "{$siteUrl}/chatbot-export?format=raw_interactions";
                 }
-
-                $csvUrl = "{$siteUrl}/chatbot-export?format=csv";
-                $jsonUrl = "{$siteUrl}/chatbot-export?format=json";
-                $rawUrl = "{$siteUrl}/chatbot-export?format=raw_interactions";
 
                 // Log file location instructions
                 $locator = $this->grav['locator'];
@@ -326,8 +328,12 @@ class AiChatbotPlugin extends Plugin
     /**
      * Helper to normalize multilingual routes (e.g. /en, /id, /en/home -> /).
      */
-    protected function normalizeRoute(string $route): string
+    protected function normalizeRoute(?string $route): string
     {
+        if ($route === null) {
+            return '/';
+        }
+
         $clean = '/' . ltrim(trim($route), '/');
 
         // Supported languages in Grav system config
@@ -406,7 +412,8 @@ class AiChatbotPlugin extends Plugin
         // Page Display Visibility Rules
         $rawRoute = $this->grav['uri']->path() ?: '/';
         $currentRoute = $this->normalizeRoute($rawRoute);
-        $pageRoute = isset($this->grav['page']) ? $this->normalizeRoute($this->grav['page']->route()) : '';
+        $pageObject = $this->grav['page'] ?? null;
+        $pageRoute = ($pageObject && method_exists($pageObject, 'route') && $pageObject->route()) ? $this->normalizeRoute($pageObject->route()) : '';
 
         $displayMode = $this->config->get('plugins.ai-chatbot.display_mode', 'all');
 
@@ -678,7 +685,8 @@ class AiChatbotPlugin extends Plugin
 
         $rawRoute = $this->grav['uri']->path() ?: '/';
         $currentRoute = $this->normalizeRoute($rawRoute);
-        $pageRoute = isset($this->grav['page']) ? $this->normalizeRoute($this->grav['page']->route()) : '';
+        $pageObject = $this->grav['page'] ?? null;
+        $pageRoute = ($pageObject && method_exists($pageObject, 'route') && $pageObject->route()) ? $this->normalizeRoute($pageObject->route()) : '';
 
         $displayMode = $this->config->get('plugins.ai-chatbot.display_mode', 'all');
 
