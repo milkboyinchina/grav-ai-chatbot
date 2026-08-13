@@ -28,35 +28,42 @@ class ChatbotModelTools extends HTMLElement {
 
   _getFormFieldVal(name) {
     if (typeof document === 'undefined') return '';
+
+    // Direct DOM selectors
     const selectors = [
-      `[name="data[${name}]"]`,
-      `[name="${name}"]`,
+      `select[name="data[${name}]"]`,
+      `input[name="data[${name}]"]`,
+      `select[name="${name}"]`,
+      `input[name="${name}"]`,
       `#${name}`,
-      `[data-field="${name}"] input`,
       `[data-field="${name}"] select`,
-      `input[name*="${name}"]`,
+      `[data-field="${name}"] input`,
       `select[name*="${name}"]`,
+      `input[name*="${name}"]`,
       `textarea[name*="${name}"]`
     ];
 
     for (const sel of selectors) {
       const el = document.querySelector(sel);
-      if (el && el.value !== undefined && el.value !== null) {
+      if (el && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
         return el.value.trim();
       }
     }
 
-    // Advanced search: find input by sibling label text
-    const labels = Array.from(document.querySelectorAll('label, .form-label'));
+    // Label text proximity search
+    const labels = Array.from(document.querySelectorAll('label, .form-label, span, div'));
     for (const lbl of labels) {
       const txt = (lbl.textContent || '').toLowerCase();
-      if (txt.includes(name.replace('_', ' ')) ||
+      const isMatch = (name === 'provider' && (txt.includes('ai provider engine') || txt.includes('provider'))) ||
         (name === 'api_key' && (txt.includes('api key') || txt.includes('key'))) ||
-        (name === 'custom_endpoint' && (txt.includes('custom url') || txt.includes('openai compatible url')))) {
-        const parent = lbl.closest('.form-field, .field, div');
+        (name === 'custom_endpoint' && (txt.includes('custom url') || txt.includes('openai compatible url'))) ||
+        (name === 'model' && txt.includes('model identifier'));
+
+      if (isMatch) {
+        const parent = lbl.closest('.form-field, .field, .form-group, div');
         if (parent) {
-          const input = parent.querySelector('input, select, textarea');
-          if (input && input.value !== undefined) {
+          const input = parent.querySelector('select, input, textarea');
+          if (input && input.value !== undefined && input.value !== null && input.value.trim() !== '') {
             return input.value.trim();
           }
         }
@@ -70,7 +77,7 @@ class ChatbotModelTools extends HTMLElement {
     const keyBtn = this.shadowRoot.getElementById('key-btn');
     const statusEl = this.shadowRoot.getElementById('status');
 
-    const provider = this._getFormFieldVal('provider') || 'omniroute';
+    const provider = this._getFormFieldVal('provider') || 'gemini';
     const apiKey = this._getFormFieldVal('api_key');
     const customEndpoint = this._getFormFieldVal('custom_endpoint');
 
@@ -121,7 +128,7 @@ class ChatbotModelTools extends HTMLElement {
     const selectWrapper = this.shadowRoot.getElementById('select-wrapper');
     const selectEl = this.shadowRoot.getElementById('model-select');
 
-    const provider = this._getFormFieldVal('provider') || 'omniroute';
+    const provider = this._getFormFieldVal('provider') || 'gemini';
     const apiKey = this._getFormFieldVal('api_key');
     const customEndpoint = this._getFormFieldVal('custom_endpoint');
 
@@ -199,7 +206,7 @@ class ChatbotModelTools extends HTMLElement {
     const testBtn = this.shadowRoot.getElementById('test-btn');
     const statusEl = this.shadowRoot.getElementById('status');
 
-    const provider = this._getFormFieldVal('provider') || 'omniroute';
+    const provider = this._getFormFieldVal('provider') || 'gemini';
     const apiKey = this._getFormFieldVal('api_key');
     const model = this._getFormFieldVal('model') || 'gemini-3.1-flash-lite';
     const customEndpoint = this._getFormFieldVal('custom_endpoint');
