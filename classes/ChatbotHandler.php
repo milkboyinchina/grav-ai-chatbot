@@ -441,12 +441,19 @@ class ChatbotHandler
         }
     }
 
+    protected function sanitizeProvider(string $provider): string
+    {
+        $allowed = ['gemini', 'gemini_openai', 'omniroute', 'openai_compatible', 'ollama', 'groq', 'openrouter', 'openai', 'custom'];
+        $clean = strtolower(trim($provider));
+        return in_array($clean, $allowed, true) ? $clean : 'gemini';
+    }
+
     /**
      * Test API Key authentication with provider API endpoint.
      */
     protected function testApiKey(array $data): array
     {
-        $provider = strtolower($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $provider = $this->sanitizeProvider($data['provider'] ?? $this->config['provider'] ?? 'gemini');
         $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
 
@@ -589,7 +596,7 @@ class ChatbotHandler
      */
     protected function fetchModels(array $data): array
     {
-        $provider = strtolower($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $provider = $this->sanitizeProvider($data['provider'] ?? $this->config['provider'] ?? 'gemini');
         $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
 
@@ -699,7 +706,7 @@ class ChatbotHandler
      */
     protected function testModelHealth(array $data): array
     {
-        $provider = strtolower($data['provider'] ?? $this->config['provider'] ?? 'gemini');
+        $provider = $this->sanitizeProvider($data['provider'] ?? $this->config['provider'] ?? 'gemini');
         $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
         $model = trim($data['model'] ?? $this->config['model'] ?? 'gemini-3.1-flash-lite');
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');

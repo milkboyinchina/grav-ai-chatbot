@@ -29,44 +29,33 @@ class ChatbotModelTools extends HTMLElement {
   _getFormFieldVal(name) {
     if (typeof document === 'undefined') return '';
 
-    // Direct DOM selectors
+    if (name === 'provider') {
+      const selEl = document.querySelector('select[name="data[provider]"], select[name="provider"], [data-field="provider"] select');
+      if (selEl && selEl.value) {
+        return selEl.value.trim();
+      }
+      const providerField = document.querySelector('[data-field="provider"]');
+      if (providerField) {
+        const sel = providerField.querySelector('select');
+        if (sel && sel.value) return sel.value.trim();
+      }
+      return 'gemini';
+    }
+
     const selectors = [
-      `select[name="data[${name}]"]`,
       `input[name="data[${name}]"]`,
-      `select[name="${name}"]`,
+      `select[name="data[${name}]"]`,
       `input[name="${name}"]`,
+      `select[name="${name}"]`,
       `#${name}`,
-      `[data-field="${name}"] select`,
       `[data-field="${name}"] input`,
-      `select[name*="${name}"]`,
-      `input[name*="${name}"]`,
-      `textarea[name*="${name}"]`
+      `[data-field="${name}"] select`
     ];
 
     for (const sel of selectors) {
       const el = document.querySelector(sel);
       if (el && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
         return el.value.trim();
-      }
-    }
-
-    // Label text proximity search
-    const labels = Array.from(document.querySelectorAll('label, .form-label, span, div'));
-    for (const lbl of labels) {
-      const txt = (lbl.textContent || '').toLowerCase();
-      const isMatch = (name === 'provider' && (txt.includes('ai provider engine') || txt.includes('provider'))) ||
-        (name === 'api_key' && (txt.includes('api key') || txt.includes('key'))) ||
-        (name === 'custom_endpoint' && (txt.includes('custom url') || txt.includes('openai compatible url'))) ||
-        (name === 'model' && txt.includes('model identifier'));
-
-      if (isMatch) {
-        const parent = lbl.closest('.form-field, .field, .form-group, div');
-        if (parent) {
-          const input = parent.querySelector('select, input, textarea');
-          if (input && input.value !== undefined && input.value !== null && input.value.trim() !== '') {
-            return input.value.trim();
-          }
-        }
       }
     }
 
