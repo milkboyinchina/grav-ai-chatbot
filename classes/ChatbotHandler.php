@@ -11,12 +11,12 @@ use Grav\Common\Grav;
  */
 class ChatbotHandler
 {
-    protected Grav $grav;
-    protected array $config;
+    protected ?Grav $grav = null;
+    protected array $config = [];
 
-    public function __construct(Grav $grav, array $config)
+    public function __construct(?Grav $grav = null, array $config = [])
     {
-        $this->grav = $grav;
+        $this->grav = $grav ?? (class_exists('Grav\Common\Grav') ? Grav::instance() : null);
         $this->config = $config;
     }
 

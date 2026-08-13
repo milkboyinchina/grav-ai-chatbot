@@ -79,12 +79,16 @@ class OpenAiCompatibleClient implements AiClientInterface
             'messages' => $formattedMessages,
             'temperature' => 0.4,
             'max_tokens' => $this->maxTokens,
-            'stream' => false, // Forces OmniRoute/LiteLLM to return standard JSON
-            'options' => [
+            'stream' => false
+        ];
+
+        $isOllama = str_contains(strtolower($this->endpoint), 'ollama') || str_contains($this->endpoint, '110.120') || str_contains($this->endpoint, '127.0.0.1') || str_contains($this->endpoint, 'localhost');
+        if ($isOllama) {
+            $payload['options'] = [
                 'num_ctx' => $this->contextWindowTokens,
                 'num_predict' => $this->maxTokens
-            ]
-        ];
+            ];
+        }
 
         $headers = [
             'Content-Type: application/json',
@@ -194,6 +198,12 @@ class OpenAiCompatibleClient implements AiClientInterface
 
         $cleanContent = $this->sanitizeCotOutput($rawContent);
         $answer = $cleanContent;
+        if (empty($answer) && !empty($rawContent)) {
+            $answer = trim(preg_replace('/<\/?think>/i', '', $rawContent));
+        }
+        if (empty($answer)) {
+            $answer = 'OK';
+        }
 
         if (empty($answer) && !empty($rawReasoning)) {
             try {
