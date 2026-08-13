@@ -59,28 +59,12 @@
 
   function setFormFieldVal(name, val) {
     if (typeof document === 'undefined') return;
-    const directSelectors = [
-      `input[name="data[${name}]"]`,
-      `select[name="data[${name}]"]`,
-      `input[name="${name}"]`,
-      `select[name="${name}"]`,
-      `#${name}`,
-      `[data-field="${name}"] input`,
-      `[data-field="${name}"] select`
-    ];
 
-    let found = false;
-    for (const sel of directSelectors) {
-      const el = document.querySelector(sel);
-      if (el) {
-        el.value = val;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-        found = true;
-      }
-    }
+    let targetInputs = Array.from(document.querySelectorAll(
+      `input[name="data[${name}]"], select[name="data[${name}]"], input[name="${name}"], select[name="${name}"], #${name}, [data-field="${name}"] input, [data-field="${name}"] select`
+    ));
 
-    if (!found) {
+    if (targetInputs.length === 0) {
       const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
       for (const input of allInputs) {
         const n = (input.name || '').toLowerCase();
@@ -90,11 +74,36 @@
 
         const isMatch = (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt')));
         if (isMatch) {
-          input.value = val;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
+          targetInputs.push(input);
         }
       }
+    }
+
+    if (targetInputs.length === 0) {
+      const labels = Array.from(document.querySelectorAll('label, span, div, .form-label'));
+      for (const lbl of labels) {
+        const txt = (lbl.textContent || '').toLowerCase();
+        if (txt.includes('model identifier') || txt.includes('model')) {
+          const parent = lbl.closest('.form-field, .field, .form-group, div');
+          if (parent) {
+            const inp = parent.querySelector('input, select');
+            if (inp) targetInputs.push(inp);
+          }
+        }
+      }
+    }
+
+    for (const el of targetInputs) {
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeSetter) {
+        nativeSetter.call(el, val);
+      } else {
+        el.value = val;
+      }
+
+      el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true, composed: true }));
     }
   }
 

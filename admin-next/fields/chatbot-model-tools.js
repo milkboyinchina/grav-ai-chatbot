@@ -6,6 +6,7 @@ class ChatbotModelTools extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this._currentStep = 1;
     this._models = [];
+    this._selectedModel = '';
     this._status = { type: '', message: '' };
     this._isManualMode = false;
     this._testedHealthSuccess = false;
@@ -90,28 +91,12 @@ class ChatbotModelTools extends HTMLElement {
 
   _setFormFieldVal(name, val) {
     if (typeof document === 'undefined') return;
-    const directSelectors = [
-      `input[name="data[${name}]"]`,
-      `select[name="data[${name}]"]`,
-      `input[name="${name}"]`,
-      `select[name="${name}"]`,
-      `#${name}`,
-      `[data-field="${name}"] input`,
-      `[data-field="${name}"] select`
-    ];
 
-    let found = false;
-    for (const sel of directSelectors) {
-      const el = document.querySelector(sel);
-      if (el) {
-        el.value = val;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-        found = true;
-      }
-    }
+    let targetInputs = Array.from(document.querySelectorAll(
+      `input[name="data[${name}]"], select[name="data[${name}]"], input[name="${name}"], select[name="${name}"], #${name}, [data-field="${name}"] input, [data-field="${name}"] select`
+    ));
 
-    if (!found) {
+    if (targetInputs.length === 0) {
       const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
       for (const input of allInputs) {
         const n = (input.name || '').toLowerCase();
@@ -121,11 +106,36 @@ class ChatbotModelTools extends HTMLElement {
 
         const isMatch = (name === 'model' && (n.includes('model') || id.includes('model') || df.includes('model') || ph.includes('gemini') || ph.includes('gpt')));
         if (isMatch) {
-          input.value = val;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
+          targetInputs.push(input);
         }
       }
+    }
+
+    if (targetInputs.length === 0) {
+      const labels = Array.from(document.querySelectorAll('label, span, div, .form-label'));
+      for (const lbl of labels) {
+        const txt = (lbl.textContent || '').toLowerCase();
+        if (txt.includes('model identifier') || txt.includes('model')) {
+          const parent = lbl.closest('.form-field, .field, .form-group, div');
+          if (parent) {
+            const inp = parent.querySelector('input, select');
+            if (inp) targetInputs.push(inp);
+          }
+        }
+      }
+    }
+
+    for (const el of targetInputs) {
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeSetter) {
+        nativeSetter.call(el, val);
+      } else {
+        el.value = val;
+      }
+
+      el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true, composed: true }));
     }
   }
 
@@ -139,6 +149,9 @@ class ChatbotModelTools extends HTMLElement {
       this._render();
       return;
     }
+
+    this._status = { type: 'info', message: '⏳ Verifying API Key authentication...' };
+    this._render();
 
     try {
       const headers = { 'Content-Type': 'application/json' };
@@ -199,6 +212,9 @@ class ChatbotModelTools extends HTMLElement {
       if (data.success && data.models && data.models.length) {
         this._models = data.models;
         this._isManualMode = false;
+        if (!this._selectedModel) {
+          this._selectedModel = data.models[0];
+        }
         this._status = { type: 'success', message: `✅ Successfully retrieved ${data.models.length} active models!` };
         this._currentStep = 3; // Advance to Step 3 on success
       } else {
@@ -213,11 +229,12 @@ class ChatbotModelTools extends HTMLElement {
   async _testModelHealth(selectedModel) {
     const provider = this._getFormFieldVal('provider') || 'gemini';
     const apiKey = this._getFormFieldVal('api_key');
-    const model = selectedModel || this._getFormFieldVal('model') || 'gemini-3.1-flash-lite';
+    const model = selectedModel || this._selectedModel || this._getFormFieldVal('model') || 'gemini-3.1-flash-lite';
     const customEndpoint = this._getFormFieldVal('custom_endpoint');
     const fallbackEndpoint = this._getFormFieldVal('fallback_endpoint');
 
     this._testedModel = model;
+    this._selectedModel = model;
     this._testedHealthSuccess = false;
     this._status = { type: 'info', message: `⏳ Sending live health check ping to model '${model}'...` };
     this._render();
@@ -255,15 +272,17 @@ class ChatbotModelTools extends HTMLElement {
   }
 
   _useThisModel() {
-    if (!this._testedModel) return;
-    this._setFormFieldVal('model', this._testedModel);
-    this._status = { type: 'success', message: `🎉 Model '${this._testedModel}' successfully applied to Model Identifier field!` };
+    const targetModel = this._testedModel || this._selectedModel;
+    if (!targetModel) return;
+    this._setFormFieldVal('model', targetModel);
+    this._status = { type: 'success', message: `🎉 Model '${targetModel}' successfully applied to Model Identifier field!` };
     this._render();
   }
 
   _render() {
     const step = this._currentStep;
     const status = this._status;
+    const activeSelectedModel = this._testedModel || this._selectedModel || this._getFormFieldVal('model');
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -358,6 +377,17 @@ class ChatbotModelTools extends HTMLElement {
           font-size: 12px;
           color: #64748b;
           margin-bottom: 14px;
+        }
+
+        .note-hint {
+          font-size: 11px;
+          color: #6366f1;
+          background: #eef2ff;
+          padding: 6px 10px;
+          border-radius: 4px;
+          margin-bottom: 12px;
+          display: inline-block;
+          font-weight: 500;
         }
 
         /* Buttons & Actions */
@@ -516,6 +546,7 @@ class ChatbotModelTools extends HTMLElement {
           <div class="step-content">
             <div class="step-title">Step 1: Test API Key Authentication</div>
             <div class="step-desc">Verify your authentication credentials directly with the provider endpoint.</div>
+            <div class="note-hint">ℹ️ Note: This tests your newly typed API Key in the API Key field above before saving plugin settings.</div>
             <div class="btn-group">
               <button type="button" id="btn-test-key" class="btn-warning">🔑 Test API Key</button>
               <button type="button" id="btn-skip-1" class="btn-secondary">➡️ Skip to Step 2</button>
@@ -551,14 +582,14 @@ class ChatbotModelTools extends HTMLElement {
               ${!this._isManualMode && this._models.length > 0 ? `
                 <label>Active Provider Models (${this._models.length} retrieved):</label>
                 <select id="wizard-select-model">
-                  ${this._models.map(m => `<option value="${m}">${m}</option>`).join('')}
+                  ${this._models.map(m => `<option value="${m}" ${m === activeSelectedModel ? 'selected' : ''}>${m}</option>`).join('')}
                 </select>
                 <div style="margin-top:6px;">
                   <button type="button" id="btn-toggle-manual" class="btn-secondary" style="font-size:11px; padding:4px 8px;">✍️ Switch to Unlisted / Custom Model Input</button>
                 </div>
               ` : `
                 <label>Enter Custom / Unlisted Model ID:</label>
-                <input type="text" id="wizard-input-model" placeholder="e.g. gemini-3.1-flash-lite, gpt-4o-mini, llama3.3" value="${this._getFormFieldVal('model') || 'gemini-3.1-flash-lite'}" />
+                <input type="text" id="wizard-input-model" placeholder="e.g. gemini-3.1-flash-lite, gpt-4o-mini, llama3.3" value="${activeSelectedModel || 'gemini-3.1-flash-lite'}" />
                 ${this._models.length > 0 ? `
                   <div style="margin-top:6px;">
                     <button type="button" id="btn-toggle-select" class="btn-secondary" style="font-size:11px; padding:4px 8px;">📋 Choose from Retrieved Models List (${this._models.length})</button>
@@ -579,7 +610,6 @@ class ChatbotModelTools extends HTMLElement {
       </div>
     `;
 
-    // Event Listeners Binding
     const root = this.shadowRoot;
 
     // Step Nav Clicks
@@ -598,6 +628,22 @@ class ChatbotModelTools extends HTMLElement {
     root.getElementById('btn-manual-2')?.addEventListener('click', () => { this._isManualMode = true; this._currentStep = 3; this._render(); });
 
     // Step 3 Controls
+    const wizardSelectEl = root.getElementById('wizard-select-model');
+    if (wizardSelectEl) {
+      wizardSelectEl.addEventListener('change', () => {
+        this._selectedModel = wizardSelectEl.value;
+        this._testedModel = wizardSelectEl.value;
+      });
+    }
+
+    const wizardInputEl = root.getElementById('wizard-input-model');
+    if (wizardInputEl) {
+      wizardInputEl.addEventListener('input', () => {
+        this._selectedModel = wizardInputEl.value;
+        this._testedModel = wizardInputEl.value;
+      });
+    }
+
     root.getElementById('btn-toggle-manual')?.addEventListener('click', () => { this._isManualMode = true; this._render(); });
     root.getElementById('btn-toggle-select')?.addEventListener('click', () => { this._isManualMode = false; this._render(); });
     
