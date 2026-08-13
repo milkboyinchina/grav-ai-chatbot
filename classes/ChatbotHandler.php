@@ -370,6 +370,8 @@ class ChatbotHandler
         $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
         $model = trim($data['model'] ?? $this->config['model'] ?? 'llama-3.3-70b-versatile');
         $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
+        $enableFallback = !empty($data['enable_fallback_endpoint']) || !empty($this->config['enable_fallback_endpoint']);
+        $fallbackEndpoint = $enableFallback ? trim($data['fallback_endpoint'] ?? $this->config['fallback_endpoint'] ?? '') : '';
 
         if (empty($apiKey) && in_array($provider, ['groq', 'gemini', 'openai', 'openrouter'], true)) {
             $msg = "API Key is required for provider '{$provider}'.";
@@ -387,7 +389,9 @@ class ChatbotHandler
                 'provider' => $provider,
                 'api_key' => $apiKey,
                 'model' => $model,
-                'custom_endpoint' => $customEndpoint
+                'custom_endpoint' => $customEndpoint,
+                'enable_fallback_endpoint' => $enableFallback,
+                'fallback_endpoint' => $fallbackEndpoint
             ]);
 
             $res = $client->generateResponse('Reply with "PONG".', [

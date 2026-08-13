@@ -5,6 +5,7 @@ provider: omniroute
 api_key: ''
 model: 'gemini-2.0-flash'
 custom_endpoint: http://100.100.27.122:20128/v1
+enable_fallback_endpoint: false
 fallback_endpoint: ''
 api_timeout: 30
 max_tokens: 800

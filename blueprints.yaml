@@ -67,7 +67,7 @@ form:
           help: Select your preferred AI provider
           default: omniroute
           options:
-            omniroute: 🔀 OmniRoute AI Proxy / Gateway (OpenAI-Compatible)
+            omniroute: 🤖 Custom OpenAI-Compatible
             ollama: 🦙 Ollama Local Host (v1 / Chat)
             groq: ⚡ Groq Cloud (Llama-3.3-70b / Fast)
             openrouter: 🌐 OpenRouter AI Gateway
@@ -89,17 +89,32 @@ form:
 
         custom_endpoint:
           type: text
-          label: PLUGIN_AI_CHATBOT.CUSTOM_ENDPOINT
-          help: Custom endpoint URL. Required for 'custom' provider. For 'ollama', leave blank for default local (http://localhost:11434) or enter remote Ollama host (e.g. http://100.100.75.77:11434).
+          label: 🌐 Custom Base Endpoint URL
+          help: Custom endpoint URL (e.g. http://100.100.27.122:20128/v1). Required when using Custom OpenAI-Compatible or remote Ollama hosts.
           default: ''
+          show_on: "provider: omniroute,ollama,custom"
           validate:
             required: false
 
+        enable_fallback_endpoint:
+          type: toggle
+          label: 🔄 Enable Secondary/Fallback Endpoint (Failover)
+          help: Enable optional secondary fallback endpoint URL for failover when primary endpoint fails or times out.
+          highlight: 0
+          default: 0
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          show_on: "provider: omniroute,ollama,custom"
+          validate:
+            type: bool
+
         fallback_endpoint:
           type: text
-          label: 🔄 Secondary/Fallback Endpoint (Failover)
-          help: Optional secondary/fallback endpoint URL (e.g. http://192.168.18.12:11434). Used automatically if primary endpoint connection fails or times out.
+          label: 🔄 Secondary/Fallback Endpoint URL
+          help: Optional secondary/fallback endpoint URL (e.g. http://192.168.18.12:11434/v1). Automatically retried if primary endpoint connection fails or times out.
           default: ''
+          show_on: "enable_fallback_endpoint: 1"
           validate:
             required: false
 
