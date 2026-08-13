@@ -472,10 +472,13 @@ class ChatbotHandler
                 $ch = curl_init($url);
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_TIMEOUT => 8,
-                    CURLOPT_SSL_VERIFYPEER => false
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_FOLLOWLOCATION => true
                 ]);
                 $response = curl_exec($ch);
+                $curlErr = curl_error($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
 
@@ -487,8 +490,21 @@ class ChatbotHandler
                     ];
                 }
 
+                if (!empty($curlErr)) {
+                    return [
+                        'http_code' => 500,
+                        'success' => false,
+                        'message' => "❌ cURL Connection Error to Google Gemini API: {$curlErr}"
+                    ];
+                }
+
                 $json = json_decode($response, true);
                 $err = $json['error']['message'] ?? "HTTP {$httpCode} Authentication Failed";
+
+                if ($httpCode === 400 || $httpCode === 403 || str_contains(strtolower($err), 'api key not valid') || str_contains(strtolower($err), 'invalid')) {
+                    $err .= " (Note: Official Google Gemini API keys start with 'AIzaSy...'. If you are using OmniRoute or a custom proxy API key like 'AQ.Ab...', please select '🤖 Custom OpenAI-Compatible' as the AI Provider Engine).";
+                }
+
                 return [
                     'http_code' => 401,
                     'success' => false,
@@ -516,10 +532,13 @@ class ChatbotHandler
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_HTTPHEADER => $headers,
-                    CURLOPT_TIMEOUT => 8,
-                    CURLOPT_SSL_VERIFYPEER => false
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_FOLLOWLOCATION => true
                 ]);
                 $response = curl_exec($ch);
+                $curlErr = curl_error($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
 
@@ -528,6 +547,14 @@ class ChatbotHandler
                         'http_code' => 200,
                         'success' => true,
                         'message' => "✅ API Key is Valid & Authenticated against " . strtoupper($provider) . " API!"
+                    ];
+                }
+
+                if (!empty($curlErr)) {
+                    return [
+                        'http_code' => 500,
+                        'success' => false,
+                        'message' => "❌ cURL Connection Error to " . strtoupper($provider) . " API: {$curlErr}"
                     ];
                 }
 
