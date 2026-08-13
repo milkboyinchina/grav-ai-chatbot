@@ -70,20 +70,17 @@ class GeminiClient implements AiClientInterface
             ]
         ];
 
-        $headers = ['Content-Type: application/json'];
-        if (str_starts_with($this->apiKey, 'AQ.') || str_starts_with($this->apiKey, 'ya29.')) {
-            $headers[] = "Authorization: Bearer {$this->apiKey}";
-            $headers[] = "x-goog-api-key: {$this->apiKey}";
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$targetModel}:generateContent";
-        } else {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$targetModel}:generateContent?key={$this->apiKey}";
-        }
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$targetModel}:generateContent?key={$this->apiKey}";
 
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT => $this->timeout,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
 
         $result = curl_exec($ch);

@@ -481,19 +481,10 @@ class ChatbotHandler
 
         try {
             if ($provider === 'gemini') {
-                $headers = ['Content-Type: application/json'];
-                if (str_starts_with($apiKey, 'AQ.') || str_starts_with($apiKey, 'ya29.')) {
-                    $headers[] = "Authorization: Bearer {$apiKey}";
-                    $headers[] = "x-goog-api-key: {$apiKey}";
-                    $url = "https://generativelanguage.googleapis.com/v1beta/models";
-                } else {
-                    $url = "https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}";
-                }
-
+                $url = "https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}";
                 $ch = curl_init($url);
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_HTTPHEADER => $headers,
                     CURLOPT_TIMEOUT => 10,
                     CURLOPT_SSL_VERIFYPEER => false,
                     CURLOPT_SSL_VERIFYHOST => 0,
