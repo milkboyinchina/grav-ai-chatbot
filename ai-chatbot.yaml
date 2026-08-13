@@ -4,7 +4,7 @@ ai_disabled_response_text: "AI assistant is currently disabled. Please search ou
 provider: omniroute
 api_key: ''
 model: 'gemini-3.1-flash-lite'
-custom_endpoint: http://110.120.130.140:20128
+custom_endpoint: ''
 fallback_endpoint: ''
 api_timeout: 30
 max_tokens: 800
