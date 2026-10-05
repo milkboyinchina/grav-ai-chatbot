@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.0] - Unreleased
 
 ### Added
+- **Environment-var API key override**: when `api_key` is blank, the plugin uses `AI_CHATBOT_API_KEY` from `.env`, allowing the secret to stay out of version control.
 - **3-Step Interactive Model Setup Wizard** (`<chatbot-model-tools>`):
   - Step 1: `🔑 Test API Key` (Live verification against provider API).
   - Step 2: `🔄 Retrieve Active Models` (Queries provider for available model IDs).

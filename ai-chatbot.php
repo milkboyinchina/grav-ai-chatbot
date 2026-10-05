@@ -51,6 +51,32 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
+     * Overlay environment secrets onto the plugin configuration.
+     *
+     * Keeps secrets out of version control: when `plugins.ai-chatbot.api_key`
+     * is empty, the value of the `AI_CHATBOT_API_KEY` environment variable
+     * (typically defined in `.env`) is used instead. The value remains
+     * server-side and is never persisted, logged or exposed to the client.
+     */
+    protected function applyEnvironmentOverrides(): void
+    {
+        $configured = trim((string)$this->config->get('plugins.ai-chatbot.api_key', ''));
+        if ($configured !== '') {
+            return;
+        }
+
+        $envKey = getenv('AI_CHATBOT_API_KEY');
+        if ($envKey === false || trim((string)$envKey) === '') {
+            $envKey = $_ENV['AI_CHATBOT_API_KEY'] ?? $_SERVER['AI_CHATBOT_API_KEY'] ?? '';
+        }
+
+        $envKey = trim((string)$envKey);
+        if ($envKey !== '') {
+            $this->config->set('plugins.ai-chatbot.api_key', $envKey);
+        }
+    }
+
+    /**
      * @return array
      */
     public static function getSubscribedEvents(): array
@@ -386,6 +412,8 @@ class AiChatbotPlugin extends Plugin
      */
     public function onPluginsInitialized()
     {
+        $this->applyEnvironmentOverrides();
+
         $this->enable([
             'onApiBlueprintResolved' => ['onApiBlueprintResolved', 0],
         ]);
