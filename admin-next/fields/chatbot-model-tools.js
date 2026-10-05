@@ -228,11 +228,10 @@ class ChatbotModelTools extends HTMLElement {
         headers['X-API-Token'] = window.__GRAV_API_TOKEN;
       }
 
-      const res = await fetch('/chatbot-api?t=' + Date.now(), {
+      const res = await fetch('/api/v1/ai-chatbot/test-key?t=' + Date.now(), {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
-          action: 'test_api_key',
           provider: provider,
           api_key: apiKey,
           custom_endpoint: customEndpoint
@@ -240,11 +239,12 @@ class ChatbotModelTools extends HTMLElement {
       });
 
       const data = await res.json();
-      if (data.success) {
-        this._status = { type: 'success', message: data.message };
+      const payload = data.data || data;
+      if (payload.success) {
+        this._status = { type: 'success', message: payload.message };
         this._currentStep = 2; // Advance to Step 2 on success
       } else {
-        this._status = { type: 'error', message: data.message };
+        this._status = { type: 'error', message: payload.message };
       }
     } catch (err) {
       this._status = { type: 'error', message: `❌ Error: ${err.message}` };
@@ -266,11 +266,10 @@ class ChatbotModelTools extends HTMLElement {
         headers['X-API-Token'] = window.__GRAV_API_TOKEN;
       }
 
-      const res = await fetch('/chatbot-api?t=' + Date.now(), {
+      const res = await fetch('/api/v1/ai-chatbot/models?t=' + Date.now(), {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
-          action: 'fetch_models',
           provider: provider,
           api_key: apiKey,
           custom_endpoint: customEndpoint
@@ -278,16 +277,17 @@ class ChatbotModelTools extends HTMLElement {
       });
 
       const data = await res.json();
-      if (data.success && data.models && data.models.length) {
-        this._models = data.models.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      const payload = data.data || data;
+      if (payload.success && payload.models && payload.models.length) {
+        this._models = payload.models.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         this._isManualMode = false;
         if (!this._selectedModel) {
           this._selectedModel = this._models[0];
         }
-        this._status = { type: 'success', message: `✅ Successfully retrieved ${data.models.length} active models!` };
+        this._status = { type: 'success', message: `✅ Successfully retrieved ${payload.models.length} active models!` };
         this._currentStep = 3; // Advance to Step 3 on success
       } else {
-        this._status = { type: 'error', message: `❌ ${data.message || 'Failed to retrieve models'}` };
+        this._status = { type: 'error', message: `❌ ${payload.message || 'Failed to retrieve models'}` };
       }
     } catch (err) {
       this._status = { type: 'error', message: `❌ Error: ${err.message}` };
@@ -314,11 +314,10 @@ class ChatbotModelTools extends HTMLElement {
         headers['X-API-Token'] = window.__GRAV_API_TOKEN;
       }
 
-      const res = await fetch('/chatbot-api?t=' + Date.now(), {
+      const res = await fetch('/api/v1/ai-chatbot/health?t=' + Date.now(), {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
-          action: 'test_model_health',
           provider: provider,
           api_key: apiKey,
           model: model,
@@ -328,11 +327,12 @@ class ChatbotModelTools extends HTMLElement {
       });
 
       const data = await res.json();
-      if (data.success) {
+      const payload = data.data || data;
+      if (payload.success) {
         this._testedHealthSuccess = true;
-        this._status = { type: 'success', message: data.message };
+        this._status = { type: 'success', message: payload.message };
       } else {
-        this._status = { type: 'error', message: data.message };
+        this._status = { type: 'error', message: payload.message };
       }
     } catch (err) {
       this._status = { type: 'error', message: `❌ Connection Error: ${err.message}` };
@@ -344,6 +344,8 @@ class ChatbotModelTools extends HTMLElement {
     const targetModel = this._testedModel || this._selectedModel;
     if (!targetModel) return;
     this._setFormFieldVal('model', targetModel);
+    this._value = '';
+    this.dispatchEvent(new CustomEvent('change', { detail: '', bubbles: true, composed: true }));
     this._status = { type: 'success', message: `🎉 Model '${targetModel}' successfully applied to Model Identifier field!` };
     this._render();
   }

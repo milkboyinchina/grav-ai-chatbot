@@ -62,10 +62,67 @@ class AiChatbotPlugin extends Plugin
             'onOutputGenerated' => ['onOutputGenerated', 0],
             'onBlueprintCreated' => ['onBlueprintCreated', 0],
             'onApiBlueprintResolved' => ['onApiBlueprintResolved', 0],
+            'onApiRegisterRoutes' => ['onApiRegisterRoutes', 0],
+            'onApiCollectPublicRoutes' => ['onApiCollectPublicRoutes', 0],
             'onPageSaved' => ['onPageSaved', 0],
             'onPageDeleted' => ['onPageDeleted', 0],
             'onSchedulerInitialized' => ['onSchedulerInitialized', 0],
         ];
+    }
+
+    /**
+     * Register Grav 2.0 REST API routes (replaces legacy /chatbot-api exit() hack).
+     * Legacy /chatbot-api is kept as a BC shim for existing frontend JS (see routeCheck).
+     */
+    public function onApiRegisterRoutes($event): void
+    {
+        /** @var \Grav\Plugin\Api\ApiRouteCollector $routes */
+        $routes = $event['routes'];
+        $controller = \Grav\Plugin\AiChatbot\Controllers\ChatbotApiController::class;
+
+        // Public visitor endpoints (rate-limit + guardrail protected, no login required)
+        $routes->post('/ai-chatbot/query', [$controller, 'query']);
+        $routes->post('/ai-chatbot/summarize', [$controller, 'summarize']);
+
+        // Admin endpoints (require api.system.read/write via AbstractApiController)
+        $routes->get('/ai-chatbot/metrics', [$controller, 'metrics']);
+        $routes->get('/ai-chatbot/logs', [$controller, 'logs']);
+        $routes->get('/ai-chatbot/security', [$controller, 'security']);
+        $routes->post('/ai-chatbot/test-key', [$controller, 'testKey']);
+        $routes->post('/ai-chatbot/models', [$controller, 'fetchModels']);
+        $routes->post('/ai-chatbot/health', [$controller, 'testHealth']);
+        $routes->post('/ai-chatbot/reindex', [$controller, 'rebuildIndex']);
+        $routes->post('/ai-chatbot/unlock', [$controller, 'unlock']);
+        $routes->get('/ai-chatbot/export', [$controller, 'export']);
+    }
+
+    /**
+     * Declare visitor-facing REST endpoints as public (no login). Rate limiting and
+     * the security guardrail are enforced inside ChatbotHandler.
+     *
+     * @param \RocketTheme\Toolbox\Event\Event $event
+     */
+    public function onApiCollectPublicRoutes($event): void
+    {
+        $base  = (string)($event['api_base'] ?? '');
+        $exact = (array)($event['exact'] ?? []);
+        $exact[] = 'POST ' . $base . '/ai-chatbot/query';
+        $exact[] = 'POST ' . $base . '/ai-chatbot/summarize';
+        $event['exact'] = $exact;
+    }
+
+    /**
+     * Base path of the plugin's REST endpoints, or '' when the API plugin is unavailable.
+     */
+    protected function getRestBase(): string
+    {
+        if (!$this->config->get('plugins.api.enabled', false)) {
+            return '';
+        }
+        $route  = '/' . trim((string)$this->config->get('plugins.api.route', '/api'), '/');
+        $prefix = trim((string)$this->config->get('plugins.api.version_prefix', 'v1'), '/');
+        $root   = rtrim((string)($this->grav['base_url_relative'] ?? ''), '/');
+        return $root . $route . '/' . $prefix . '/ai-chatbot';
     }
 
     /**
@@ -340,7 +397,6 @@ class AiChatbotPlugin extends Plugin
                 'onAdminTwigSiteVariables' => ['onAdminTwigSiteVariables', 0],
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
-                'onAdminMenu' => ['onAdminMenu', 0],
                 'onBlueprintCreated' => ['onBlueprintCreated', 0],
             ]);
         } else {
@@ -426,6 +482,7 @@ class AiChatbotPlugin extends Plugin
 
         $jsConfig = json_encode([
             'apiEndpoint' => '/chatbot-api',
+            'restBase' => $this->getRestBase(),
             'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
             'botTitle' => $this->config->get('plugins.ai-chatbot.bot_title', 'Website Assistant'),
             'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
@@ -496,10 +553,14 @@ class AiChatbotPlugin extends Plugin
     protected function handleChatbotQueryApi()
     {
         header('Content-Type: application/json');
-        header('Access-Control-Allow-Origin: *');
-        header('Access-Control-Allow-Headers: Content-Type');
+        header('Deprecation: true');
+        header('Sunset: Wed, 31 Dec 2026 23:59:59 GMT');
+        header('Warning: 299 - "Endpoint /chatbot-api is deprecated. Migrate to /api/v1/ai-chatbot/query"');
+        header('Link: <' . $this->getRestBase() . '/query>; rel="successor-version"');
 
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            header('Access-Control-Allow-Origin: *');
+            header('Access-Control-Allow-Headers: Content-Type');
             http_response_code(200);
             exit();
         }
@@ -516,6 +577,19 @@ class AiChatbotPlugin extends Plugin
 
         $rawInput = file_get_contents('php://input');
         $data = json_decode($rawInput, true) ?: $_POST;
+        $action = trim($data['action'] ?? $_GET['action'] ?? 'query');
+
+        // BC shim policy: legacy /chatbot-api only serves PUBLIC visitor actions.
+        // Admin actions must use /api/v1/ai-chatbot/* with X-API-Token + api.system.* perms.
+        $adminOnly = ['test_api_key', 'fetch_models', 'test_model_health', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs', 'clear_analytics', 'generate_demo_data', 'analytics_report', 'test_connection'];
+        if (in_array($action, $adminOnly, true)) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => "Action '{$action}' requires Admin API authentication. Use /api/v1/ai-chatbot/* with X-API-Token.",
+            ]);
+            exit();
+        }
 
         $cfg = $this->config->get('plugins.ai-chatbot', []);
 
@@ -528,14 +602,11 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Inspect all session sources to find authenticated Grav Admin user.
+     * Inspect Grav user objects to find authenticated admin user.
+     * Never starts sessions manually and never trusts raw $_SESSION/$_COOKIE.
      */
     protected function getAuthenticatedAdminUser()
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
-        }
-
         // 1. Check Grav admin object user
         if (isset($this->grav['admin']) && !empty($this->grav['admin']->user) && !empty($this->grav['admin']->user->authenticated)) {
             return $this->grav['admin']->user;
@@ -546,34 +617,13 @@ class AiChatbotPlugin extends Plugin
             return $this->grav['user'];
         }
 
-        // 3. Check Grav session user
-        if (isset($this->grav['session']) && !empty($this->grav['session']->user) && !empty($this->grav['session']->user->authenticated)) {
-            return $this->grav['session']->user;
-        }
-
-        // 4. Check $_SESSION array
-        if (!empty($_SESSION)) {
-            if (isset($_SESSION['admin']['user'])) {
-                return $_SESSION['admin']['user'];
-            }
-            if (isset($_SESSION['user'])) {
-                return $_SESSION['user'];
-            }
-            foreach ($_SESSION as $val) {
-                if (is_object($val) && (!empty($val->authenticated) || !empty($val->username))) {
-                    return $val;
-                }
-                if (is_array($val) && (!empty($val['authenticated']) || !empty($val['username']))) {
-                    return $val;
-                }
-            }
-        }
-
         return null;
     }
 
     /**
      * Handle export download with user whitelist authentication check.
+     * NOTE: preferred path is GET /api/v1/ai-chatbot/export (permission-enforced).
+     * This legacy /chatbot-export shim no longer trusts raw cookies/session arrays.
      */
     protected function handleAnalyticsExport()
     {
@@ -583,34 +633,42 @@ class AiChatbotPlugin extends Plugin
             $user = $this->getAuthenticatedAdminUser();
 
             $rawAllowed = $this->config->get('plugins.ai-chatbot.export_allowed_users', "admin\nmilkboy");
-            $allowedUsers = array_filter(array_map('trim', preg_split('/[\r\n,]+/', $rawAllowed)));
+            $allowedUsers = array_filter(array_map('trim', preg_split('/[\r\n,]+/', (string)$rawAllowed)));
 
             $username = '';
             if (is_object($user)) {
-                $username = strtolower(trim($user->username ?? $user->name ?? ''));
+                $username = strtolower(trim((string)($user->username ?? $user->name ?? '')));
             } elseif (is_array($user)) {
-                $username = strtolower(trim($user['username'] ?? $user['name'] ?? ''));
+                $username = strtolower(trim((string)($user['username'] ?? $user['name'] ?? '')));
             }
 
             $isAuthorized = false;
 
-            // Check if user is authenticated in Grav Admin
-            if ($user || !empty($_COOKIE['grav-site-40d1b2d']) || !empty($_COOKIE['admin-session'])) {
+            // Require an actually-authenticated Grav user object — never a bare cookie.
+            $authenticated = false;
+            if (is_object($user)) {
+                $authenticated = !empty($user->authenticated) || (method_exists($user, 'authorize') && $user->authorize('admin.login'));
+            } elseif (is_array($user)) {
+                $authenticated = !empty($user['authenticated']);
+            } elseif (isset($this->grav['user']) && !empty($this->grav['user']->authenticated)) {
+                $user = $this->grav['user'];
+                $username = strtolower(trim((string)($user->username ?? '')));
+                $authenticated = true;
+            }
+
+            if ($authenticated) {
                 if (empty($allowedUsers)) {
                     $isAuthorized = true;
                 } else {
-                    if (empty($username)) {
-                        $username = 'admin'; // Admin session cookie present
-                    }
                     foreach ($allowedUsers as $allowed) {
-                        if (strtolower($allowed) === 'all' || strtolower($allowed) === '*' || strtolower($allowed) === $username) {
+                        if (strtolower($allowed) === $username) {
                             $isAuthorized = true;
                             break;
                         }
                     }
 
                     if (!$isAuthorized && is_object($user) && method_exists($user, 'authorize')) {
-                        if ($user->authorize('admin.super') || $user->authorize('admin.plugins') || $user->authorize('admin.login')) {
+                        if ($user->authorize('admin.super') || $user->authorize('admin.plugins')) {
                             $isAuthorized = true;
                         }
                     }
@@ -623,7 +681,7 @@ class AiChatbotPlugin extends Plugin
                 echo json_encode([
                     'status' => 403,
                     'error' => 'Forbidden',
-                    'message' => "Access Denied: User '" . ($username ?: 'guest') . "' is not authorized to download interaction telemetry data. Please log in as a whitelisted admin user (" . implode(', ', $allowedUsers) . ")."
+                    'message' => "Access Denied: User '" . ($username ?: 'guest') . "' is not authorized to download interaction telemetry data. Please log in as a whitelisted admin user (" . implode(', ', $allowedUsers) . ") or use /api/v1/ai-chatbot/export."
                 ], JSON_PRETTY_PRINT);
                 exit();
             }
@@ -692,6 +750,7 @@ class AiChatbotPlugin extends Plugin
         // Pass configuration data to JavaScript
         $jsConfig = json_encode([
             'apiEndpoint' => '/chatbot-api',
+            'restBase' => $this->getRestBase(),
             'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
             'botTitle' => $this->config->get('plugins.ai-chatbot.bot_title', 'Website Assistant'),
             'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
@@ -744,6 +803,9 @@ class AiChatbotPlugin extends Plugin
 
     /**
      * Inject admin-specific assets for analytics reporting.
+     * NOTE: admin-next/fields/*.js are auto-bundled by Admin2 via
+     * GET /api/v1/gpm/plugins/{slug}/fields — do NOT addJs() them here
+     * (would double-register with wrong window.__GRAV_FIELD_TAG context).
      */
     public function onAdminTwigSiteVariables()
     {
@@ -751,7 +813,6 @@ class AiChatbotPlugin extends Plugin
         $assets->addCss('plugin://ai-chatbot/assets/css/admin-analytics.css');
         $assets->addJs('plugin://ai-chatbot/assets/js/admin-analytics.js');
         $assets->addJs('plugin://ai-chatbot/assets/js/admin-model-tools.js');
-        $assets->addJs('plugin://ai-chatbot/admin-next/fields/chatbot-model-tools.js');
     }
 
     /**
@@ -811,7 +872,9 @@ class AiChatbotPlugin extends Plugin
                 'ai-chatbot-rag-reindex'
             );
             $job->at($cronExpr);
-            $job->output('user/data/ai-chatbot/rag_scheduler.log');
+            $locator = $this->grav['locator'] ?? null;
+            $logBase = $locator ? $locator->findResource('user://data', true) : null;
+            $job->output(($logBase ?: 'user/data') . '/ai-chatbot/rag_scheduler.log');
         } catch (\Throwable $t) {}
     }
 }

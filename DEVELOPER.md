@@ -8,15 +8,17 @@ This guide provides technical specifications, class relationships, REST API endp
 
 ```mermaid
 graph TD
-    A[Visitor Query via POST /chatbot-api] --> B[ChatbotHandler.php]
-    B --> C[SecurityGuardrail.php]
-    C -->|Blocked| D[Logger.php & Blocked Json Response]
-    C -->|Allowed| E[FaqResolver.php Local $0 FAQ Engine]
+    A[Visitor Query via POST /api/v1/ai-chatbot/query] --> B[ChatbotHandler.php]
+    B --> C[RateLimiter.php and SecurityGuardrail.php]
+    C -->|Blocked| D[Logger.php and Blocked JSON Response]
+    C -->|Allowed| E[FaqResolver.php Local Zero-Cost FAQ Engine]
     E -->|FAQ Match| F[Instant Local Response]
-    E -->|No Match| G[Rag\Indexer.php Vector Search]
-    G --> H[AiClientFactory.php / OpenAiCompatibleClient.php]
-    H --> I[LLM API Provider Groq/Gemini/OmniRoute]
-    I --> J[Logger.php Telemetry & Cost Accounting]
+    E -->|No Match| E2[ContactPageResolver.php]
+    E2 -->|Contact Intent| F2[Local Contact Info Response]
+    E2 -->|No Match| G[Rag Retriever SQLite Vector Search]
+    G --> H[AiClientFactory.php to GeminiClient or OpenAiCompatibleClient]
+    H --> I[LLM API Provider Gemini/Groq/Custom OpenAI-Compatible/OpenAI/OpenRouter/Ollama]
+    I --> J[Logger.php Telemetry and Cost Accounting]
     J --> K[JSON Output Response to Frontend]
 ```
 
@@ -27,80 +29,39 @@ graph TD
 | **`ChatbotHandler`** | `classes/ChatbotHandler.php` | Main request router, API payload parser, response encoder, and exception boundary. |
 | **`SecurityGuardrail`** | `classes/SecurityGuardrail.php` | Input normalization, leetspeak decoding, 5-category blacklist inspection, `user/pages/` scope enforcement, and IP cool-off lockouts. |
 | **`FaqResolver`** | `classes/FaqResolver.php` | Local semantic FAQ pre-matching engine supporting `default.en.md` / `default.id.md` page headers, aliases, and intent normalization. |
-| **`Rag\Indexer`** | `classes/Rag/Indexer.php` | Heading-aware page chunker, SQLite vector store, TF-IDF / BM25 / Embedding search. |
-| **`OpenAiCompatibleClient`** | `classes/OpenAiCompatibleClient.php` | Driver for OpenAI, Groq, OpenRouter, and Ollama APIs with system security boundary injection. |
+| **`ContactPageResolver`** | `classes/ContactPageResolver.php` | Resolves contact intents against public `/contact` and hidden `/hidden-contacts` pages. |
+| **`Rag\Indexer`** | `classes/Rag/Indexer.php` | Heading-aware page chunker and embedding writer to the SQLite vector store; incremental SHA-256 hashing. |
+| **`Rag\Retriever`** | `classes/Rag/Retriever.php` | Similarity search over the SQLite vector store; returns Top-K chunks for the prompt. |
+| **`RateLimiter`** | `classes/RateLimiter.php` | Per-IP rolling-window request limiting backed by Grav cache. |
+| **`AiClientFactory`** | `classes/AiClientFactory.php` | Selects the concrete AI client (`GeminiClient` or `OpenAiCompatibleClient`) from provider config. |
+| **`OpenAiCompatibleClient`** | `classes/OpenAiCompatibleClient.php` | Driver for OpenAI, Groq, OpenRouter, Custom OpenAI-Compatible, and Ollama APIs with system security boundary injection. |
 | **`Logger`** | `classes/Logger.php` | Interaction telemetry recording (`interactions.json`), cost calculation, and error logging (`error.log`). |
 | **`AnalyticsReportGenerator`** | `classes/AnalyticsReportGenerator.php` | Date-range telemetry filtering, chart data aggregation, and CSV/JSON export generation. |
 
 ---
 
-## 🔌 2. REST API Specification (`POST /chatbot-api`)
+## 🔌 2. REST API Specification (`/api/v1/ai-chatbot/*`)
 
-All client-side chat widgets and Admin 2 dashboard components communicate via `POST /chatbot-api`.
+All modern client-side chat widgets and Admin 2 dashboard components communicate via the Grav 2.0 REST API endpoints registered under `/api/v1/ai-chatbot/*`.
 
-### Endpoints & Payloads
+### Endpoints & Permissions Matrix
 
-#### A. Send Visitor Question (`action: chat`)
-```json
-// Request Payload
-{
-  "action": "chat",
-  "question": "What are your business hours?",
-  "current_route": "/contact"
-}
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/ai-chatbot/query` | public | Visitor question. Body: `question`, `history[]`, `current_route`, optional `action: force_ai`. |
+| POST | `/ai-chatbot/summarize` | public | Page summary. Body: `current_route`. |
+| GET | `/ai-chatbot/metrics` | `api.system.read` | Dashboard metrics and analytics. |
+| GET | `/ai-chatbot/logs?per_page=` | `api.system.read` | Paginated interactions. |
+| GET | `/ai-chatbot/security` | `api.system.read` | Threat audit data. |
+| GET | `/ai-chatbot/export?format=csv\|json\|raw_interactions` | `api.system.read` | File download. |
+| POST | `/ai-chatbot/test-key`, `/models`, `/health` | `api.system.write` | Provider tools (Admin2 model-tools). |
+| POST | `/ai-chatbot/reindex` | `api.system.write` | Rebuild RAG index. |
+| POST | `/ai-chatbot/unlock` | `api.system.write` | Release IP lockouts. |
 
-// Success Response (FAQ Match)
-{
-  "http_code": 200,
-  "success": true,
-  "answer": "We are open Monday through Friday from 9 AM to 5 PM.",
-  "source": "faq_match"
-}
-```
+All responses use the `{ "data": { ... } }` JSON envelope.
 
-#### B. Fetch Dashboard Metrics (`action: get_metrics`)
-```json
-// Request Payload
-{ "action": "get_metrics" }
-
-// Success Response
-{
-  "http_code": 200,
-  "success": true,
-  "provider": "omniroute",
-  "model": "gemini-2.0-flash",
-  "stats": {
-    "total_queries": 142,
-    "completion_tokens": 18450,
-    "estimated_cost": 0.0125
-  }
-}
-```
-
-#### C. Fetch Security Audit Logs (`action: get_security_logs`)
-```json
-// Request Payload
-{ "action": "get_security_logs" }
-
-// Success Response
-{
-  "http_code": 200,
-  "success": true,
-  "data": {
-    "threat_level": "secure",
-    "active_lockouts": 0,
-    "total_violations": 3,
-    "logs": [
-      {
-        "timestamp": "2026-08-11 14:29:49 +00:00",
-        "ip_hash": "245c0ffc",
-        "reason": "Security Guardrail: Input matched prohibited safety pattern. (Raw: <script>alert(1)</script>)",
-        "status": "Blocked"
-      }
-    ]
-  }
-}
-```
+### Legacy Shim (`/chatbot-api`)
+The legacy `/chatbot-api` endpoint is **deprecated** and maintained as a fallback for the public chat widget. It serves visitor queries only (`query`, `summarize_page`). All administrative actions (`get_metrics`, `test_api_key`, `fetch_models`, etc.) return `HTTP 403 Forbidden` and must use the REST API with `X-API-Token`. Planned for complete removal in version 3.0.0.
 
 ---
 
@@ -126,7 +87,7 @@ Grav Admin 2 renders custom blueprint fields as native Web Components. Component
    - Set `box-sizing: border-box`, `max-width: 100%`, and `word-break: break-word` on inner card containers so components stay strictly bounded within card borders.
 
 5. **Authentication Header & API Key Security**:
-   - Include `X-API-Token: window.__GRAV_API_TOKEN` header on all HTTP requests targeting `/chatbot-api`.
+   - Include `X-API-Token: window.__GRAV_API_TOKEN` header on all HTTP requests targeting `/api/v1/ai-chatbot/*`.
    - **API Key Confidentiality**: `api_key` is processed strictly server-to-server via PHP cURL and is **NEVER** exposed to client JS, HTML DOM attributes, or disk error log files.
 
 ---
@@ -144,7 +105,7 @@ Grav Admin 2 renders custom blueprint fields as native Web Components. Component
    - **Command Injection**: `cat /etc/passwd`, `rm -rf`, `sudo su`, `powershell`.
 
 3. **Strict Read-Only Scope (`user/pages/` & RAG Only)**:
-   - System prompt directives and input inspection enforce that the AI Chatbot has **READ-ONLY access strictly limited to `user/pages/`** and its RAG embeddings index (`user/data/ai-chatbot/rag_index.json`).
+   - System prompt directives and input inspection enforce that the AI Chatbot has **READ-ONLY access strictly limited to `user/pages/`** and its RAG embeddings index (`user/data/ai-chatbot/rag_index.sqlite`).
 
 4. **IP Cool-Off Protection**:
    - 5 security violations in 60s trigger a **15-minute temporary IP lockout** (`429 Security Cool-Off`).
@@ -153,7 +114,7 @@ Grav Admin 2 renders custom blueprint fields as native Web Components. Component
 
 ## 🧪 5. Local Container Testing Workflow
 
-- **Local Development URL**: `http://localhost/admin/plugins/ai-chatbot`
+- **Local Development URL**: `http://localhost:18888/admin/plugins/ai-chatbot`
 - **Cache Clearing Command**:
   ```bash
   docker exec grav-lamp-web php bin/grav clearcache
@@ -162,5 +123,10 @@ Grav Admin 2 renders custom blueprint fields as native Web Components. Component
   ```bash
   docker exec grav-lamp-web php -l user/plugins/ai-chatbot/classes/SecurityGuardrail.php
   docker exec grav-lamp-web php -l user/plugins/ai-chatbot/classes/ChatbotHandler.php
+  docker exec grav-lamp-web php -l user/plugins/ai-chatbot/classes/Controllers/ChatbotApiController.php
+  ```
+- **YAML Syntax Check**:
+  ```bash
+  docker exec grav-lamp-web php vendor/bin/yaml-lint user/plugins/ai-chatbot/blueprints.yaml
   ```
 - **Deployment Policy**: All changes must be tested locally. Production deployment (`make deploy`) is NEVER executed unless explicitly ordered by the user.

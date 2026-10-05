@@ -15,7 +15,7 @@ jobs:
       - name: Create Clean Grav Plugin Package Zip
         run: |
           mkdir -p build/ai-chatbot
-          rsync -av --exclude='build' --exclude='.git' --exclude='.github' . build/ai-chatbot/
+          rsync -av --exclude='build' --exclude='.git' --exclude='.github' --exclude='AGENTS.md' --exclude='.task' --exclude='.agents' . build/ai-chatbot/
           cd build
           zip -r ai-chatbot.zip ai-chatbot
 

@@ -59,7 +59,10 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 
 ---
 
-### 🌟 Why Google Gemini API (`gemini-2.0-flash`) is the Default Provider Choice
+### 🌟 Why Google Gemini API (`gemini-2.0-flash`) is a Recommended Free-Tier Option
+
+> [!NOTE]
+> **Shipped defaults**: the plugin installs with `provider: omniroute` (Custom OpenAI-Compatible) and `model: gemini-3.1-flash-lite`. Switch to `gemini` and set your API key if you want to use the Google free tier described below.
 
 > [!TIP]
 > **Why Google Gemini Free Tier is Best for Testing & Production**:

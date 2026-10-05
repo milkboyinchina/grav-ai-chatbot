@@ -5,7 +5,7 @@ All notable changes to the Grav AI Chatbot plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-08-14
+## [2.0.0] - Unreleased
 
 ### Added
 - **3-Step Interactive Model Setup Wizard** (`<chatbot-model-tools>`):
@@ -26,8 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SQLite vector store (`rag_index.sqlite`) with cosine similarity.
   - Multi-driver embeddings (Ollama `nomic-embed-text`, Gemini `text-embedding-004`, OpenAI `text-embedding-3-small`, TF-IDF/BM25).
   - Grav CMS Scheduler background cron integration (`ai-chatbot-rag-reindex`).
+- **Grav 2.0 REST API** `/api/v1/ai-chatbot/*` (`ChatbotApiController`): public `query` and `summarize` (registered through `onApiCollectPublicRoutes`); admin `metrics`, `logs`, `security`, `test-key`, `models`, `health`, `reindex`, `unlock`, `export` (`api.system.read|write`).
+- **`<chatbot-rag-tools>`** Admin 2 field with Twig fallback.
 
 ### Changed
+- **Frontend Widget REST Migration**: Frontend widget uses `/api/v1/ai-chatbot/{query,summarize}` and falls back to the legacy `/chatbot-api` endpoint.
+- **Legacy API Deprecation**: Legacy `/chatbot-api` is deprecated: it serves visitor actions only (admin actions return HTTP 403 and must use the REST API). It now emits RFC 8594 `Deprecation`, `Sunset`, `Warning: 299`, and successor `Link` headers. Planned removal in 3.0.0.
+- **Admin Translations**: Removed the Spanish (`es`) admin translation block; added an Indonesian (`id`) block mirroring the English keys.
 - **Renamed Omniroute & Custom Endpoints**: Renamed `omniroute` to **Custom OpenAI-Compatible** and label to `🌐 Custom URL`.
 - **Google Gemini Authentication**: Removed `Authorization: Bearer` headers for Gemini API to ensure `AQ.Ab...` and `AIzaSy...` keys authenticate cleanly with `HTTP 200 OK`.
 - **Non-Ollama Payload Sanitization**: Omitted Ollama-specific `options` payload parameters (`num_ctx`, `num_predict`) when sending requests to standard OpenAI endpoints (Groq, OpenRouter, OpenAI).

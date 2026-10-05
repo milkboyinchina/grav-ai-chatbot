@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 1.4.3
+version: 2.0.0
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, blacklisted word safety guardrails, page visibility rules, and analytics reporting.
 icon: robot
 author:
@@ -24,7 +24,8 @@ form:
       label: 📖 Documentation & Setup Guide
       markdown: true
       content: '> 💡 **Encountering any difficulties?** Please read the detailed **[Grav AI Chatbot Official User Manual (MANUAL.md)](https://github.com/milkboyinchina/grav-ai-chatbot/blob/main/MANUAL.md)** on GitHub for complete step-by-step setup guides, field dependencies, RAG vector store options, and server cron setup.'
-      ignore: true
+      validate:
+        type: ignore
 
     enabled:
       type: toggle
@@ -92,6 +93,8 @@ form:
           type: chatbot-model-tools
           label: 🛠️ Model Tools & Live Health Check
           help: Retrieve active models from provider API and perform live model health checks.
+          validate:
+            type: ignore
 
         custom_endpoint:
           type: text
@@ -162,10 +165,6 @@ form:
             type: int
             min: 100
             max: 20000
-          validate:
-            type: int
-            min: 512
-            max: 2000000
 
     section_rag:
       type: section
@@ -252,11 +251,11 @@ form:
           default: '0 2 * * *'
 
         rebuild_rag_index_button:
-          type: display
+          type: chatbot-rag-tools
           label: ⚡ Manual RAG Index Operations
-          markdown: true
-          content: '<div style="margin-top: 5px;"><button type="button" id="grav-chatbot-rebuild-rag-btn" class="button btn btn-primary" style="background:#10b981; color:#fff; font-weight:600; padding:8px 16px; border-radius:6px; border:none; cursor:pointer;"><i class="fa fa-database"></i> ⚡ Rebuild RAG Vector Index Now</button></div><div id="grav-chatbot-rag-status" style="margin-top:10px; display:none; padding:10px 14px; border-radius:6px; font-weight:600;"></div><script>(function(){var btn=document.getElementById("grav-chatbot-rebuild-rag-btn");var statusEl=document.getElementById("grav-chatbot-rag-status");if(btn){btn.addEventListener("click",function(){btn.disabled=true;statusEl.style.display="block";statusEl.style.background="#f3f4f6";statusEl.style.color="#1f2937";statusEl.innerHTML="⏳ Rebuilding RAG Vector Index... Please wait.";fetch("/chatbot-api?t="+Date.now(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"rebuild_rag_index"})}).then(function(res){return res.json()}).then(function(data){btn.disabled=false;if(data.success){statusEl.style.background="#d1fae5";statusEl.style.color="#065f46";statusEl.innerHTML="✅ "+data.message}else{statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML="❌ Indexing Error: "+(data.error||data.message||"Failed")}}).catch(function(err){btn.disabled=false;statusEl.style.background="#fee2e2";statusEl.style.color="#991b1b";statusEl.innerHTML="❌ Connection Error: "+err.message})})}})();</script>'
-          ignore: true
+          help: Rebuild the RAG vector index via the Admin API (no inline scripts for Admin2 compatibility).
+          validate:
+            type: ignore
 
     section_faq:
       type: section
@@ -555,6 +554,8 @@ form:
           type: chatbot-security-logs
           label: 🛡️ Real-Time Security & Threat Audit Dashboard
           help: Live security violation audit logs, active IP lockouts, and threat status.
+          validate:
+            type: ignore
 
     section_logging:
       type: section
@@ -616,6 +617,8 @@ form:
           rows: 7
           readonly: true
           ignore: true
+          validate:
+            type: ignore
 
 
         ai_chatbot_error_log_location:
@@ -626,6 +629,8 @@ form:
           rows: 5
           readonly: true
           ignore: true
+          validate:
+            type: ignore
 
     section_analytics:
       type: section
@@ -636,6 +641,8 @@ form:
           type: chatbot-metrics
           label: 📊 Real-Time Interaction Metrics & Analytics
           help: Live visual analytics metrics powered by custom Admin 2 Web Component.
+          validate:
+            type: ignore
 
         download_csv_link:
           type: text
@@ -675,6 +682,8 @@ form:
           rows: 5
           readonly: true
           ignore: true
+          validate:
+            type: ignore
 
         analytics_recommendations_text:
           type: textarea
@@ -685,9 +694,13 @@ form:
           readonly: true
           classes: grav-chatbot-recs-field
           ignore: true
+          validate:
+            type: ignore
 
         analytics_live_logs:
           type: chatbot-live-logs
           label: 📜 Live Error & Security Audit Log
           help: Real-time streaming log output feed.
+          validate:
+            type: ignore
 

@@ -1,3 +1,5 @@
+> **Status**: historical, non-authoritative. The referenced `Admin2IntegrationService.php` and `onApiDashboardWidgets` are not present in the current tree.
+
 # Grav Admin2 Integration & Dashboard Audit Report
 
 **Plugin**: `grav-plugin-ai-chatbot`  

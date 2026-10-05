@@ -4,6 +4,7 @@
   function initGravChatbot() {
     const config = window.GravChatbotConfig || {};
     const apiEndpoint = config.apiEndpoint || '/chatbot-api';
+    const restBase = config.restBase || '';
     const position = config.position || 'bottom-right';
     const botTitle = config.botTitle || 'Website Assistant';
     const welcomeMessage = config.welcomeMessage || 'Hello! How can I help you with this website today?';
@@ -239,6 +240,32 @@
       }
     }
 
+    // Prefer the REST API (envelope { data: {...} }); fall back to the deprecated legacy endpoint
+    // when the REST route is unavailable or returns an unexpected shape.
+    async function postChat(payload, isSummary) {
+      if (restBase) {
+        try {
+          const res = await fetch(restBase + (isSummary ? '/summarize' : '/query'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json().catch(function () { return null; });
+          if (json && json.data && typeof json.data === 'object') {
+            return json.data;
+          }
+        } catch (e) {
+          // Network or parse failure: use the legacy endpoint below.
+        }
+      }
+      const legacyRes = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return legacyRes.json();
+    }
+
     async function sendQuestion(customQuestion, action) {
       const q = customQuestion || (inputField ? inputField.value.trim() : '');
       if (!q) return;
@@ -266,18 +293,13 @@
       const typingEl = showTypingIndicator();
 
       try {
-        const res = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            question: q,
-            action: action || 'query',
-            history: history.slice(-6),
-            current_route: config.currentRoute || '/'
-          })
-        });
-
-        const data = await res.json();
+        const payload = {
+          question: q,
+          action: action || 'query',
+          history: history.slice(-6),
+          current_route: config.currentRoute || '/'
+        };
+        const data = await postChat(payload, action === 'summarize_page');
         removeTypingIndicator(typingEl);
 
         if (data.success && data.answer) {

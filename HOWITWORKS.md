@@ -14,7 +14,7 @@ This document explains the internal execution flow, multi-tier request pipeline,
                                      v
                       +-----------------------------+
                       |  AJAX Request Router        |
-                      |  (/chatbot-api endpoint)    |
+                      |  (/api/v1/ai-chatbot/query) |
                       +-----------------------------+
                                      |
                                      v

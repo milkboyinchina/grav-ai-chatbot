@@ -92,13 +92,36 @@ class RateLimiter
 
     protected function getClientIp(): string
     {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER['HTTP_CLIENT_IP'];
+        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        // Only trust proxy headers when the direct peer is a trusted private/docker network.
+        // Prevents trivial IP spoofing via X-Forwarded-For from the public internet.
+        if ($this->isTrustedProxy($remoteAddr)) {
+            if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+                $candidate = trim(explode(',', $_SERVER['HTTP_CLIENT_IP'])[0]);
+                if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                    return $candidate;
+                }
+            }
+            if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+                $candidate = trim($ips[0]);
+                if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                    return $candidate;
+                }
+            }
         }
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            return trim($ips[0]);
+        return $remoteAddr;
+    }
+
+    protected function isTrustedProxy(string $ip): bool
+    {
+        // Loopback + RFC1918 + docker bridge ranges
+        if ($ip === '127.0.0.1' || $ip === '::1') {
+            return true;
         }
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        if (str_starts_with($ip, '10.') || str_starts_with($ip, '192.168.') || str_starts_with($ip, '172.')) {
+            return true;
+        }
+        return false;
     }
 }

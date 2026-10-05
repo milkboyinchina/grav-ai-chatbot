@@ -24,7 +24,7 @@ en:
     FAQ_ENABLED: Enable FAQ Pre-Matching
     FAQ_ENABLED_HELP: Answers matching questions from the FAQ page directly without using AI API keys
     ENABLE_MULTILINGUAL_FAQ: Enable Multilingual FAQ Matching
-    ENABLE_MULTILINGUAL_FAQ_HELP: Automatically uses visitor language to match localized FAQ pages (e.g. faq.es.md, /es/faq)
+    ENABLE_MULTILINGUAL_FAQ_HELP: Automatically uses visitor language to match localized FAQ pages (e.g. faq.id.md, /id/faq)
     FAQ_ROUTE: FAQ Page Route
     FAQ_ROUTE_HELP: Route to your website FAQ page (e.g. /faq)
     FAQ_SIMILARITY: FAQ Match Sensitivity (%)
@@ -69,28 +69,73 @@ en:
     COT_EMPTY_RESPONSE_TEXT: AI Unclear Response Message
     COT_EMPTY_RESPONSE_TEXT_HELP: Message shown when the AI could not generate a clear answer (e.g. nonsensical input).
 
-es:
+id:
   PLUGIN_AI_CHATBOT:
-    ENABLED: Habilitado
-    PROVIDER_SETTINGS: Configuración de Proveedor IA
-    AI_ENABLED: Habilitar API de IA
-    AI_ENABLED_HELP: Cuando se deshabilita, el chatbot responde strictly con las FAQ locales sin llamar a la API de IA.
-    PROVIDER: Motor Proveedor de IA
-    PROVIDER_HELP: Seleccione su motor preferido (Groq, Google Gemini, OpenRouter, OpenAI, o Personalizado)
-    API_KEY: Clave de API
-    API_KEY_HELP: Ingrese su clave de API de forma segura
-    MODEL: Identificador de Modelo
-    MODEL_HELP: Ej. llama-3.3-70b-versatile, llama-3.1-8b-instant, gemini-1.5-flash, gpt-4o-mini
-    CUSTOM_ENDPOINT: URL Endpoint Personalizado
-    CUSTOM_ENDPOINT_HELP: Ej. https://openrouter.ai/api/v1 (solo requerido para proveedor personalizado)
-    TEST_CONNECTION: Probar Conexión de IA
-    TEST_CONNECTION_HELP: Pruebe su clave API y configuración de modelo en vivo
-    FAQ_SETTINGS: Configuración de Preguntas Frecuentes (FAQ)
-    FAQ_ENABLED: Habilitar Coincidencia FAQ
-    FAQ_ENABLED_HELP: Responde preguntas coincidentes directamente desde la página FAQ sin usar credenciales de IA
-    ENABLE_MULTILINGUAL_FAQ: Coincidencia Multilingüe FAQ
-    ENABLE_MULTILINGUAL_FAQ_HELP: Utiliza automáticamente el idioma del visitante para buscar en páginas FAQ localizadas
-    QUICK_REPLIES_ENABLED: Botones de Respuesta Rápida
-    QUICK_REPLIES_ENABLED_HELP: Muestra botones de sugerencias rápidas sobre el cuadro de chat
-    QUICK_REPLIES: Botones Personalizables
-    QUICK_REPLIES_HELP: Agregue o personalice botones de sugerencia rápida
+    ENABLED: Aktif
+    PROVIDER_SETTINGS: Pengaturan Penyedia AI
+    AI_ENABLED: Aktifkan Fallback API AI
+    AI_ENABLED_HELP: Jika dinonaktifkan, chatbot hanya memakai jawaban FAQ lokal dan tidak memanggil API AI.
+    AI_DISABLED_RESPONSE_TEXT: Pesan Respons AI Nonaktif
+    AI_DISABLED_RESPONSE_TEXT_HELP: Pesan balasan kustom untuk pengunjung saat tidak ada FAQ lokal yang cocok dan fallback API AI dinonaktifkan.
+    PROVIDER: Mesin Penyedia AI
+    PROVIDER_HELP: Pilih model penyedia AI pilihan Anda (Groq, Google Gemini, OpenRouter, OpenAI, atau Kustom)
+    API_KEY: Kunci API
+    API_KEY_HELP: Masukkan Kunci API penyedia Anda dengan aman (biarkan kosong untuk Ollama lokal / model yang di-host sendiri)
+    MODEL: Identifikasi Model
+    MODEL_HELP: Contoh gemini-2.0-flash, gemini-2.0-flash-lite, llama-3.3-70b-versatile, gpt-4o-mini
+    CUSTOM_ENDPOINT: URL Endpoint Kustom
+    CUSTOM_ENDPOINT_HELP: Contoh https://openrouter.ai/api/v1 (hanya diperlukan untuk penyedia Kustom)
+    CUSTOM_SYSTEM_PROMPT: Prompt / Instruksi Sistem Kustom
+    CUSTOM_SYSTEM_PROMPT_HELP: Instruksi sistem kustom untuk model AI. Jika dikosongkan, memakai aturan bawaan penekanan CoT dan batas karakter.
+    MAX_RESPONSE_CHARS: Maksimum Karakter Respons (Batas Lunak)
+    MAX_RESPONSE_CHARS_HELP: Panduan lunak untuk jumlah maksimum karakter balasan AI (bawaan 1000 karakter).
+    TEST_CONNECTION: Uji Koneksi API AI
+    TEST_CONNECTION_HELP: Uji kunci API dan konfigurasi model penyedia secara langsung sebelum menyimpan pengaturan
+    FAQ_SETTINGS: Pengaturan Pra-Pencocokan FAQ
+    FAQ_ENABLED: Aktifkan Pra-Pencocokan FAQ
+    FAQ_ENABLED_HELP: Menjawab pertanyaan yang cocok dari halaman FAQ secara langsung tanpa memakai kunci API AI
+    ENABLE_MULTILINGUAL_FAQ: Aktifkan Pencocokan FAQ Multibahasa
+    ENABLE_MULTILINGUAL_FAQ_HELP: Otomatis memakai bahasa pengunjung untuk mencocokkan halaman FAQ yang dilokalkan (mis. faq.id.md, /id/faq)
+    FAQ_ROUTE: Rute Halaman FAQ
+    FAQ_ROUTE_HELP: Rute menuju halaman FAQ situs Anda (mis. /faq)
+    FAQ_SIMILARITY: Sensitivitas Pencocokan FAQ (%)
+    FAQ_SIMILARITY_HELP: Ambang skor kemiripan (50-100%) untuk mencocokkan pertanyaan pengguna dengan item FAQ
+    CONTACT_SETTINGS: Pengaturan Resolusi Halaman Kontak
+    CONTACT_ROUTE: Rute Halaman Kontak Publik
+    CONTACT_ROUTE_HELP: Rute menuju halaman kontak publik (mis. /contact)
+    ENABLE_HIDDEN_CONTACTS: Aktifkan Halaman Kontak Tersembunyi
+    ENABLE_HIDDEN_CONTACTS_HELP: Membaca halaman kontak yang tidak dipublikasikan/tersembunyi untuk permintaan khusus (engineer, lead)
+    HIDDEN_CONTACT_ROUTE: Rute Halaman Kontak Tersembunyi
+    HIDDEN_CONTACT_ROUTE_HELP: Rute menuju halaman kontak tersembunyi (mis. /hidden-contacts)
+    SECURITY_SETTINGS: Keamanan & Pembatasan Laju
+    RATE_LIMIT_ENABLED: Aktifkan Pembatasan Laju per IP
+    RATE_LIMIT_MAX: Maksimum Permintaan per Jendela
+    RATE_LIMIT_WINDOW: Durasi Jendela (Detik)
+    STRICT_SITE_SCOPE: Cakupan Situs Ketat
+    SESSION_SETTINGS: Pengaturan Retensi Sesi
+    SESSION_RETENTION_DAYS: Periode Retensi Obrolan (Hari)
+    SESSION_RETENTION_DAYS_HELP: Jumlah hari penyimpanan riwayat obrolan dan status aktif pengunjung di seluruh halaman, tab, dan pemuatan ulang (isi 0 untuk sesi saja)
+    LOGGING_SETTINGS: Log & Analitik FAQ
+    LOGGING_ENABLED: Aktifkan Log Interaksi
+    LOG_API_USAGE: Lacak Pemakaian Token & Estimasi Biaya
+    UI_SETTINGS: UI & Tema Widget Chatbot
+    THEME_PRESET: Preset Tema UI
+    THEME_PRESET_HELP: Pilih gaya warna tema visual
+    WIDGET_POSITION: Posisi Widget Mengambang
+    DISPLAY_MODE: Visibilitas Tampilan Widget
+    DISPLAY_MODE_HELP: Kendalikan halaman situs mana yang menampilkan widget chatbot (Semua Halaman, Hanya Halaman Terpilih, atau Kecualikan Halaman Terpilih)
+    DISPLAY_PAGES: Rute Halaman (Satu per baris)
+    DISPLAY_PAGES_HELP: Masukkan rute halaman, mis. / untuk beranda, /contact, /faq
+    WELCOME_MESSAGE: Sapaan Selamat Datang
+    ACCENT_COLOR: Warna Aksen Kustom
+    ACCENT_COLOR_HELP: Digunakan saat tema 'Custom Color Picker' dipilih
+    QUICK_REPLIES_ENABLED: Tombol Aksi Balasan Cepat
+    QUICK_REPLIES_ENABLED_HELP: Menampilkan pil saran balasan cepat di atas kotak input obrolan
+    QUICK_REPLIES: Tombol Balasan Cepat yang Dapat Dikustom
+    QUICK_REPLIES_HELP: Tambah atau sesuaikan tombol saran cepat (mis. Ringkas Halaman, Kontak Pemilik, atau prompt pertanyaan kustom)
+    NOTIFICATION_ENABLED: Notifikasi Toast Proaktif
+    NOTIFICATION_ENABLED_HELP: Menampilkan pesan toast pop-up di atas tombol peluncur
+    NOTIFICATION_TEXT: Teks Notifikasi Toast
+    NOTIFICATION_DELAY: Jeda Toast (Detik)
+    COT_EMPTY_RESPONSE_TEXT: Pesan Respons AI Tidak Jelas
+    COT_EMPTY_RESPONSE_TEXT_HELP: Pesan yang ditampilkan saat AI tidak dapat menghasilkan jawaban yang jelas (mis. input tidak masuk akal).

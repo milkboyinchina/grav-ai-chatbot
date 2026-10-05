@@ -51,7 +51,7 @@ class Logger
         $record = [
             'id' => uniqid('log_', true),
             'timestamp' => $entry['timestamp'] ?? date('c'),
-            'ip_hash' => substr(md5($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'), 0, 8),
+            'ip_hash' => substr(hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1') . '|ai-chatbot'), 0, 16),
             'question' => trim($entry['question'] ?? ''),
             'answer' => trim($entry['answer'] ?? ''),
             'source' => $entry['source'] ?? 'ai_api', // 'faq_match', 'ai_api', 'rate_limit', 'guardrail'

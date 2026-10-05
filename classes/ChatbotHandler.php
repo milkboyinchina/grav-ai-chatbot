@@ -216,9 +216,10 @@ class ChatbotHandler
                     SecurityGuardrail::recordViolation($ipHash);
 
                     $blockMsg = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
-                    
+
                     $logger = new Logger($this->grav);
-                    $logger->logError("Security Guardrail Blocked Query [IP Hash: " . substr($ipHash, 0, 8) . "]: " . $inspection['reason'] . " (Raw: {$question})");
+                    // Do not persist raw visitor input in error logs (PII / prompt-injection payloads).
+                    $logger->logError("Security Guardrail Blocked Query [IP Hash: " . substr($ipHash, 0, 8) . "]: " . $inspection['reason'] . " (chars=" . mb_strlen($question) . ")", 'GUARDRAIL');
                     $logger->logInteraction([
                         'question' => $question,
                         'answer' => $blockMsg,
@@ -486,8 +487,9 @@ class ChatbotHandler
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_TIMEOUT => 10,
-                    CURLOPT_SSL_VERIFYPEER => false,
-                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2,
                     CURLOPT_FOLLOWLOCATION => true
                 ]);
                 $response = curl_exec($ch);
@@ -542,8 +544,9 @@ class ChatbotHandler
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_HTTPHEADER => $headers,
                     CURLOPT_TIMEOUT => 10,
-                    CURLOPT_SSL_VERIFYPEER => false,
-                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2,
                     CURLOPT_FOLLOWLOCATION => true
                 ]);
                 $response = curl_exec($ch);
@@ -618,7 +621,9 @@ class ChatbotHandler
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_TIMEOUT => 10,
-                    CURLOPT_SSL_VERIFYPEER => false
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2
                 ]);
                 $response = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -657,7 +662,9 @@ class ChatbotHandler
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_HTTPHEADER => $headers,
                     CURLOPT_TIMEOUT => 10,
-                    CURLOPT_SSL_VERIFYPEER => false
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2
                 ]);
                 $response = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

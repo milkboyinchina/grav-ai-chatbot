@@ -33,21 +33,21 @@ class ChatbotSecurityLogs extends HTMLElement {
 
   async _fetchData() {
     try {
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = {};
       if (typeof window !== 'undefined' && window.__GRAV_API_TOKEN) {
         headers['X-API-Token'] = window.__GRAV_API_TOKEN;
       }
 
-      const res = await fetch('/chatbot-api', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({ action: 'get_security_logs' })
-      });
+      const res = await fetch('/api/v1/ai-chatbot/security?t=' + Date.now(), { headers });
 
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data) {
-          this._data = json.data;
+        const payload = json.data || json;
+        const inner = payload.data || payload;
+        if ((payload.status === 'success' || payload.success) && inner) {
+          this._data = inner.data || inner;
+          // Normalize shape: controller returns {status,data:{threat_level,...}}
+          if (this._data && this._data.data) this._data = this._data.data;
           this._render();
         }
       }
@@ -63,10 +63,11 @@ class ChatbotSecurityLogs extends HTMLElement {
         headers['X-API-Token'] = window.__GRAV_API_TOKEN;
       }
 
-      const res = await fetch('/chatbot-api', {
+      const endpoint = actionName === 'release_ip_lockouts' ? '/api/v1/ai-chatbot/unlock' : '/api/v1/ai-chatbot/unlock';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ action: actionName })
+        body: JSON.stringify({})
       });
 
       if (res.ok) {

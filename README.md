@@ -32,10 +32,10 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 
 The plugin includes a multi-layered security hardening suite protecting against **Prompt Injections**, **Jailbreaks**, **XSS Script Injections**, **SQL Injection**, **Credential Stuffing**, and **Data Leaks**:
 
-- 🔒 **Strict Read-Only Scope Boundary (`user/pages/` & RAG Only)**: Restricts chatbot knowledge strictly to public pages in `user/pages/` and its RAG vector embeddings (`user/data/ai-chatbot/rag_index.json`). Chatbot has zero access to server files, credentials, or `user/config/`.
+- 🔒 **Strict Read-Only Scope Boundary (`user/pages/` & RAG Only)**: Restricts chatbot knowledge strictly to public pages in `user/pages/` and its RAG vector embeddings (`user/data/ai-chatbot/rag_index.sqlite`). Chatbot has zero access to server files, credentials, or `user/config/`.
 - 🔤 **Leetspeak & Unicode Normalization**: Automatically normalizes obfuscation tricks (e.g. `h4ck` $\rightarrow$ `hack`, `byp4ss` $\rightarrow$ `bypass`, `@dmin` $\rightarrow$ `admin`, zero-width spaces) prior to pattern inspection.
 - 🛡️ **5-Category Defense Matrix**: Automatically blocks Prompt Injections, Jailbreaks, XSS vectors (`<script`, `onerror=`), SQL Injection (`union select`, `drop table`), Credential Probes (`.env`, `user/config`), and System Commands (`cat /etc/passwd`).
-- ⏱️ **Server-Side Token Flooding Defense**: Enforces strict server-side input truncation (**Max 500 characters / ~125 tokens**) before invoking LLM API providers.
+- ⏱️ **Server-Side Token Flooding Defense**: Enforces a configurable token ceiling (`max_input_tokens`, default 500 tokens ≈ 2000 characters) and a hard server-side truncation at **500 characters** before invoking LLM API providers.
 - 🔑 **Credential Stuffing Cool-Off Protection**: Tracks security guardrail violations by anonymized IP hash. 5 violations within 60s trigger a **15-minute temporary IP lockout** (`429 Security Cool-Off`).
 - 📊 **Real-Time Admin 2 Security Audit Dashboard (`<chatbot-security-logs>`)**: Renders real-time threat meter, live audit violation logs, and admin lockout release controls in Grav Admin 2.
 
@@ -56,11 +56,12 @@ The plugin includes a multi-layered security hardening suite protecting against 
 
 - ⚡ **Multi-Provider AI Engines & Dual-Endpoint Failover**:
   - **Groq API** (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
-  - **Google Gemini API** (Default: `gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`).
+  - **Google Gemini API** (`gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`; also supports `gemini-3.1-flash-lite`).
     *(Disclaimer: Not sponsored by Google — please Google, donate some tokens! 😅)*
   - **OpenRouter API** (`google/gemini-flash-1.5`, `anthropic/claude-3.5-sonnet`).
   - **OpenAI API** (`gpt-4o-mini`, `gpt-4o`).
   - **Custom Endpoints & Configurable Failover** (Local Ollama, Tailscale VPN hosts, vLLM, or self-hosted OpenAI-compatible servers with **automatic primary & secondary endpoint failover**).
+  - **Shipped defaults**: `provider: omniroute` (Custom OpenAI-Compatible) with `model: gemini-3.1-flash-lite`, plus `custom_endpoint` left blank for the administrator to set.
 
 - 🛡️ **Configurable AI Disabled Reply & Offline Fallback**:
   - Toggle AI generation on/off (`ai_enabled`).
@@ -183,10 +184,10 @@ Navigate to **Grav Admin -> Plugins -> Grav AI Chatbot** to configure:
 
 ## 📊 Analytics & Export API Endpoints
 
-- **Live Analytics Report**: `POST /chatbot-api` with `{ "action": "analytics_report", "range": "7d" }`
-- **CSV Download**: `GET /chatbot-export?format=csv&range=30d`
-- **JSON Download**: `GET /chatbot-export?format=json&range=90d`
-- **Raw Interactions Download**: `GET /chatbot-export?format=raw_interactions&range=all`
+- **Live Analytics Report**: `GET /api/v1/ai-chatbot/metrics` (Requires `X-API-Token: <token>`; response includes aggregated `analytics` data).
+- **CSV Download**: `GET /api/v1/ai-chatbot/export?format=csv` (or legacy `/chatbot-export?format=csv&range=30d`)
+- **JSON Download**: `GET /api/v1/ai-chatbot/export?format=json` (or legacy `/chatbot-export?format=json&range=90d`)
+- **Raw Interactions Download**: `GET /api/v1/ai-chatbot/export?format=raw_interactions` (or legacy `/chatbot-export?format=raw_interactions&range=all`)
 
 ---
 
