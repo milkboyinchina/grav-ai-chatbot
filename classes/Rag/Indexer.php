@@ -3,6 +3,7 @@ namespace Grav\Plugin\AiChatbot\Rag;
 
 use Grav\Common\Grav;
 use Grav\Common\Page\Page;
+use Grav\Plugin\AiChatbot\DataPath;
 
 /**
  * Class Indexer
@@ -27,8 +28,8 @@ class Indexer
         $this->store = new VectorStore($grav);
         $this->embedder = new EmbeddingProvider($config);
 
-        $dataDir = $grav['locator']->findResource('user://data/ai-chatbot', true, true) ?: '/var/www/html/user/data/ai-chatbot';
-        $this->lockFilePath = $dataDir . '/rag_indexing.lock';
+        DataPath::ensureDirectory();
+        $this->lockFilePath = DataPath::file('rag_indexing.lock');
     }
 
     /**

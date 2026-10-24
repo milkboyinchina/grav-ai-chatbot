@@ -97,7 +97,7 @@ class ChatbotModelTools extends HTMLElement {
       return [];
     }
 
-    if (name === 'custom_endpoint' || name === 'fallback_endpoint') {
+    if (name === 'custom_endpoint') {
       const exactSelectors = [
         `input[name="data[${name}]"]`,
         `[data-field="${name}"] input`,
@@ -300,7 +300,6 @@ class ChatbotModelTools extends HTMLElement {
     const apiKey = this._getFormFieldVal('api_key');
     const model = selectedModel || this._selectedModel || this._getFormFieldVal('model') || 'gemini-3.1-flash-lite';
     const customEndpoint = this._getFormFieldVal('custom_endpoint');
-    const fallbackEndpoint = this._getFormFieldVal('fallback_endpoint');
 
     this._testedModel = model;
     this._selectedModel = model;
@@ -321,8 +320,7 @@ class ChatbotModelTools extends HTMLElement {
           provider: provider,
           api_key: apiKey,
           model: model,
-          custom_endpoint: customEndpoint,
-          fallback_endpoint: fallbackEndpoint
+          custom_endpoint: customEndpoint
         })
       });
 

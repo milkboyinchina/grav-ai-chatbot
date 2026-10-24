@@ -4,7 +4,7 @@ namespace Grav\Plugin\AiChatbot;
 /**
  * Class AiClientFactory
  * Creates the appropriate AI driver instance based on plugin config.
- * Supports Groq, Google Gemini, OpenRouter, OpenAI, Ollama (Local/Remote), and Custom endpoints.
+ * Supports Groq, Google Gemini, OpenRouter, OpenAI, Ollama, and OmniRoute.
  *
  * @license GPL-3.0-or-later
  */
@@ -18,11 +18,10 @@ class AiClientFactory
      */
     public static function create(array $config): AiClientInterface
     {
-        $provider = strtolower($config['provider'] ?? 'gemini');
-        $apiKey = trim($config['api_key'] ?? '');
-        $model = trim($config['model'] ?? '');
-        $customEndpoint = trim($config['custom_endpoint'] ?? '');
-        $fallbackEndpoint = trim($config['fallback_endpoint'] ?? '');
+        $provider = strtolower(trim((string)($config['provider'] ?? 'gemini')));
+        $apiKey = trim((string)($config['api_key'] ?? ''));
+        $model = trim((string)($config['model'] ?? ''));
+        $customEndpoint = rtrim(trim((string)($config['custom_endpoint'] ?? '')), '/');
         $timeout = (int)($config['api_timeout'] ?? 30);
         $maxTokens = (int)($config['max_tokens'] ?? 800);
         $contextWindowTokens = (int)($config['context_window_tokens'] ?? 8192);
@@ -62,27 +61,26 @@ class AiClientFactory
                 );
 
             case 'ollama':
-                $endpoint = $customEndpoint ?: 'http://host.docker.internal:11434/v1';
-                // If endpoint uses localhost or 127.0.0.1 inside container environment, translate to host.docker.internal
-                if (preg_match('/localhost|127\.0\.0\.1/i', $endpoint)) {
-                    $endpoint = preg_replace('/localhost|127\.0\.0\.1/i', 'host.docker.internal', $endpoint);
+                if ($customEndpoint === '') {
+                    throw new \InvalidArgumentException('Ollama requires a custom endpoint URL.');
                 }
-                if (!preg_match('/\/v1\/?$/i', $endpoint)) {
-                    $endpoint = rtrim($endpoint, '/') . '/v1';
+                if (!preg_match('#/v1/?$#i', $customEndpoint)) {
+                    $customEndpoint .= '/v1';
                 }
                 return new OpenAiCompatibleClient(
                     $apiKey ?: 'ollama',
                     $model ?: 'llama3.2',
-                    $endpoint,
+                    $customEndpoint,
                     false,
                     $timeout,
                     $maxTokens,
-                    $contextWindowTokens,
-                    $fallbackEndpoint
+                    $contextWindowTokens
                 );
 
             case 'omniroute':
-            case 'openai_compatible':
+                if ($customEndpoint === '') {
+                    throw new \InvalidArgumentException('OmniRoute requires a custom endpoint URL.');
+                }
                 return new OpenAiCompatibleClient(
                     $apiKey,
                     $model,
@@ -90,19 +88,7 @@ class AiClientFactory
                     false,
                     $timeout,
                     $maxTokens,
-                    $contextWindowTokens,
-                    $fallbackEndpoint
-                );
-            case 'custom':
-                return new OpenAiCompatibleClient(
-                    $apiKey,
-                    $model ?: 'default',
-                    $customEndpoint,
-                    false,
-                    $timeout,
-                    $maxTokens,
-                    $contextWindowTokens,
-                    $fallbackEndpoint
+                    $contextWindowTokens
                 );
 
             case 'gemini':

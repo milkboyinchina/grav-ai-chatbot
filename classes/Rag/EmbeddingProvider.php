@@ -3,7 +3,7 @@ namespace Grav\Plugin\AiChatbot\Rag;
 
 /**
  * Class EmbeddingProvider
- * Vector embedding generator for Ollama, Google Gemini, OpenAI/OpenRouter, and TF-IDF fallback.
+ * Vector embedding generator for Ollama, Google Gemini, OpenAI, and local TF-IDF.
  *
  * @license GPL-3.0-or-later
  */
@@ -18,34 +18,33 @@ class EmbeddingProvider
     public function __construct(array $config)
     {
         $this->config = $config;
-        $this->provider = strtolower($config['rag_embedding_provider'] ?? $config['provider'] ?? 'tfidf_local');
-        $this->apiKey = trim($config['api_key'] ?? '');
-        $this->model = trim($config['rag_embedding_model'] ?? '');
+        $this->apiKey = trim((string)($config['api_key'] ?? ''));
+        $this->model = trim((string)($config['rag_embedding_model'] ?? ''));
 
-        if (empty($this->model)) {
-            if ($this->provider === 'ollama') {
-                $this->model = 'nomic-embed-text';
-            } elseif ($this->provider === 'gemini') {
-                $this->model = 'text-embedding-004';
-            } elseif ($this->provider === 'openai') {
-                $this->model = 'text-embedding-3-small';
-            } else {
-                $this->model = 'tfidf_local';
-            }
-        }
+        $requested = strtolower(trim((string)($config['rag_embedding_provider'] ?? 'tfidf_local')));
+        $allowed = ['ollama', 'gemini', 'openai', 'tfidf_local'];
+        $this->provider = in_array($requested, $allowed, true) ? $requested : 'tfidf_local';
 
-        $customEndpoint = trim($config['custom_endpoint'] ?? '');
+        $customEndpoint = rtrim(trim((string)($config['custom_endpoint'] ?? '')), '/');
+        $this->endpoint = '';
+
         if ($this->provider === 'ollama') {
-            $ep = $customEndpoint ?: 'http://host.docker.internal:11434/v1';
-            if (preg_match('/localhost|127\.0\.0\.1/i', $ep)) {
-                $ep = preg_replace('/localhost|127\.0\.0\.1/i', 'host.docker.internal', $ep);
+            if ($customEndpoint === '') {
+                $this->provider = 'tfidf_local';
+            } else {
+                $this->endpoint = $customEndpoint;
+                $this->model = $this->model ?: 'nomic-embed-text';
             }
-            $this->endpoint = rtrim($ep, '/');
         } elseif ($this->provider === 'gemini') {
             $this->endpoint = 'https://generativelanguage.googleapis.com/v1beta';
+            $this->model = $this->model ?: 'text-embedding-004';
         } elseif ($this->provider === 'openai') {
             $this->endpoint = 'https://api.openai.com/v1';
-        } else {
+            $this->model = $this->model ?: 'text-embedding-3-small';
+        }
+
+        if ($this->provider === 'tfidf_local') {
+            $this->model = 'tfidf_local';
             $this->endpoint = '';
         }
     }
@@ -69,7 +68,6 @@ class EmbeddingProvider
             case 'gemini':
                 return $this->generateGeminiEmbedding($text);
             case 'openai':
-            case 'openrouter':
                 return $this->generateOpenAiEmbedding($text);
             case 'tfidf_local':
             default:
@@ -120,7 +118,7 @@ class EmbeddingProvider
             return $this->generateLocalTfIdfVector($text);
         }
 
-        $url = "{$this->endpoint}/models/{$this->model}:embedContent?key={$this->apiKey}";
+        $url = "{$this->endpoint}/models/{$this->model}:embedContent";
         $payload = [
             'model' => "models/{$this->model}",
             'content' => [
@@ -132,7 +130,7 @@ class EmbeddingProvider
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'x-goog-api-key: ' . $this->apiKey]);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         $response = curl_exec($ch);
@@ -151,7 +149,8 @@ class EmbeddingProvider
     protected function generateOpenAiEmbedding(string $text): array
     {
         if (empty($this->apiKey)) {
-            return $this->generateLocalTfIdfVector($text);
+            $this->logEmbeddingFailure('OpenAI embedding skipped: API key is missing.');
+            return [];
         }
 
         $url = "{$this->endpoint}/embeddings";
@@ -173,16 +172,40 @@ class EmbeddingProvider
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         $response = curl_exec($ch);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
-        if ($response) {
-            $data = json_decode($response, true);
-            if (!empty($data['data'][0]['embedding']) && is_array($data['data'][0]['embedding'])) {
-                return $data['data'][0]['embedding'];
-            }
+        if ($response === false || $response === '') {
+            $this->logEmbeddingFailure('OpenAI embedding request failed: ' . ($curlError ?: 'empty response'));
+            return [];
         }
 
-        return $this->generateLocalTfIdfVector($text);
+        $data = json_decode($response, true);
+        if (!empty($data['data'][0]['embedding']) && is_array($data['data'][0]['embedding'])) {
+            return $data['data'][0]['embedding'];
+        }
+
+        $error = $data['error']['message'] ?? 'response did not contain an embedding';
+        $this->logEmbeddingFailure('OpenAI embedding request failed: ' . $error);
+
+        return [];
+    }
+
+    /**
+     * Record provider failures without breaking the indexing request.
+     */
+    protected function logEmbeddingFailure(string $message): void
+    {
+        if (!class_exists('Grav\Common\Grav')) {
+            return;
+        }
+
+        try {
+            $grav = \Grav\Common\Grav::instance();
+            (new \Grav\Plugin\AiChatbot\Logger($grav))->logError($message, 'EMBEDDING');
+        } catch (\Throwable $t) {
+            // Logging must never abort indexing.
+        }
     }
 
     /**

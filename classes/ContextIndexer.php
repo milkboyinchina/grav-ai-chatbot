@@ -23,11 +23,10 @@ class ContextIndexer
     /**
      * Convenience method for building site context prompt.
      *
-     * @param string $currentRoute
      * @param int $maxContextChars
      * @return string
      */
-    public function buildContextPrompt(string $currentRoute = '/', int $maxContextChars = 3000): string
+    public function buildContextPrompt(int $maxContextChars = 3000): string
     {
         return $this->buildSiteContext([], $maxContextChars);
     }
@@ -143,23 +142,5 @@ class ContextIndexer
         }
 
         return $result;
-    }
-
-    /**
-     * Search context chunks relevant to question.
-     *
-     * @param string $question User query
-     * @param int $maxChunks Maximum chunks to return
-     * @return array Chunks array
-     */
-    public function searchContext(string $question, int $maxChunks = 3): array
-    {
-        $fullContext = $this->buildSiteContext();
-        if (empty($fullContext)) {
-            return [];
-        }
-
-        $chunks = explode("\n\n---\n\n", $fullContext);
-        return array_slice($chunks, 0, $maxChunks);
     }
 }

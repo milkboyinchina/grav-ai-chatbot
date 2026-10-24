@@ -57,8 +57,10 @@
         btn.className = 'grav-chatbot-pill';
         btn.textContent = qr.label || qr.action_or_prompt;
         btn.addEventListener('click', function () {
-          if (qr.type === 'action') {
-            sendQuestion(qr.label || qr.action_or_prompt, qr.action_or_prompt);
+          // Only summarize_page is a real internal action. Every other entry is
+          // sent as a normal question so stale or custom entries stay harmless.
+          if (qr.type === 'action' && qr.action_or_prompt === 'summarize_page') {
+            sendQuestion(qr.label || 'Summarize Page', 'summarize_page');
           } else {
             sendQuestion(qr.action_or_prompt || qr.label, 'query');
           }

@@ -17,18 +17,12 @@ class ContactPageResolver
     protected string $hiddenRoute;
     protected bool $enableHidden;
 
-    public function __construct(Grav $grav, $publicRoute = '/contact', string $hiddenRoute = '/hidden-contacts', bool $enableHidden = true)
+    public function __construct(Grav $grav, array $config = [])
     {
         $this->grav = $grav;
-        if (is_array($publicRoute)) {
-            $this->publicRoute = $publicRoute['contact_route'] ?? '/contact';
-            $this->hiddenRoute = $publicRoute['hidden_contact_route'] ?? '/hidden-contacts';
-            $this->enableHidden = !empty($publicRoute['enable_hidden_contacts']);
-        } else {
-            $this->publicRoute = $publicRoute ?: '/contact';
-            $this->hiddenRoute = $hiddenRoute ?: '/hidden-contacts';
-            $this->enableHidden = $enableHidden;
-        }
+        $this->publicRoute = $config['contact_route'] ?? '/contact';
+        $this->hiddenRoute = $config['hidden_contact_route'] ?? '/hidden-contacts';
+        $this->enableHidden = !empty($config['enable_hidden_contacts']);
     }
 
     /**
@@ -40,7 +34,7 @@ class ContactPageResolver
     public function resolveContactIntent(string $userQuestion): ?array
     {
         $questionLower = strtolower($userQuestion);
-        $isContactIntent = preg_match('/(contact|reach|email|phone|address|location|call|support|talk to|office|hours)/i', $questionLower);
+        $isContactIntent = preg_match('/\b(?:contact|reach|email|phone|address|location|call|support|talk to|office|hours)\b/i', $questionLower);
         
         if (!$isContactIntent) {
             return null;
@@ -55,14 +49,6 @@ class ContactPageResolver
     }
 
     /**
-     * Alias method for resolving contact details.
-     */
-    public function resolveContactDetails(string $userQuestion): string
-    {
-        return $this->getContactInformation($userQuestion);
-    }
-
-    /**
      * Determines whether user prompt asks for specialized/engineer contact vs standard contact,
      * and extracts appropriate page content.
      *
@@ -72,7 +58,7 @@ class ContactPageResolver
     public function getContactInformation(string $userQuestion): string
     {
         $questionLower = strtolower($userQuestion);
-        $isSpecialized = preg_match('/(engineer|tech|support|devops|lead|direct|internal|emergency)/i', $questionLower);
+        $isSpecialized = preg_match('/\b(?:engineer(?:ing|s)?|tech(?:nical)?|support|devops|lead|direct|internal|emergency)\b/i', $questionLower);
 
         $contactText = "";
 

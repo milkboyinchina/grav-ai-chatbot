@@ -1,4 +1,4 @@
-# How Grav AI Chatbot Works — Technical Architecture & Workflow
+# How Grav AI Chatbot Works: Technical Architecture & Workflow
 
 This document explains the internal execution flow, multi-tier request pipeline, local vector storage, and background processes powering the **Grav CMS AI Chatbot Plugin** (`user/plugins/ai-chatbot`).
 

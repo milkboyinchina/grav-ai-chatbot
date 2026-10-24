@@ -28,16 +28,9 @@ class FaqResolver
     public function __construct(Grav $grav, array $config = [])
     {
         $this->grav = $grav;
-        
-        if (is_string($config)) {
-            $this->faqRoute = $config ?: '/faq';
-            $this->threshold = 70;
-            $this->enableMultilingual = true;
-        } else {
-            $this->faqRoute = $config['faq_route'] ?? '/faq';
-            $this->threshold = max(50, min(100, (int)($config['faq_similarity_threshold'] ?? 70)));
-            $this->enableMultilingual = !empty($config['enable_multilingual_faq']);
-        }
+        $this->faqRoute = $config['faq_route'] ?? '/faq';
+        $this->threshold = max(50, min(100, (int)($config['faq_similarity_threshold'] ?? 70)));
+        $this->enableMultilingual = !empty($config['enable_multilingual_faq']);
     }
 
     /**

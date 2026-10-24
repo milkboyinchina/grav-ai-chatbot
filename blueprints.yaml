@@ -15,6 +15,7 @@ license: GPL-3.0-or-later
 
 dependencies:
   - { name: grav, version: '>=2.0.0' }
+  - { name: api }
 
 form:
   validation: loose
@@ -66,12 +67,12 @@ form:
           type: select
           label: 🤖 AI Provider Engine
           help: Select your preferred AI provider
-          default: omniroute
+          default: gemini
           options:
-            omniroute: 🤖 Custom OpenAI-Compatible
             gemini: ♊ Google Gemini API
             groq: ⚡ Groq Cloud (Llama-3.3-70b / Fast)
             ollama: 🦙 Ollama Local Host (v1 / Chat)
+            omniroute: 🔀 OmniRoute Gateway (OpenAI-Compatible)
             openai: 🤖 OpenAI Official API (GPT-4o / GPT-4o-mini)
             openrouter: 🌐 OpenRouter AI Gateway
 
@@ -99,18 +100,8 @@ form:
         custom_endpoint:
           type: text
           label: 🌐 Custom URL
-          help: Custom endpoint URL. Only required when using Ollama (v1 / Chat) or Custom OpenAI-Compatible (e.g. http://110.120.130.140:20128).
-          show_on: "provider: omniroute,ollama,custom"
-          validate:
-            required: false
-
-        fallback_endpoint:
-          type: text
-          label: 🔄 Fallback Endpoint URL
-          help: Not required. Leave Blank if Not Needed
-          placeholder: Not required. Leave Blank if Not Needed
-          default: ''
-          show_on: "provider: omniroute,ollama,custom"
+          help: Base endpoint URL. Required for Ollama and OmniRoute, for example https://gateway.example.com/v1
+          show_on: "provider: omniroute,ollama"
           validate:
             required: false
 
@@ -427,10 +418,10 @@ form:
             type:
               type: select
               label: Action Type
-              default: action
+              default: question
               options:
-                action: Internal Action (summarize_page, contact)
                 question: Question / Prompt Query
+                action: Internal Action (summarize_page only)
             action_or_prompt:
               type: text
               label: Action Name or Question Prompt
@@ -495,17 +486,6 @@ form:
           label: PLUGIN_AI_CHATBOT.RATE_LIMIT_WINDOW
           default: 60
 
-        strict_site_scope:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.STRICT_SITE_SCOPE
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-          validate:
-            type: bool
-
         blacklist_filter_enabled:
           type: toggle
           label: 🚫 Enable Blacklisted Words Guardrail Filter
@@ -522,7 +502,7 @@ form:
           type: textarea
           label: 🚫 Blacklisted Words / Restricted Vocabulary List
           help: Enter restricted words, profanity, or forbidden topics (one per line or comma-separated).
-          default: "spam\nscam\nhack\nexploit\nbypass\nadmin_password\nsecret_token\nleak\nporn\ncasino\ngambling\nillegal"
+          default: "spam\nscam\nexploit\nadmin_password\nsecret_token\nleak\nporn\ncasino\ngambling\nillegal"
           rows: 6
 
         blacklist_response_text:
@@ -531,24 +511,6 @@ form:
           help: Custom response displayed to the visitor when a blacklisted word is detected.
           default: "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language."
           rows: 3
-
-        export_require_auth:
-          type: toggle
-          label: 🔒 Restrict Export Downloads to Whitelisted Users
-          help: Require user to be logged in to Grav Admin and listed in the user whitelist below before downloading CSV/JSON reports
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-          validate:
-            type: bool
-
-        export_allowed_users:
-          type: textarea
-          label: 👥 Whitelisted Usernames for Export Download
-          help: "Enter authorized usernames (one per line or comma-separated) allowed to download interaction logs. Example: admin, milkboy"
-          default: "admin\nmilkboy"
 
         ai_chatbot_security_logs_display:
           type: chatbot-security-logs
@@ -562,29 +524,6 @@ form:
       title: PLUGIN_AI_CHATBOT.LOGGING_SETTINGS
       underline: true
       fields:
-        logging_enabled:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.LOGGING_ENABLED
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-          validate:
-            type: bool
-
-        log_api_usage:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.LOG_API_USAGE
-          help: Track Token Usage & Estimated Cost
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-          validate:
-            type: bool
-
         log_ai_responses:
           type: toggle
           label: 🤖 Enable AI Server Response Logging
@@ -625,7 +564,7 @@ form:
           type: textarea
           label: 📁 Error Log File Location & Deleting Instructions
           help: Information on where error log files are stored and how to edit or clear error data.
-          default: "📁 Log File Path: user/data/ai-chatbot/error.log\nAbsolute Path: /var/www/html/user/data/ai-chatbot/error.log\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur."
+          default: "📁 Log File Path: user/data/ai-chatbot/error.log\n\n📝 Manual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur."
           rows: 5
           readonly: true
           ignore: true
@@ -678,7 +617,7 @@ form:
           type: textarea
           label: 📁 Telemetry Log File Location & Editing Instructions
           help: Information on where interaction log files are stored and how to edit or delete data.
-          default: "📁 Log File Path: user/data/ai-chatbot/interactions.json\nAbsolute Path: /var/www/html/user/data/ai-chatbot/interactions.json\n\n📝 Manual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query."
+          default: "📁 Log File Path: user/data/ai-chatbot/interactions.json\n\n📝 Manual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query."
           rows: 5
           readonly: true
           ignore: true

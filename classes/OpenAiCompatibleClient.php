@@ -12,40 +12,24 @@ class OpenAiCompatibleClient implements AiClientInterface
     protected string $apiKey;
     protected string $model;
     protected string $endpoint;
-    protected string $fallbackEndpoint;
     protected bool $isOpenRouter;
     protected int $timeout;
     protected int $maxTokens;
     protected int $contextWindowTokens;
 
-    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false, int $timeout = 30, int $maxTokens = 800, int $contextWindowTokens = 8192, string $fallbackEndpoint = '')
+    public function __construct(string $apiKey, string $model = 'gpt-4o-mini', string $endpoint = '', bool $isOpenRouter = false, int $timeout = 30, int $maxTokens = 800, int $contextWindowTokens = 8192)
     {
+        if ($endpoint === '') {
+            throw new \InvalidArgumentException('AI client requires an endpoint URL.');
+        }
+
         $this->apiKey = $apiKey;
         $this->model = $model ?: 'gpt-4o-mini';
         $this->isOpenRouter = $isOpenRouter;
         $this->timeout = max(5, $timeout);
         $this->maxTokens = max(50, $maxTokens);
         $this->contextWindowTokens = max(512, $contextWindowTokens);
-
-        if (!empty($endpoint)) {
-            $this->endpoint = rtrim($endpoint, '/') . '/chat/completions';
-        } elseif ($isOpenRouter) {
-            $this->endpoint = 'https://openrouter.ai/api/v1/chat/completions';
-        } else {
-            $this->endpoint = 'https://api.openai.com/v1/chat/completions';
-        }
-
-        if (!empty($fallbackEndpoint)) {
-            if (preg_match('/localhost|127\.0\.0\.1/i', $fallbackEndpoint)) {
-                $fallbackEndpoint = preg_replace('/localhost|127\.0\.0\.1/i', 'host.docker.internal', $fallbackEndpoint);
-            }
-            if (!preg_match('/\/v1\/?$/i', $fallbackEndpoint) && !preg_match('/\/v1\/chat\/completions\/?$/i', $fallbackEndpoint)) {
-                $fallbackEndpoint = rtrim($fallbackEndpoint, '/') . '/v1';
-            }
-            $this->fallbackEndpoint = rtrim($fallbackEndpoint, '/') . '/chat/completions';
-        } else {
-            $this->fallbackEndpoint = '';
-        }
+        $this->endpoint = rtrim($endpoint, '/') . '/chat/completions';
     }
 
     public function generateResponse(string $systemPrompt, array $messages): array
@@ -82,7 +66,7 @@ class OpenAiCompatibleClient implements AiClientInterface
             'stream' => false
         ];
 
-        $isOllama = str_contains(strtolower($this->endpoint), 'ollama') || str_contains($this->endpoint, '110.120') || str_contains($this->endpoint, '127.0.0.1') || str_contains($this->endpoint, 'localhost');
+        $isOllama = str_contains(strtolower($this->endpoint), 'ollama') || str_contains($this->endpoint, '127.0.0.1') || str_contains($this->endpoint, 'localhost');
         if ($isOllama) {
             $payload['options'] = [
                 'num_ctx' => $this->contextWindowTokens,
@@ -113,38 +97,6 @@ class OpenAiCompatibleClient implements AiClientInterface
         $curlError = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-
-        // Fallback retry for secondary endpoint if primary connection timed out or failed
-        if (!empty($curlError)) {
-            $fallbackUrl = $this->fallbackEndpoint;
-            if (empty($fallbackUrl) && (strpos($this->endpoint, '100.100.75.77') !== false || strpos($this->endpoint, '192.168.18.12') !== false)) {
-                $fallbackUrl = strpos($this->endpoint, '100.100.75.77') !== false
-                    ? str_replace('100.100.75.77', '192.168.18.12', $this->endpoint)
-                    : str_replace('192.168.18.12', '100.100.75.77', $this->endpoint);
-            }
-
-            if (!empty($fallbackUrl)) {
-                $chFallback = curl_init($fallbackUrl);
-                curl_setopt($chFallback, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($chFallback, CURLOPT_POST, true);
-                curl_setopt($chFallback, CURLOPT_POSTFIELDS, json_encode($payload));
-                curl_setopt($chFallback, CURLOPT_HTTPHEADER, $headers);
-                curl_setopt($chFallback, CURLOPT_CONNECTTIMEOUT, 5);
-                curl_setopt($chFallback, CURLOPT_TIMEOUT, $this->timeout);
-                curl_setopt($chFallback, CURLOPT_SSL_VERIFYPEER, true);
-
-                $responseFallback = curl_exec($chFallback);
-                $curlErrorFallback = curl_error($chFallback);
-                $httpCodeFallback = curl_getinfo($chFallback, CURLINFO_HTTP_CODE);
-                curl_close($chFallback);
-
-                if (empty($curlErrorFallback) && $httpCodeFallback === 200) {
-                    $response = $responseFallback;
-                    $curlError = null;
-                    $httpCode = $httpCodeFallback;
-                }
-            }
-        }
 
         if (!empty($curlError)) {
             return [
@@ -196,34 +148,30 @@ class OpenAiCompatibleClient implements AiClientInterface
         $rawContent = $messageObj['content'] ?? '';
         $rawReasoning = $messageObj['reasoning'] ?? '';
 
-        $cleanContent = $this->sanitizeCotOutput($rawContent);
-        $answer = $cleanContent;
-        if (empty($answer) && !empty($rawContent)) {
-            $answer = trim(preg_replace('/<\/?think>/i', '', $rawContent));
-        }
-        if (empty($answer)) {
-            $answer = 'OK';
-        }
+        $answer = $this->sanitizeCotOutput($rawContent);
 
-        if (empty($answer) && !empty($rawReasoning)) {
-            try {
-                if (class_exists('Grav\Common\Grav')) {
-                    $logger = new Logger(\Grav\Common\Grav::instance());
-                    $logger->logError("AI Model returned empty content; fallback to reasoning applied [Model: {$this->model}].", 'AI_MODEL_API');
-                }
-            } catch (\Throwable $t) {}
+        // Some reasoning models return only a reasoning field. Recover it before
+        // treating the response as empty, but never fabricate an answer.
+        if ($answer === '' && $rawReasoning !== '') {
             $answer = $this->sanitizeCotOutput($rawReasoning);
+            if ($answer !== '') {
+                try {
+                    if (class_exists('Grav\Common\Grav')) {
+                        (new Logger(\Grav\Common\Grav::instance()))->logError("AI Model returned empty content; reasoning fallback applied [Model: {$this->model}].", 'AI_MODEL_API');
+                    }
+                } catch (\Throwable $t) {}
+            }
         }
 
         $promptTokens = (int)($data['usage']['prompt_tokens'] ?? 0);
         $completionTokens = (int)($data['usage']['completion_tokens'] ?? 0);
 
         return [
-            'success' => !empty($answer),
+            'success' => $answer !== '',
             'answer' => $answer,
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
-            'error' => null
+            'error' => $answer === '' ? 'Empty response from provider.' : null
         ];
     }
 
@@ -270,7 +218,7 @@ class OpenAiCompatibleClient implements AiClientInterface
         $monologueStarters = '/^(?:Wait|Actually|Hmm|OK|Okay|So|Now|Let me|Alright|Right|First|Well),?\s/i';
 
         if (preg_match($monologueStarters, $trimmed3) && preg_match($selfRefIndicators, $trimmed3)) {
-            // The response starts with a thinking cue and references the user/input — it's internal monologue
+            // The response starts with a thinking cue and references the user/input; treat it as internal monologue
             // Try to extract an actual answer after a double-newline break
             if (preg_match('/\n\s*\n+((?!(?:Wait|Actually|Hmm|OK|Okay|So|Now|Let me|Alright|Right|First|Well),?\s).*)/si', $trimmed3, $m3)) {
                 $candidate = trim($m3[1]);

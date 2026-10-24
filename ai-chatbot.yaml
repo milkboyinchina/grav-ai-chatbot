@@ -1,11 +1,10 @@
 enabled: true
 ai_enabled: true
 ai_disabled_response_text: "AI assistant is currently disabled. Please search our FAQ or contact site support for assistance."
-provider: omniroute
+provider: gemini
 api_key: ''
 model: 'gemini-3.1-flash-lite'
 custom_endpoint: ''
-fallback_endpoint: ''
 api_timeout: 30
 max_tokens: 800
 max_input_tokens: 500
@@ -34,16 +33,11 @@ rate_limit_enabled: true
 rate_limit_max_requests: 10
 rate_limit_window_seconds: 60
 blacklist_filter_enabled: true
-blacklist_words: "spam\nscam\nhack\nexploit\nbypass\nadmin_password\nsecret_token\nauth_token\nsession_key\nprivate_key\nid_rsa\nleak\nporn\ncasino\ngambling\nillegal\nignore previous instructions\nforget all prior instructions\noverride system prompt\nsystem prompt\njailbreak\ndan mode\ndeveloper mode\npretend you are\nreveal system prompt\nshow your rules\n<script\njavascript:\nonerror=\nonload=\neval(\nexec(\ndocument.cookie\nwindow.localStorage\nfetch(\n<iframe\n<svg/onload\n<img src=x\nunion select\ndrop table\ninsert into\nupdate users\ndelete from\nor 1=1\ninformation_schema\nsys.tables\n; --\netc/passwd\netc/shadow\ndocker.sock\n.env\napi_key\nvps_root\nconfig.php\nsystem.yaml\nuser/config\ncat /etc/passwd\nrm -rf\nchmod 777\nwget http\ncurl -O\nnc -e\n/bin/sh\n/bin/bash\nsudo su\npowershell -e"
+blacklist_words: "spam\nscam\nexploit\nadmin_password\nsecret_token\nauth_token\nsession_key\nprivate_key\nid_rsa\nleak\nporn\ncasino\ngambling\nillegal\nignore previous instructions\nforget all prior instructions\noverride system prompt\nsystem prompt\njailbreak\ndan mode\ndeveloper mode\npretend you are\nreveal system prompt\nshow your rules\n<script\njavascript:\nonerror=\nonload=\ndocument.cookie\nwindow.localStorage\n<iframe\n<svg/onload\n<img src=x\nunion select\ndrop table\ninsert into\nupdate users\ndelete from\nor 1=1\ninformation_schema\nsys.tables\n; --\netc/passwd\netc/shadow\ndocker.sock\nvps_root\nconfig.php\nsystem.yaml\nuser/config\ncat /etc/passwd\nrm -rf\nchmod 777\nwget http\ncurl -O\nnc -e\n/bin/sh\n/bin/bash\nsudo su\npowershell -e"
 blacklist_response_text: "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language."
-
-export_require_auth: true
-export_allowed_users: "admin\nmilkboy"
 
 session_retention_days: 7
 
-logging_enabled: true
-log_api_usage: true
 log_ai_responses: false
 cost_input_token_price_per_m: '0.15'
 cost_output_token_price_per_m: '0.60'
@@ -64,8 +58,8 @@ quick_replies:
     type: action
     action_or_prompt: summarize_page
   - label: '📞 Contact Owner'
-    type: action
-    action_or_prompt: contact
+    type: question
+    action_or_prompt: 'How can I contact the site owner?'
   - label: '❓ Founding Date'
     type: question
     action_or_prompt: 'When was this company established?'

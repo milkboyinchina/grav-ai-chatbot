@@ -4,7 +4,7 @@
 [![Grav CMS](https://img.shields.io/badge/Grav-2.0%2B-orange.svg)](https://getgrav.org)
 [![Version](https://img.shields.io/badge/Version-v2.0.0-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
 
-An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retrieval-Augmented Generation (RAG) vector search, multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, date range analytics filtering, and visual telemetry dashboards.
+An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retrieval-Augmented Generation (RAG) vector search, multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, and telemetry dashboards.
 
 ## 🌐 Live Demo & Hardware Benchmark Test
 
@@ -54,24 +54,19 @@ The plugin includes a multi-layered security hardening suite protecting against 
   - Registers job `ai-chatbot-rag-reindex` automatically with Grav CMS Scheduler.
   - *Note*: Requires standard system crontab setup (`* * * * * cd /path/to/grav && php bin/grav scheduler`). See [`MANUAL.md`](MANUAL.md#2-grav-scheduler--automated-cron-setup) for details.
 
-- ⚡ **Multi-Provider AI Engines & Dual-Endpoint Failover**:
-  - **Groq API** (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) — Ultra-fast sub-second LLM inference.
+- ⚡ **Multi-Provider AI Engines**:
+  - **Groq API** (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`): Ultra-fast sub-second LLM inference.
   - **Google Gemini API** (`gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-flash-001`, `gemini-2.0-flash-lite-001`; also supports `gemini-3.1-flash-lite`).
-    *(Disclaimer: Not sponsored by Google — please Google, donate some tokens! 😅)*
+    *(Disclaimer: Not sponsored by Google, please Google, donate some tokens! 😅)*
   - **OpenRouter API** (`google/gemini-flash-1.5`, `anthropic/claude-3.5-sonnet`).
   - **OpenAI API** (`gpt-4o-mini`, `gpt-4o`).
-  - **Custom Endpoints & Configurable Failover** (Local Ollama, Tailscale VPN hosts, vLLM, or self-hosted OpenAI-compatible servers with **automatic primary & secondary endpoint failover**).
-  - **Shipped defaults**: `provider: omniroute` (Custom OpenAI-Compatible) with `model: gemini-3.1-flash-lite`, plus `custom_endpoint` left blank for the administrator to set.
+  - **Custom Endpoints** (Local Ollama, Tailscale VPN hosts, vLLM, or OmniRoute gateways). Ollama and OmniRoute require a valid `http` or `https` endpoint.
+  - **Shipped defaults**: `provider: gemini` with `model: gemini-3.1-flash-lite`. Set `custom_endpoint` only for `ollama` or `omniroute`.
 
 - 🛡️ **Configurable AI Disabled Reply & Offline Fallback**:
   - Toggle AI generation on/off (`ai_enabled`).
   - Set a custom reply message (`ai_disabled_response_text`) to display when no local FAQ answer match is found and AI fallback is disabled.
   - **Uninterrupted FAQ Pre-Matching**: Local FAQ answers are always matched and delivered first with 0 AI API calls.
-
-<!--
-- 🔌 **Live AI Connection Test**:
-  - Click **`[ 🔌 Test AI Connection ]`** in Grav Admin settings to test API keys and models live before saving configuration.
--->
 
 - ❓ **Semantic FAQ Pre-Matching Engine**:
   - Pre-matches visitor questions against localized `/faq` pages.
@@ -81,7 +76,6 @@ The plugin includes a multi-layered security hardening suite protecting against 
 
 - 📊 **Real-Time Interaction Metrics & Analytics Dashboard (`<chatbot-metrics>`)**:
   - **Live KPI Metrics**: Total Conversations, Completion Tokens, Estimated API Cost (USD), and Active AI Engine Provider.
-  - **Date Range Telemetry Filter**: Filter metrics and graphs by **Last 7 Days**, **Last 30 Days**, **Last 90 Days**, **Last 180 Days**, **Last 365 Days**, or **All Time**.
   - **Live Data Refresh**: Real-time **`[ 🔄 Refresh ]`** action for live metric updates without page reloads.
 
 - 💡 **Candidate FAQ Recommendations Engine (`FaqRecommender.php`)**:
@@ -96,9 +90,9 @@ The plugin includes a multi-layered security hardening suite protecting against 
   - Live threat meter (`🟢 System Secure` / `⚠️ Active Lockout`), blocked threat feed, and one-click IP lockout release actions.
 
 - 📥 **Export & Download Options**:
-  - **CSV Report Download**: `/chatbot-export?format=csv&range=...`
-  - **JSON Analytics Dataset**: `/chatbot-export?format=json&range=...`
-  - **Raw Interactions JSON Download**: `/chatbot-export?format=raw_interactions&range=all`
+  - **CSV Report Download**: `/api/v1/ai-chatbot/export?format=csv` (`api.system.read`)
+  - **JSON Analytics Dataset**: `/api/v1/ai-chatbot/export?format=json` (`api.system.read`)
+  - **Raw Interactions JSON Download**: `/api/v1/ai-chatbot/export?format=raw_interactions` (`api.system.read`)
 
 - 💬 **Customizable Quick Reply Buttons**:
   - Configure quick reply suggestion pills directly in Grav Admin (**`📝 Summarize Page`**, **`📞 Contact Owner`**, **`❓ Founding Date`**, or custom prompts).
@@ -171,23 +165,24 @@ Navigate to **Grav Admin -> Plugins -> Grav AI Chatbot** to configure:
 | Setting Group | Configuration Fields |
 | :--- | :--- |
 | **RAG Retrieval & Vector Store** | Master RAG Toggle (`rag_enabled`), Page Auto-Indexing (`rag_indexing_enabled`), Embedding Provider (Ollama / Gemini / OpenAI / TF-IDF), Top-K Chunks, Min Similarity %, **Grav Scheduler Re-Indexing Cron**, **`⚡ Rebuild RAG Index` Button** |
-| **AI Provider Settings** | Enable AI Fallback (`ai_enabled`), **AI Disabled Response Message (`ai_disabled_response_text`)**, Provider Select, API Key, Model Identifier, Custom Endpoint, **Live Test AI Connection Button** |
+| **AI Provider Settings** | Enable AI Fallback (`ai_enabled`), **AI Disabled Response Message (`ai_disabled_response_text`)**, Provider Select, API Key, Model Identifier, Custom Endpoint, **Model Tools & Live Health Check** |
 | **FAQ Settings** | Enable FAQ Pre-Matching, Multilingual FAQ Matching, FAQ Route (`/faq`), Similarity Sensitivity Threshold (%) |
 | **Contact Resolution** | Public Contact Route (`/contact`), Enable Hidden Contact Page, Hidden Contact Route (`/hidden-contacts`) |
 | **Chatbot Widget UI** | Theme Presets, Floating Position, Page Display Visibility Rules, Welcome Message, Accent Color, **Quick Reply Buttons List** |
 | **Proactive Toasts** | Enable Toast, Toast Text, Delay Seconds |
 | **Session Retention** | Session Retention Period (Days) |
-| **Security & Limits** | IP Rate Limiting Enable, Max Requests Per Window, Window Duration (Seconds), Strict Site Scope |
-| **Analytics & Telemetry** | Enable Interaction Logging, **Date Range Filter (7d, 1m, 3m, 6m, 12m, All)**, Export CSV/JSON/Raw Links |
+| **Security & Limits** | IP Rate Limiting Enable, Max Requests Per Window, Window Duration (Seconds), Blacklist Guardrail Toggle, Blacklisted Vocabulary, Blacklist Response Text |
+| **Analytics & Telemetry** | Candidate FAQ Recommendations, Telemetry Log Location, Export CSV/JSON/Raw Links, Live Error & Security Audit Log |
 
 ---
 
 ## 📊 Analytics & Export API Endpoints
 
 - **Live Analytics Report**: `GET /api/v1/ai-chatbot/metrics` (Requires `X-API-Token: <token>`; response includes aggregated `analytics` data).
-- **CSV Download**: `GET /api/v1/ai-chatbot/export?format=csv` (or legacy `/chatbot-export?format=csv&range=30d`)
-- **JSON Download**: `GET /api/v1/ai-chatbot/export?format=json` (or legacy `/chatbot-export?format=json&range=90d`)
-- **Raw Interactions Download**: `GET /api/v1/ai-chatbot/export?format=raw_interactions` (or legacy `/chatbot-export?format=raw_interactions&range=all`)
+- **CSV Download**: `GET /api/v1/ai-chatbot/export?format=csv` (requires `api.system.read`)
+- **JSON Download**: `GET /api/v1/ai-chatbot/export?format=json` (requires `api.system.read`)
+- **Raw Interactions Download**: `GET /api/v1/ai-chatbot/export?format=raw_interactions` (requires `api.system.read`)
+- **Legacy export shim**: `/chatbot-export?format=csv|json|raw_interactions` requires an authenticated administrator with `admin.super` or `admin.plugins`.
 
 ---
 
@@ -196,4 +191,4 @@ Navigate to **Grav Admin -> Plugins -> Grav AI Chatbot** to configure:
 This project is licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE).
 
 ## Credits
-> Countless free API tokens were brutally sacrificed during the testing of this bot—may their KV caches rest in peace. 🕊️
+> Countless free API tokens were brutally sacrificed during the testing of this bot; may their KV caches rest in peace. 🕊️

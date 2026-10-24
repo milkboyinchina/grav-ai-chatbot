@@ -36,22 +36,9 @@
       </div>
     </div>
 
-    <!-- Quick Action Pills -->
+    <!-- Quick Action Pills (rendered by chatbot.js from the global config) -->
     {% if config.plugins['ai-chatbot'].quick_replies_enabled|default(true) %}
-      <div class="grav-chatbot-quick-actions">
-        {% set replies = config.plugins['ai-chatbot'].quick_replies|default([
-          {'label': '📝 Summarize Page', 'type': 'action', 'action_or_prompt': 'summarize_page'},
-          {'label': '📞 Contact Owner', 'type': 'action', 'action_or_prompt': 'contact'},
-          {'label': '❓ Founding Date', 'type': 'question', 'action_or_prompt': 'When was this company established?'}
-        ]) %}
-        {% for item in replies %}
-          {% if item.type == 'action' %}
-            <button type="button" class="grav-chatbot-pill" data-action="{{ item.action_or_prompt|e('html_attr') }}">{{ item.label }}</button>
-          {% else %}
-            <button type="button" class="grav-chatbot-pill" data-prompt="{{ item.action_or_prompt|e('html_attr') }}">{{ item.label }}</button>
-          {% endif %}
-        {% endfor %}
-      </div>
+      <div class="grav-chatbot-quick-actions"></div>
     {% endif %}
 
     <!-- Input Form -->

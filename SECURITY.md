@@ -59,9 +59,9 @@ graph TD
    - Strips zero-width characters and converts leetspeak obfuscations (`h4ck` $\rightarrow$ `hack`, `byp4ss` $\rightarrow$ `bypass`, `@dmin` $\rightarrow$ `admin`) before evaluation.
 2. **5-Category Defense Matrix (`SecurityGuardrail.php`)**:
    - **Prompt Injections & Jailbreaks**: Detects and blocks `ignore previous instructions`, `reveal system prompt`, `dan mode`, `developer mode`, `abaikan instruksi`.
-   - **Script Injection (XSS)**: Blocks `<script`, `javascript:`, `onerror=`, `onload=`, `eval(`, `fetch(`.
+   - **Script Injection (XSS)**: Blocks `<script`, `javascript:`, `onerror=`, `onload=`, `<iframe`.
    - **SQL Injection**: Blocks `union select`, `drop table`, `insert into`, `or 1=1`, `; --`.
-   - **Credential Probes**: Blocks probes targeting `.env`, `user/config`, `admin_password`, `secret_token`, `id_rsa`.
+   - **Credential Probes**: Blocks probes targeting `user/config`, `admin_password`, `secret_token`, `id_rsa`.
    - **System Commands**: Blocks `cat /etc/passwd`, `rm -rf`, `chmod 777`, `sudo su`, `/bin/bash`.
 3. **Strict Read-Only Knowledge Scope (`user/pages/` & RAG Only)**:
    - System prompt directives and input inspection restrict the AI Chatbot's access **STRICTLY to read-only content from `user/pages/`** and its RAG embeddings index (`user/data/ai-chatbot/rag_index.sqlite`). The chatbot has zero access to server files, credentials, or `user/config/`.
@@ -76,5 +76,5 @@ graph TD
 
 1. **Keep Grav & PHP Updated**: Ensure your web server runs PHP 8.3+ and Grav CMS 2.0+.
 2. **Enable Blacklisted Words Filter**: Maintain `blacklist_filter_enabled: true` in plugin configuration.
-3. **Restrict Export Downloads**: Enable `export_require_auth: true` and specify whitelisted usernames (`export_allowed_users`) allowed to download interaction logs.
+3. **Restrict Export Downloads**: The legacy `/chatbot-export` shim always requires an authenticated Grav administrator with `admin.super` or `admin.plugins`. The REST endpoint `/api/v1/ai-chatbot/export` additionally requires `api.system.read`.
 4. **Monitor Admin 2 Security Logs**: Periodically review the `<chatbot-security-logs>` card in Grav Admin 2 to audit blocked threat attempts and active IP lockouts.

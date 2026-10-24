@@ -1,4 +1,4 @@
-# Grav CMS AI Chatbot — User-Friendly Admin & Configuration Manual
+# Grav CMS AI Chatbot: User-Friendly Admin & Configuration Manual
 
 Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`user/plugins/ai-chatbot`). This guide is designed to match the **Grav Admin Plugin Configuration Page** (**Plugins -> AI Chatbot**) step-by-step, clearly explaining every section, field, cross-section dependency, API key reuse rule, and background automation process.
 
@@ -46,12 +46,11 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 | :--- | :--- | :--- | :--- |
 | **Enable AI Fallback** | `ai_enabled` | `1` (Enabled) | Master toggle for cloud AI generation. When disabled, only local FAQ answers are delivered. |
 | **AI Disabled Message** | `ai_disabled_response_text` | *"AI assistant is currently disabled..."* | Text displayed to visitors when AI fallback is turned off. |
-| **AI Provider** | `provider` | `omniroute` | Options (in alphabetical order): `omniroute` (Custom OpenAI-Compatible), `gemini` (Google Gemini API), `groq` (Groq Cloud), `ollama` (Ollama Local Host), `openai` (OpenAI Official API), `openrouter` (OpenRouter AI Gateway). |
+| **AI Provider** | `provider` | `gemini` | Options (in alphabetical order): `gemini` (Google Gemini API), `groq` (Groq Cloud), `ollama` (Ollama Local Host), `omniroute` (OmniRoute OpenAI-compatible gateway), `openai` (OpenAI Official API), `openrouter` (OpenRouter AI Gateway). |
 | **API Key** | `api_key` | *Blank* | **🔑 SHARED FIELD**: Secret API Key. Used for chat completions AND reused by RAG when cloud embedding is selected (`gemini` or `openai`). Leave blank for local Ollama/TF-IDF. When this field is blank, the plugin falls back to the `AI_CHATBOT_API_KEY` environment variable (set it in `.env`) so the secret can stay out of version control. |
 | **Model Identifier** | `model` | `gemini-3.1-flash-lite` | Identifier string for chat completions (e.g. `gemini-3.1-flash-lite`, `gpt-4o-mini`, `qwen/qwen3.6-27b`, `openrouter/free`, `llama-3.3-70b-versatile`, `deepseek-r1`). |
 | **Model Tools & Live Health Check** | `model_operations` | *Custom Tool* | **🛠️ 3-STEP WIZARD**: Step 1 (🔑 Test Key), Step 2 (🔄 Retrieve Models sorted alphabetically), Step 3 (⚡ Health Ping & ✨ Use This Model with **✍️ Switch to Unlisted / Custom Model Input** button). |
-| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Primary endpoint URL. Required for `omniroute` (Custom OpenAI-Compatible) and remote Ollama hosts (e.g., `http://110.120.130.140:20128/`). |
-| **Fallback Endpoint URL**| `fallback_endpoint` | *Blank* | **🔄 FAILOVER FIELD**: Optional secondary/fallback endpoint URL (e.g., `http://192.168.18.12:11434/`). Automatically retried if primary endpoint connection fails or times out (3s). |
+| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Base endpoint URL. Required for `omniroute` and `ollama`. Must be a valid `http` or `https` URL, for example `https://gateway.example.com/v1`. |
 | **API Timeout (Sec)** | `api_timeout` | `30` | Maximum HTTP execution time in seconds (Range: 5 - 120s). |
 | **Max Output Tokens** | `max_tokens` | `800` | Token limit for AI completion replies (Range: 50 - 4,000 tokens). |
 | **Max Input Tokens** | `max_input_tokens` | `500` | Maximum allowed tokens per user question (~2000 characters). |
@@ -62,7 +61,7 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 ### 🌟 Why Google Gemini API (`gemini-2.0-flash`) is a Recommended Free-Tier Option
 
 > [!NOTE]
-> **Shipped defaults**: the plugin installs with `provider: omniroute` (Custom OpenAI-Compatible) and `model: gemini-3.1-flash-lite`. Switch to `gemini` and set your API key if you want to use the Google free tier described below.
+> **Shipped defaults**: the plugin installs with `provider: gemini` and `model: gemini-3.1-flash-lite`. Set your API key, or switch provider if you use Groq, OpenRouter, OpenAI, Ollama, or an OmniRoute gateway.
 
 > [!TIP]
 > **Why Google Gemini Free Tier is Best for Testing & Production**:
@@ -318,12 +317,9 @@ quick_replies:
 | **Rate Limiting** | `rate_limit_enabled` | `1` (Enabled) | Protects against API quota exhaustion and spam attacks. |
 | **Max Requests** | `rate_limit_max_requests` | `10` | Maximum requests allowed per IP within the time window. |
 | **Window Duration (Sec)** | `rate_limit_window_seconds` | `60` | Time window duration in seconds (Default 60s). |
-| **Strict Site Scope** | `strict_site_scope` | `1` (Enabled) | Restricts AI answers strictly to your website scope. |
 | **Blacklist Guardrail** | `blacklist_filter_enabled` | `1` (Enabled) | Blocks queries containing forbidden terms before sending to AI API. |
-| **Blacklisted Vocabulary** | `blacklist_words` | `spam\nscam\nhack...` | List of restricted words/profanity (one per line). |
+| **Blacklisted Vocabulary** | `blacklist_words` | `spam\nscam\nexploit...` | List of restricted words/profanity (one per line). |
 | **Blacklist Response Text**| `blacklist_response_text` | *"⚠️ Safety Guardrail..."* | Warning message shown to visitors when restricted terms are detected. |
-| **Restrict Export Access** | `export_require_auth` | `1` (Enabled) | Requires user to be logged into Grav Admin to download CSV/JSON reports. |
-| **Whitelisted Export Users**| `export_allowed_users` | `admin\nmilkboy` | Authorized usernames allowed to download telemetry files (one per line). |
 
 ---
 
@@ -331,8 +327,6 @@ quick_replies:
 
 | Field Label | Setting Key | Default Value | Options & Dependencies Used |
 | :--- | :--- | :--- | :--- |
-| **Logging Enabled** | `logging_enabled` | `1` (Enabled) | Logs visitor queries to `user/data/ai-chatbot/interactions.json`. |
-| (WIP) **Log API Usage & Costs** | `log_api_usage` | `1` (Enabled) | Tracks token consumption and calculates estimated USD costs. |
 | (WIP) **Log AI Server Responses**| `log_ai_responses` | `0` (Disabled) | Records raw AI payloads to `user/data/ai-chatbot/ai_responses.log`. |
 | (WIP) **Input Token Price ($/1M)**| `cost_input_token_price_per_m` | `0.15` | Input price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.15). |
 | (WIP) **Output Token Price ($/1M)**| `cost_output_token_price_per_m`| `0.60` | Output price per 1M tokens in USD (e.g. Gemini 1.5 Flash = $0.60). |
@@ -341,14 +335,14 @@ quick_replies:
 
 ## Section 9: 📊 AI Analytics & Performance Dashboard (`section_analytics`)
 
-Access visual dashboards under **Grav Admin -> Plugins -> AI Chatbot -> Section 9**:
+Access the telemetry dashboard under **Grav Admin -> Plugins -> AI Chatbot -> Section 9**:
 
-- (WIP) **Update Chart Metrics Button**: Click **`🔄 Update & Regenerate Chart Metrics`** to sync live charts instantly.
-- (WIP) **Visual SVG Graphs**: View daily interaction volume bar charts and query source ratios (FAQ Hits vs AI Calls vs Rate Limits).
-- **Export Links**:
-  - CSV Report: `/chatbot-export?format=csv&range=30d`
-  - JSON Analytics: `/chatbot-export?format=json&range=90d`
-  - Raw Interaction Logs: `/chatbot-export?format=raw_interactions&range=all`
+- **Candidate FAQ Recommendations**: Queries handled by the AI API, grouped for review before adding them to the `/faq` page.
+- **Telemetry Log Location**: File path and instructions for inspecting `user/data/ai-chatbot/interactions.json`.
+- **Export Links**: The legacy `/chatbot-export` shim requires an authenticated administrator with `admin.super` or `admin.plugins`:
+  - CSV Report: `/chatbot-export?format=csv`
+  - JSON Analytics: `/chatbot-export?format=json`
+  - Raw Interaction Logs: `/chatbot-export?format=raw_interactions`
 
 ---
 

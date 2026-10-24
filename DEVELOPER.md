@@ -1,4 +1,4 @@
-# Grav AI Chatbot Plugin — Developer & Architecture Guide (`DEVELOPER.md`)
+# Grav AI Chatbot Plugin: Developer & Architecture Guide (`DEVELOPER.md`)
 
 This guide provides technical specifications, class relationships, REST API endpoints, Admin 2 Web Component field contracts, and security guardrail architecture for developers extending or contributing to **`ai-chatbot`**.
 
@@ -17,7 +17,7 @@ graph TD
     E2 -->|Contact Intent| F2[Local Contact Info Response]
     E2 -->|No Match| G[Rag Retriever SQLite Vector Search]
     G --> H[AiClientFactory.php to GeminiClient or OpenAiCompatibleClient]
-    H --> I[LLM API Provider Gemini/Groq/Custom OpenAI-Compatible/OpenAI/OpenRouter/Ollama]
+    H --> I[LLM API Provider Gemini/Groq/OpenAI/OpenRouter/Ollama/OmniRoute]
     I --> J[Logger.php Telemetry and Cost Accounting]
     J --> K[JSON Output Response to Frontend]
 ```
@@ -34,9 +34,9 @@ graph TD
 | **`Rag\Retriever`** | `classes/Rag/Retriever.php` | Similarity search over the SQLite vector store; returns Top-K chunks for the prompt. |
 | **`RateLimiter`** | `classes/RateLimiter.php` | Per-IP rolling-window request limiting backed by Grav cache. |
 | **`AiClientFactory`** | `classes/AiClientFactory.php` | Selects the concrete AI client (`GeminiClient` or `OpenAiCompatibleClient`) from provider config. |
-| **`OpenAiCompatibleClient`** | `classes/OpenAiCompatibleClient.php` | Driver for OpenAI, Groq, OpenRouter, Custom OpenAI-Compatible, and Ollama APIs with system security boundary injection. |
+| **`OpenAiCompatibleClient`** | `classes/OpenAiCompatibleClient.php` | Driver for OpenAI, Groq, OpenRouter, OmniRoute, and Ollama APIs with system security boundary injection. |
 | **`Logger`** | `classes/Logger.php` | Interaction telemetry recording (`interactions.json`), cost calculation, and error logging (`error.log`). |
-| **`AnalyticsReportGenerator`** | `classes/AnalyticsReportGenerator.php` | Date-range telemetry filtering, chart data aggregation, and CSV/JSON export generation. |
+| **`AnalyticsReportGenerator`** | `classes/AnalyticsReportGenerator.php` | Telemetry aggregation, FAQ candidate recommendations, and CSV/JSON export generation. |
 
 ---
 
@@ -57,11 +57,12 @@ All modern client-side chat widgets and Admin 2 dashboard components communicate
 | POST | `/ai-chatbot/test-key`, `/models`, `/health` | `api.system.write` | Provider tools (Admin2 model-tools). |
 | POST | `/ai-chatbot/reindex` | `api.system.write` | Rebuild RAG index. |
 | POST | `/ai-chatbot/unlock` | `api.system.write` | Release IP lockouts. |
+| POST | `/ai-chatbot/clear-logs` | `api.system.write` | Clear `error.log` and release IP lockouts. |
 
 All responses use the `{ "data": { ... } }` JSON envelope.
 
 ### Legacy Shim (`/chatbot-api`)
-The legacy `/chatbot-api` endpoint is **deprecated** and maintained as a fallback for the public chat widget. It serves visitor queries only (`query`, `summarize_page`). All administrative actions (`get_metrics`, `test_api_key`, `fetch_models`, etc.) return `HTTP 403 Forbidden` and must use the REST API with `X-API-Token`. Planned for complete removal in version 3.0.0.
+The legacy `/chatbot-api` endpoint is **deprecated** and maintained as a fallback for the public chat widget. It serves only the allowlisted visitor actions (`query`, `force_ai`, `summarize_page`). Every other action returns `HTTP 403 Forbidden` and must use the REST API with `X-API-Token`. Planned for complete removal in version 3.0.0.
 
 ---
 
@@ -99,9 +100,9 @@ Grav Admin 2 renders custom blueprint fields as native Web Components. Component
 
 2. **5-Category Defense Matrix (`SecurityGuardrail.php`)**:
    - **Prompt Injection**: `ignore previous instructions`, `reveal system prompt`, `dan mode`, `abaikan instruksi`.
-   - **XSS Script Injection**: `<script`, `javascript:`, `onerror=`, `onload=`, `fetch(`.
+   - **XSS Script Injection**: `<script`, `javascript:`, `onerror=`, `onload=`, `<iframe`.
    - **SQL Injection**: `union select`, `drop table`, `insert into`, `or 1=1`.
-   - **Credential Probes**: `.env`, `user/config`, `admin_password`, `id_rsa`.
+   - **Credential Probes**: `user/config`, `admin_password`, `secret_token`, `id_rsa`.
    - **Command Injection**: `cat /etc/passwd`, `rm -rf`, `sudo su`, `powershell`.
 
 3. **Strict Read-Only Scope (`user/pages/` & RAG Only)**:

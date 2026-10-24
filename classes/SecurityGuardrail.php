@@ -19,7 +19,7 @@ class SecurityGuardrail
     protected static function getRateLimitFile(): string
     {
         if (empty(self::$rateLimitFile)) {
-            self::$rateLimitFile = (defined('GRAV_ROOT') ? GRAV_ROOT : '') . '/user/data/ai-chatbot/security_violations.json';
+            self::$rateLimitFile = DataPath::file('security_violations.json');
         }
         return self::$rateLimitFile;
     }
@@ -46,11 +46,8 @@ class SecurityGuardrail
         '/javascript:/i',
         '/onerror=/i',
         '/onload=/i',
-        '/eval\(/i',
-        '/exec\(/i',
         '/document\.cookie/i',
         '/window\.localStorage/i',
-        '/fetch\(/i',
         '/<iframe/i',
         '/<svg\/onload/i',
         '/<img\s+src=x/i',
@@ -77,7 +74,6 @@ class SecurityGuardrail
         '/etc\/passwd/i',
         '/etc\/shadow/i',
         '/docker\.sock/i',
-        '/\.env/i',
         '/vps_root/i',
         '/config\.php/i',
         '/system\.yaml/i',
@@ -197,7 +193,6 @@ class SecurityGuardrail
             'config/plugins',
             'admin_password',
             'database password',
-            'api_key',
             'secret_key'
         ];
 

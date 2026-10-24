@@ -34,40 +34,6 @@ class ChatbotHandler
             $messagesHistory = $data['history'] ?? [];
             $currentRoute = $data['current_route'] ?? '/';
 
-            if ($action === 'analytics_report') {
-                $range = trim($data['range'] ?? 'all');
-                $generator = new AnalyticsReportGenerator($this->grav);
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'analytics' => $generator->getDashboardAnalyticsData($range)
-                ];
-            }
-
-            if ($action === 'clear_analytics') {
-                $logger = new Logger($this->grav);
-                $logger->clearLogs();
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'message' => 'All interaction telemetry records have been cleared successfully.'
-                ];
-            }
-
-            if ($action === 'generate_demo_data') {
-                $logger = new Logger($this->grav);
-                $count = $this->generateDemoTelemetryData($logger);
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'message' => "Successfully generated {$count} realistic sample interaction logs spanning the last 180 days!"
-                ];
-            }
-
-            if ($action === 'test_connection') {
-                return $this->testAiConnection($data);
-            }
-
             if ($action === 'test_api_key') {
                 return $this->testApiKey($data);
             }
@@ -80,7 +46,7 @@ class ChatbotHandler
                 return $this->testModelHealth($data);
             }
 
-            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs', 'fetch_models', 'test_model_health', 'test_api_key'];
+            $nonQuestionActions = ['summarize_page', 'rebuild_rag_index', 'get_metrics', 'get_security_logs', 'fetch_models', 'test_model_health', 'test_api_key'];
             if (empty($question) && !in_array($action, $nonQuestionActions, true)) {
                 return [
                     'http_code' => 400,
@@ -150,7 +116,7 @@ class ChatbotHandler
                 return [
                     'http_code' => 200,
                     'success' => true,
-                    'provider' => $this->config['provider'] ?? 'omniroute',
+                    'provider' => $this->config['provider'] ?? 'gemini',
                     'model' => $this->config['model'] ?? 'chatbot',
                     'stats' => [
                         'total_queries' => $summary['total_queries'] ?? 0,
@@ -170,33 +136,13 @@ class ChatbotHandler
                 ];
             }
 
-            if ($action === 'release_ip_lockouts') {
-                SecurityGuardrail::releaseLockouts();
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'message' => 'Active IP lockouts released.'
-                ];
-            }
-
-            if ($action === 'clear_security_logs') {
-                SecurityGuardrail::releaseLockouts();
-                $logger = new Logger($this->grav);
-                $logger->clearLogs();
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'message' => 'Security audit logs cleared.'
-                ];
-            }
-
             // Server-Side Input Query Truncation (Max 500 chars / ~125 tokens)
             if (mb_strlen($question) > 500) {
                 $question = mb_substr($question, 0, 500);
             }
 
             // TIER 0: Security Guardrail Inspection & IP Cool-Off Protection
-            $ipHash = hash('sha256', $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+            $ipHash = hash('sha256', RateLimiter::getClientIp());
 
             if (SecurityGuardrail::isIpLockedOut($ipHash)) {
                 $blockMsg = "⚠️ Security Protection: Excessive security violations detected from your network. Access is temporarily locked out for 15 minutes. Please try again later.";
@@ -215,14 +161,14 @@ class ChatbotHandler
                 if (!$inspection['allowed']) {
                     SecurityGuardrail::recordViolation($ipHash);
 
-                    $blockMsg = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
+                    $securityData = $this->config['blacklist_response_text'] ?? "⚠️ Safety Guardrail: Your message contains prohibited words or topics that violate our safety policy. Please rephrase your question using appropriate language.";
 
                     $logger = new Logger($this->grav);
                     // Do not persist raw visitor input in error logs (PII / prompt-injection payloads).
                     $logger->logError("Security Guardrail Blocked Query [IP Hash: " . substr($ipHash, 0, 8) . "]: " . $inspection['reason'] . " (chars=" . mb_strlen($question) . ")", 'GUARDRAIL');
                     $logger->logInteraction([
                         'question' => $question,
-                        'answer' => $blockMsg,
+                        'answer' => $securityData,
                         'source' => 'guardrail',
                         'provider' => 'security_filter',
                         'prompt_tokens' => 0,
@@ -232,7 +178,7 @@ class ChatbotHandler
                     return [
                         'http_code' => 200,
                         'success' => true,
-                        'answer' => $blockMsg,
+                        'answer' => $securityData,
                         'source' => 'guardrail'
                     ];
                 }
@@ -323,130 +269,57 @@ class ChatbotHandler
         }
     }
 
-    /**
-     * Generate demo telemetry data for testing.
-     */
-    public function generateDemoTelemetryData(Logger $logger): int
-    {
-        $logger->clearLogs();
-        $sampleQuestions = [
-            ["q" => "When was this company established?", "src" => "faq_match", "ans" => "Our company was established in 2020.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
-            ["q" => "What are your business operating hours?", "src" => "faq_match", "ans" => "Our team operates Monday through Friday from 9:00 AM to 5:00 PM PST.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
-            ["q" => "How can I contact customer support?", "src" => "faq_match", "ans" => "You can reach our support team by emailing support@example.com.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
-            ["q" => "What is the corporate office address?", "src" => "faq_match", "ans" => "Our headquarters are located at 100 Tech Plaza, San Francisco, CA.", "prov" => "groq", "p_tok" => 0, "c_tok" => 0],
-            ["q" => "Do you offer enterprise custom pricing packages?", "src" => "ai_api", "ans" => "Yes, we offer custom enterprise SLA and volume plans tailored to your organization.", "prov" => "groq", "p_tok" => 480, "c_tok" => 120],
-            ["q" => "What AI models are supported by this chatbot?", "src" => "ai_api", "ans" => "The plugin supports Groq (Llama 3), Google Gemini 1.5, OpenRouter, and OpenAI models.", "prov" => "gemini", "p_tok" => 520, "c_tok" => 140],
-            ["q" => "Is this chatbot compatible with dark mode themes?", "src" => "ai_api", "ans" => "Yes, it includes 5 visual presets including Emerald Dark and Glassmorphic Blue.", "prov" => "groq", "p_tok" => 410, "c_tok" => 95],
-            ["q" => "How can I reset my administrative password?", "src" => "ai_api", "ans" => "You can reset your admin password via CLI or the admin login link.", "prov" => "openai", "p_tok" => 610, "c_tok" => 160],
-            ["q" => "Can I export analytics data to CSV or JSON?", "src" => "ai_api", "ans" => "Yes, full interaction reports are exportable in CSV and JSON formats from the dashboard.", "prov" => "groq", "p_tok" => 390, "c_tok" => 85],
-            ["q" => "Is my data stored securely?", "src" => "ai_api", "ans" => "Yes, all data remains strictly within your self-hosted Grav instance without external tracking.", "prov" => "groq", "p_tok" => 450, "c_tok" => 110],
-        ];
-
-        $records = [];
-        $now = time();
-
-        for ($i = 0; $i < 60; $i++) {
-            $daysAgo = (int)floor(($i / 60) * 175);
-            $timestamp = date('c', $now - ($daysAgo * 86400) - rand(100, 7200));
-
-            $item = $sampleQuestions[$i % count($sampleQuestions)];
-            $promptTok = $item['p_tok'] > 0 ? $item['p_tok'] + rand(-50, 50) : 0;
-            $compTok = $item['c_tok'] > 0 ? $item['c_tok'] + rand(-20, 30) : 0;
-            $totalTok = $promptTok + $compTok;
-            $estCost = ($totalTok / 1000000) * 0.15;
-
-            $records[] = [
-                'id' => uniqid('demo_', true),
-                'timestamp' => $timestamp,
-                'ip_hash' => substr(md5('demo_user_' . ($i % 8)), 0, 8),
-                'question' => $item['q'],
-                'answer' => $item['ans'],
-                'source' => $item['src'],
-                'provider' => $item['prov'],
-                'prompt_tokens' => $promptTok,
-                'completion_tokens' => $compTok,
-                'total_tokens' => $totalTok,
-                'estimated_cost_usd' => round($estCost, 6)
-            ];
-        }
-
-        $logger->saveLogs($records);
-        return count($records);
-    }
-
-    /**
-     * Test AI Connection via API parameters.
-     */
-    protected function testAiConnection(array $data): array
-    {
-        $provider = strtolower(trim($data['provider'] ?? $this->config['provider'] ?? 'groq'));
-        $apiKey = trim($data['api_key'] ?? $this->config['api_key'] ?? '');
-        $model = trim($data['model'] ?? $this->config['model'] ?? 'llama-3.3-70b-versatile');
-        $customEndpoint = trim($data['custom_endpoint'] ?? $this->config['custom_endpoint'] ?? '');
-        $enableFallback = !empty($data['enable_fallback_endpoint']) || !empty($this->config['enable_fallback_endpoint']);
-        $fallbackEndpoint = $enableFallback ? trim($data['fallback_endpoint'] ?? $this->config['fallback_endpoint'] ?? '') : '';
-
-        if (empty($apiKey) && in_array($provider, ['groq', 'gemini', 'openai', 'openrouter'], true)) {
-            $msg = "API Key is required for provider '{$provider}'.";
-            $logger = new Logger($this->grav);
-            $logger->logError($msg, 'TEST_CONNECTION');
-            return [
-                'http_code' => 400,
-                'success' => false,
-                'message' => $msg
-            ];
-        }
-
-        try {
-            $client = AiClientFactory::create([
-                'provider' => $provider,
-                'api_key' => $apiKey,
-                'model' => $model,
-                'custom_endpoint' => $customEndpoint,
-                'enable_fallback_endpoint' => $enableFallback,
-                'fallback_endpoint' => $fallbackEndpoint
-            ]);
-
-            $res = $client->generateResponse('Reply with "PONG".', [
-                ['role' => 'user', 'content' => 'Ping test connection']
-            ]);
-
-            $answer = is_array($res) ? ($res['answer'] ?? '') : (string)$res;
-            $success = is_array($res) ? !empty($res['success']) : !empty($answer);
-
-            if ($success && !empty($answer)) {
-                return [
-                    'http_code' => 200,
-                    'success' => true,
-                    'message' => "Successfully connected to {$provider} ({$model})! Response: {$answer}"
-                ];
-            }
-
-            $errMsg = is_array($res) && !empty($res['error']) ? $res['error'] : "Connected to {$provider}, but received empty response payload.";
-            $logger = new Logger($this->grav);
-            $logger->logError($errMsg, 'TEST_CONNECTION');
-            return [
-                'http_code' => 500,
-                'success' => false,
-                'message' => $errMsg
-            ];
-        } catch (\Throwable $e) {
-            $errMsg = "Connection test failed for {$provider} ({$model}): " . $e->getMessage();
-            $logger = new Logger($this->grav);
-            $logger->logError($errMsg, 'TEST_CONNECTION');
-            return [
-                'http_code' => 500,
-                'success' => false,
-                'message' => $errMsg
-            ];
-        }
-    }
-
     protected function sanitizeProvider(string $provider): string
     {
-        $allowed = ['gemini', 'gemini_openai', 'omniroute', 'openai_compatible', 'ollama', 'groq', 'openrouter', 'openai', 'custom'];
+        $allowed = ['gemini', 'groq', 'openai', 'openrouter', 'ollama', 'omniroute'];
         $clean = strtolower(trim($provider));
         return in_array($clean, $allowed, true) ? $clean : 'gemini';
+    }
+
+    /**
+     * Resolve and validate a request-supplied custom endpoint.
+     *
+     * @return array{endpoint: string, error: ?string}
+     */
+    protected function resolveCustomEndpoint(array $data): array
+    {
+        $endpoint = trim((string)($data['custom_endpoint'] ?? ''));
+        if ($endpoint === '') {
+            $endpoint = trim((string)($this->config['custom_endpoint'] ?? ''));
+        }
+        if ($endpoint === '') {
+            return ['endpoint' => '', 'error' => 'Endpoint URL is required for this provider.'];
+        }
+
+        $scheme = strtolower((string)parse_url($endpoint, PHP_URL_SCHEME));
+        $host = (string)parse_url($endpoint, PHP_URL_HOST);
+        if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+            return ['endpoint' => '', 'error' => 'Endpoint URL must be a valid http or https URL.'];
+        }
+
+        return ['endpoint' => rtrim($endpoint, '/'), 'error' => null];
+    }
+
+    /**
+     * Build the client config, validating provider endpoints first.
+     *
+     * @return array{config: ?array, error: ?string}
+     */
+    protected function resolveClientConfig(): array
+    {
+        $config = $this->config;
+        $provider = $this->sanitizeProvider((string)($config['provider'] ?? 'gemini'));
+        $config['provider'] = $provider;
+
+        if (in_array($provider, ['omniroute', 'ollama'], true)) {
+            $resolved = $this->resolveCustomEndpoint($config);
+            if ($resolved['error'] !== null) {
+                return ['config' => null, 'error' => $resolved['error']];
+            }
+            $config['custom_endpoint'] = $resolved['endpoint'];
+        }
+
+        return ['config' => $config, 'error' => null];
     }
 
     /**
@@ -459,17 +332,17 @@ class ChatbotHandler
         if (empty($apiKey)) {
             $apiKey = trim($this->config['api_key'] ?? '');
         }
-        $customEndpoint = trim($data['custom_endpoint'] ?? '');
-        if (empty($customEndpoint)) {
-            $customEndpoint = trim($this->config['custom_endpoint'] ?? '');
-        }
-
-        if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
-            return [
-                'http_code' => 400,
-                'success' => false,
-                'message' => '❌ Custom URL is mandatory when using Custom OpenAI-Compatible or Ollama.'
-            ];
+        $customEndpoint = '';
+        if (in_array($provider, ['omniroute', 'ollama'], true)) {
+            $endpointCheck = $this->resolveCustomEndpoint($data);
+            if ($endpointCheck['error'] !== null) {
+                return [
+                    'http_code' => 400,
+                    'success' => false,
+                    'message' => '❌ ' . $endpointCheck['error']
+                ];
+            }
+            $customEndpoint = $endpointCheck['endpoint'];
         }
 
         if (empty($apiKey) && in_array($provider, ['groq', 'gemini', 'openai', 'openrouter'], true)) {
@@ -482,10 +355,11 @@ class ChatbotHandler
 
         try {
             if ($provider === 'gemini') {
-                $url = "https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}";
+                $url = 'https://generativelanguage.googleapis.com/v1beta/models';
                 $ch = curl_init($url);
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER => ['x-goog-api-key: ' . $apiKey],
                     CURLOPT_TIMEOUT => 10,
                     CURLOPT_CONNECTTIMEOUT => 5,
                     CURLOPT_SSL_VERIFYPEER => true,
@@ -597,17 +471,17 @@ class ChatbotHandler
         if (empty($apiKey)) {
             $apiKey = trim($this->config['api_key'] ?? '');
         }
-        $customEndpoint = trim($data['custom_endpoint'] ?? '');
-        if (empty($customEndpoint)) {
-            $customEndpoint = trim($this->config['custom_endpoint'] ?? '');
-        }
-
-        if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
-            return [
-                'http_code' => 400,
-                'success' => false,
-                'message' => '❌ Custom URL is mandatory when using Custom OpenAI-Compatible or Ollama.'
-            ];
+        $customEndpoint = '';
+        if (in_array($provider, ['omniroute', 'ollama'], true)) {
+            $endpointCheck = $this->resolveCustomEndpoint($data);
+            if ($endpointCheck['error'] !== null) {
+                return [
+                    'http_code' => 400,
+                    'success' => false,
+                    'message' => '❌ ' . $endpointCheck['error']
+                ];
+            }
+            $customEndpoint = $endpointCheck['endpoint'];
         }
 
         try {
@@ -616,10 +490,11 @@ class ChatbotHandler
                 if (empty($apiKey)) {
                     return ['http_code' => 400, 'success' => false, 'message' => 'API Key is required to fetch Gemini models.'];
                 }
-                $url = "https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}";
+                $url = 'https://generativelanguage.googleapis.com/v1beta/models';
                 $ch = curl_init($url);
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER => ['x-goog-api-key: ' . $apiKey],
                     CURLOPT_TIMEOUT => 10,
                     CURLOPT_CONNECTTIMEOUT => 5,
                     CURLOPT_SSL_VERIFYPEER => true,
@@ -721,21 +596,17 @@ class ChatbotHandler
         if (empty($model)) {
             $model = trim($this->config['model'] ?? 'gemini-3.1-flash-lite');
         }
-        $customEndpoint = trim($data['custom_endpoint'] ?? '');
-        if (empty($customEndpoint)) {
-            $customEndpoint = trim($this->config['custom_endpoint'] ?? '');
-        }
-        $fallbackEndpoint = trim($data['fallback_endpoint'] ?? '');
-        if (empty($fallbackEndpoint)) {
-            $fallbackEndpoint = trim($this->config['fallback_endpoint'] ?? '');
-        }
-
-        if (in_array($provider, ['omniroute', 'ollama', 'custom'], true) && empty($customEndpoint)) {
-            return [
-                'http_code' => 400,
-                'success' => false,
-                'message' => '❌ Custom URL is mandatory when using Custom OpenAI-Compatible or Ollama.'
-            ];
+        $customEndpoint = '';
+        if (in_array($provider, ['omniroute', 'ollama'], true)) {
+            $endpointCheck = $this->resolveCustomEndpoint($data);
+            if ($endpointCheck['error'] !== null) {
+                return [
+                    'http_code' => 400,
+                    'success' => false,
+                    'message' => '❌ ' . $endpointCheck['error']
+                ];
+            }
+            $customEndpoint = $endpointCheck['endpoint'];
         }
 
         if (empty($model)) {
@@ -753,7 +624,6 @@ class ChatbotHandler
                 'api_key' => $apiKey,
                 'model' => $model,
                 'custom_endpoint' => $customEndpoint,
-                'fallback_endpoint' => $fallbackEndpoint,
                 'api_timeout' => 12,
                 'max_tokens' => 10
             ]);
@@ -830,8 +700,7 @@ class ChatbotHandler
                 'http_code' => 200,
                 'success' => true,
                 'answer' => $aiDisabledReply,
-                'source' => 'ai_disabled',
-                'debug_raw_ai_enabled' => $this->config['ai_enabled'] ?? 'MISSING'
+                'source' => 'ai_disabled'
             ];
         }
 
@@ -839,7 +708,15 @@ class ChatbotHandler
         $prompt = "Summarize this webpage content:\n\n" . substr($pageContent, 0, 3000);
 
         try {
-            $client = AiClientFactory::create($this->config);
+            $clientConfig = $this->resolveClientConfig();
+            if ($clientConfig['error'] !== null) {
+                return [
+                    'http_code' => 400,
+                    'success' => false,
+                    'answer' => 'Chatbot is not configured: ' . $clientConfig['error'],
+                ];
+            }
+            $client = AiClientFactory::create($clientConfig['config']);
             $res = $client->generateResponse($systemPrompt, [
                 ['role' => 'user', 'content' => $prompt]
             ]);
@@ -907,7 +784,7 @@ class ChatbotHandler
 
             if (empty($siteContext)) {
                 $indexer = new ContextIndexer($this->grav);
-                $siteContext = $indexer->buildContextPrompt($currentRoute, $maxContextChars);
+                $siteContext = $indexer->buildContextPrompt($maxContextChars);
             }
 
             $customSystemPrompt = trim($this->config['custom_system_prompt'] ?? '');
@@ -934,7 +811,15 @@ class ChatbotHandler
                 'content' => $question
             ];
 
-            $client = AiClientFactory::create($this->config);
+            $clientConfig = $this->resolveClientConfig();
+            if ($clientConfig['error'] !== null) {
+                return [
+                    'http_code' => 400,
+                    'success' => false,
+                    'answer' => 'Chatbot is not configured: ' . $clientConfig['error'],
+                ];
+            }
+            $client = AiClientFactory::create($clientConfig['config']);
             $res = $client->generateResponse($siteContext, $messages);
 
             $answer = is_array($res) ? ($res['answer'] ?? '') : (string)$res;
@@ -967,8 +852,12 @@ class ChatbotHandler
                 }
             }
 
-            $promptTokens = is_array($res) ? (int)($res['prompt_tokens'] ?? 450) : 450;
-            $completionTokens = is_array($res) ? (int)($res['completion_tokens'] ?? 120) : 120;
+            $promptTokens = is_array($res) ? (int)($res['prompt_tokens'] ?? 0) : 0;
+            $completionTokens = is_array($res) ? (int)($res['completion_tokens'] ?? 0) : 0;
+
+            if (is_array($res) && (!array_key_exists('prompt_tokens', $res) || !array_key_exists('completion_tokens', $res))) {
+                (new Logger($this->grav))->logError("AI response is missing token usage [Provider: {$provider}, Model: {$model}].", 'AI_USAGE');
+            }
             
             $apiSuccess = is_array($res) ? !empty($res['success']) : false;
             $hasAnswer = !empty($answer);

@@ -16,7 +16,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Class ChatbotApiController
  * Grav 2.0 REST API for AI Chatbot (replaces legacy /chatbot-api exit() hack).
  *
- * Public (no auth): query, summarize — protected by rate-limit + guardrail.
+ * Public (no auth): query, summarize - protected by rate-limit + guardrail.
  * Admin (auth): metrics, logs, security, model tools, index rebuild, export.
  *
  * @license GPL-3.0-or-later
@@ -28,28 +28,33 @@ class ChatbotApiController extends AbstractApiController
         return (array)$this->config->get('plugins.ai-chatbot', []);
     }
 
-    protected function handler(): ChatbotHandler
+    protected function handler(bool $withPages = false): ChatbotHandler
     {
-        if (isset($this->grav['pages'])) {
-            $pages = $this->grav['pages'];
-            if (method_exists($pages, 'init')) {
-                try {
+        if ($withPages) {
+            try {
+                $pages = $this->grav['pages'];
+                if (method_exists($pages, 'enablePages')) {
+                    $pages->enablePages();
+                }
+                if (method_exists($pages, 'init')) {
                     $pages->init();
-                } catch (\Throwable $t) {}
+                }
+            } catch (\Throwable $t) {
+                // Page context is optional; FAQ, contact, and RAG fall back gracefully.
             }
         }
         return new ChatbotHandler($this->grav, $this->pluginConfig());
     }
 
     /**
-     * POST /ai-chatbot/query — public visitor chat.
+     * POST /ai-chatbot/query - public visitor chat.
      */
     public function query(ServerRequestInterface $request): ResponseInterface
     {
         $body = $this->getRequestBody($request);
         $this->requireFields($body, ['question']);
 
-        $response = $this->handler()->processRequest([
+        $response = $this->handler(true)->processRequest([
             'action' => (($body['action'] ?? '') === 'force_ai') ? 'force_ai' : 'query',
             'question' => trim((string)$body['question']),
             'history' => $body['history'] ?? [],
@@ -62,12 +67,12 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * POST /ai-chatbot/summarize — public page summary.
+     * POST /ai-chatbot/summarize - public page summary.
      */
     public function summarize(ServerRequestInterface $request): ResponseInterface
     {
         $body = $this->getRequestBody($request);
-        $response = $this->handler()->processRequest([
+        $response = $this->handler(true)->processRequest([
             'action' => 'summarize_page',
             'question' => 'Summarize Page',
             'current_route' => $body['current_route'] ?? '/',
@@ -79,7 +84,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * GET /ai-chatbot/metrics — admin dashboard metrics.
+     * GET /ai-chatbot/metrics - admin dashboard metrics.
      */
     public function metrics(ServerRequestInterface $request): ResponseInterface
     {
@@ -92,7 +97,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * GET /ai-chatbot/logs?per_page= — admin live logs (paginated).
+     * GET /ai-chatbot/logs?per_page= - admin live logs (paginated).
      */
     public function logs(ServerRequestInterface $request): ResponseInterface
     {
@@ -114,7 +119,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * GET /ai-chatbot/security — admin threat audit.
+     * GET /ai-chatbot/security - admin threat audit.
      */
     public function security(ServerRequestInterface $request): ResponseInterface
     {
@@ -125,7 +130,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * POST /ai-chatbot/test-key — admin only.
+     * POST /ai-chatbot/test-key - admin only.
      */
     public function testKey(ServerRequestInterface $request): ResponseInterface
     {
@@ -139,7 +144,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * POST /ai-chatbot/models — admin only.
+     * POST /ai-chatbot/models - admin only.
      */
     public function fetchModels(ServerRequestInterface $request): ResponseInterface
     {
@@ -153,7 +158,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * POST /ai-chatbot/health — admin only.
+     * POST /ai-chatbot/health - admin only.
      */
     public function testHealth(ServerRequestInterface $request): ResponseInterface
     {
@@ -167,7 +172,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * POST /ai-chatbot/reindex — admin only.
+     * POST /ai-chatbot/reindex - admin only.
      */
     public function rebuildIndex(ServerRequestInterface $request): ResponseInterface
     {
@@ -180,7 +185,7 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * POST /ai-chatbot/unlock — admin only, release IP lockouts.
+     * POST /ai-chatbot/unlock - admin only, release IP lockouts.
      */
     public function unlock(ServerRequestInterface $request): ResponseInterface
     {
@@ -191,7 +196,25 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
-     * GET /ai-chatbot/export?format=csv|json|raw_interactions — admin only.
+     * POST /ai-chatbot/clear-logs - admin only, clear the error log and release IP lockouts.
+     */
+    public function clearLogs(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->requirePermission($request, 'api.system.write');
+        $this->denyIfDemo($request, 'Logs are hidden in demo mode.');
+
+        $logger = new Logger($this->grav);
+        $logger->clearErrorLogs();
+        SecurityGuardrail::releaseLockouts();
+
+        return ApiResponse::create([
+            'status' => 'success',
+            'message' => 'Error logs cleared and active IP lockouts released.',
+        ]);
+    }
+
+    /**
+     * GET /ai-chatbot/export?format=csv|json|raw_interactions - admin only.
      * Returns a download Response instead of exit().
      */
     public function export(ServerRequestInterface $request): ResponseInterface

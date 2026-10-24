@@ -2,7 +2,6 @@
 namespace Grav\Plugin;
 
 use Grav\Common\Plugin;
-use Grav\Common\File\CompiledYamlFile;
 use Grav\Plugin\AiChatbot\ChatbotHandler;
 use Grav\Plugin\AiChatbot\AnalyticsReportGenerator;
 use Grav\Plugin\AiChatbot\Logger;
@@ -86,7 +85,6 @@ class AiChatbotPlugin extends Plugin
             'onPageNotFound' => ['onPageNotFound', 1000],
             'onPageInitialized' => ['onPageInitialized', 1000],
             'onOutputGenerated' => ['onOutputGenerated', 0],
-            'onBlueprintCreated' => ['onBlueprintCreated', 0],
             'onApiBlueprintResolved' => ['onApiBlueprintResolved', 0],
             'onApiRegisterRoutes' => ['onApiRegisterRoutes', 0],
             'onApiCollectPublicRoutes' => ['onApiCollectPublicRoutes', 0],
@@ -119,6 +117,7 @@ class AiChatbotPlugin extends Plugin
         $routes->post('/ai-chatbot/health', [$controller, 'testHealth']);
         $routes->post('/ai-chatbot/reindex', [$controller, 'rebuildIndex']);
         $routes->post('/ai-chatbot/unlock', [$controller, 'unlock']);
+        $routes->post('/ai-chatbot/clear-logs', [$controller, 'clearLogs']);
         $routes->get('/ai-chatbot/export', [$controller, 'export']);
     }
 
@@ -152,140 +151,14 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Populate blueprint fields dynamically with live analytics metrics, visual bar charts, error logs, and export URLs.
-     */
-    public function onBlueprintCreated($event)
-    {
-        $blueprint = $event['blueprint'];
-        if ($blueprint->getFilename() === 'ai-chatbot') {
-            try {
-                $logger = new Logger($this->grav);
-                $generator = new AnalyticsReportGenerator($this->grav);
-                $data = $generator->getDashboardAnalyticsData();
-
-                $summary = $data['summary'] ?? [];
-                $totalQueries = $summary['total_queries'] ?? 0;
-                $faqHits = $summary['faq_hits'] ?? 0;
-                $aiHits = $summary['ai_hits'] ?? 0;
-                $rateHits = $summary['rate_limit_hits'] ?? 0;
-                $totalTokens = number_format($summary['total_tokens'] ?? 0);
-                $totalCost = number_format($summary['total_cost_usd'] ?? 0, 4);
-
-                $faqPct = $totalQueries > 0 ? round(($faqHits / $totalQueries) * 100) : 0;
-                $aiPct = $totalQueries > 0 ? round(($aiHits / $totalQueries) * 100) : 0;
-                $ratePct = $totalQueries > 0 ? round(($rateHits / $totalQueries) * 100) : 0;
-
-                $summaryStr = "Total Queries: {$totalQueries} | FAQ Matches: {$faqHits} ({$faqPct}% Saved) | AI Calls: {$aiHits} | Total Tokens: {$totalTokens} | Est. Cost: \${$totalCost}";
-
-                // Build Visual ASCII/Unicode Bar Chart
-                $chartLines = ["DAILY INTERACTION VOLUME:"];
-                $dailyLabels = $data['daily_chart']['labels'] ?? [];
-                $dailyValues = $data['daily_chart']['values'] ?? [];
-                $maxDaily = max(1, ...($dailyValues ?: [1]));
-
-                if (empty($dailyLabels)) {
-                    $chartLines[] = "  (No interaction data logged yet)";
-                } else {
-                    $slicedLabels = count($dailyLabels) > 25 ? array_slice($dailyLabels, -25) : $dailyLabels;
-                    $slicedValues = count($dailyValues) > 25 ? array_slice($dailyValues, -25) : $dailyValues;
-
-                    foreach ($slicedLabels as $idx => $lbl) {
-                        $val = $slicedValues[$idx] ?? 0;
-                        $barLen = (int)round(($val / $maxDaily) * 20);
-                        $barStr = str_repeat('█', max(1, $barLen));
-                        $chartLines[] = sprintf("  %s : %s (%d queries)", $lbl, $barStr, $val);
-                    }
-                }
-
-                $chartLines[] = "";
-                $chartLines[] = "QUERY SOURCE DISTRIBUTION RATIO:";
-                $chartLines[] = sprintf("  FAQ Matches (Free) : %s %d (%d%%)", str_repeat('█', (int)round(($faqPct / 100) * 20)), $faqHits, $faqPct);
-                $chartLines[] = sprintf("  AI Model Calls     : %s %d (%d%%)", str_repeat('█', (int)round(($aiPct / 100) * 20)), $aiHits, $aiPct);
-                $chartLines[] = sprintf("  Rate Limit Shield  : %s %d (%d%%)", str_repeat('█', (int)round(($ratePct / 100) * 20)), $rateHits, $ratePct);
-
-                $chartStr = implode("\n", $chartLines);
-
-                // Read site URL from site.yaml or relative root
-                $siteUrl = rtrim($this->config->get('site.url') ?: $this->grav['uri']->rootUrl(true), '/');
-                if (empty($siteUrl) || $siteUrl === '/' || str_contains($siteUrl, 'localhost')) {
-                    $csvUrl = "/chatbot-export?format=csv";
-                    $jsonUrl = "/chatbot-export?format=json";
-                    $rawUrl = "/chatbot-export?format=raw_interactions";
-                } else {
-                    $csvUrl = "{$siteUrl}/chatbot-export?format=csv";
-                    $jsonUrl = "{$siteUrl}/chatbot-export?format=json";
-                    $rawUrl = "{$siteUrl}/chatbot-export?format=raw_interactions";
-                }
-
-                // Log file location instructions
-                $locator = $this->grav['locator'];
-                $absLogPath = $locator->findResource('user://data') . '/ai-chatbot/interactions.json';
-                $fileInstStr = "Relative Path: user/data/ai-chatbot/interactions.json\nAbsolute Path: {$absLogPath}\n\nManual Data Editing & Deleting Instructions:\n• To edit, prune, or delete individual interaction entries, open 'user/data/ai-chatbot/interactions.json' in any text editor.\n• To reset or delete ALL telemetry records, clear the file content to '[]' or delete the file. The plugin will automatically recreate an empty log file on the next visitor query.";
-
-                // Recommendations
-                $recs = $data['recommendations'] ?? [];
-                $recLines = [];
-                if (!empty($recs)) {
-                    foreach ($recs as $rec) {
-                        $recLines[] = "• [{$rec['count']}x asked] Q: {$rec['sample_question']} => A: " . substr($rec['suggested_answer'], 0, 100) . "...";
-                    }
-                    $recStr = implode("\n\n", $recLines);
-                } else {
-                    $recStr = "No candidate FAQ recommendations at this time. All interactions logged in user/data/ai-chatbot/interactions.json.";
-                }
-
-                $inPrice = $this->config->get('plugins.ai-chatbot.cost_input_token_price_per_m', '0.15');
-                $outPrice = $this->config->get('plugins.ai-chatbot.cost_output_token_price_per_m', '0.60');
-
-                $exampleDisclaimer = "Provider Token Pricing Example (Google Gemini 1.5 Flash):\n• Input / Prompt Tokens: \${$inPrice} per 1,000,000 tokens ($0.00015 / 1k)\n• Output / Completion Tokens: \${$outPrice} per 1,000,000 tokens ($0.00060 / 1k)\n\nToken Cost Estimation Warning:\nEstimated API cost = (Prompt Tokens / 1,000,000 × \${$inPrice}) + (Completion Tokens / 1,000,000 × \${$outPrice}).\nPlease note that token cost estimates are approximations for general guidance. Actual billing may vary depending on model pricing updates, system prompt caching, image inputs, or free tier credits. Please refer to your AI provider's official dashboard for exact billing statements.";
-
-                $errLogPath = $logger->getErrorLogFilePath();
-                $errInstStr = "Relative Path: user/data/ai-chatbot/error.log\nAbsolute Path: {$errLogPath}\n\nManual Error Log Editing & Deleting Instructions:\n• To view, edit, or prune error log entries, open 'user/data/ai-chatbot/error.log' in any text editor.\n• To clear all error logs, delete the file or empty its contents. The plugin will automatically recreate an empty log file when new errors occur.";
-
-                $errorLogs = $logger->getErrorLogs();
-
-                // Set both tabbed path and direct path for Admin2 / Classic Admin compatibility
-                $blueprint->set('form.fields.tabs.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
-                $blueprint->set('form.fields.tabs.fields.section_analytics.fields.analytics_chart_display.default', $chartStr);
-                $blueprint->set('form.fields.tabs.fields.section_analytics.fields.download_csv_link.default', $csvUrl);
-                $blueprint->set('form.fields.tabs.fields.section_analytics.fields.download_json_link.default', $jsonUrl);
-                $blueprint->set('form.fields.tabs.fields.section_analytics.fields.download_raw_link.default', $rawUrl);
-                $blueprint->set('form.fields.tabs.fields.section_analytics.fields.analytics_data_file_location.default', $fileInstStr);
-                $blueprint->set('form.fields.tabs.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
-
-                $blueprint->set('form.fields.tabs.fields.section_logging.fields.cost_estimation_example.default', $exampleDisclaimer);
-                $blueprint->set('form.fields.tabs.fields.section_logging.fields.ai_chatbot_error_log_display.default', $errorLogs);
-                $blueprint->set('form.fields.tabs.fields.section_logging.fields.ai_chatbot_error_log_location.default', $errInstStr);
-
-                // Direct fallback paths
-                $blueprint->set('form.fields.section_analytics.fields.analytics_summary_text.default', $summaryStr);
-                $blueprint->set('form.fields.section_analytics.fields.analytics_chart_display.default', $chartStr);
-                $blueprint->set('form.fields.section_analytics.fields.download_csv_link.default', $csvUrl);
-                $blueprint->set('form.fields.section_analytics.fields.download_json_link.default', $jsonUrl);
-                $blueprint->set('form.fields.section_analytics.fields.download_raw_link.default', $rawUrl);
-                $blueprint->set('form.fields.section_analytics.fields.analytics_data_file_location.default', $fileInstStr);
-                $blueprint->set('form.fields.section_analytics.fields.analytics_recommendations_text.default', $recStr);
-                $blueprint->set('form.fields.section_logging.fields.cost_estimation_example.default', $exampleDisclaimer);
-                $blueprint->set('form.fields.section_logging.fields.ai_chatbot_error_log_display.default', $errorLogs);
-                $blueprint->set('form.fields.section_logging.fields.ai_chatbot_error_log_location.default', $errInstStr);
-                $blueprint->set('form.fields.ai_chatbot_error_log_display.default', $errorLogs);
-                $blueprint->set('form.fields.ai_chatbot_error_log_location.default', $errInstStr);
-            } catch (\Throwable $e) {
-                // Ignore gracefully
-            }
-        }
-    }
-
-    /**
-     * Populate Admin2 API blueprint fields dynamically with live analytics metrics, visual bar charts, error logs, and export URLs.
+     * Populate the Admin2 recommendations field with live FAQ candidates.
      *
      * @param mixed $event
      */
     public function onApiBlueprintResolved($event): void
     {
         try {
-            $plugin = $event['plugin'] ?? '';
-            if ($plugin !== 'ai-chatbot') {
+            if (($event['plugin'] ?? '') !== 'ai-chatbot') {
                 return;
             }
 
@@ -294,89 +167,38 @@ class AiChatbotPlugin extends Plugin
                 return;
             }
 
-            $logger = new Logger($this->grav);
             $generator = new AnalyticsReportGenerator($this->grav);
             $data = $generator->getDashboardAnalyticsData();
-
-            $summary = $data['summary'] ?? [];
-            $totalQueries = $summary['total_queries'] ?? 0;
-            $faqHits = $summary['faq_hits'] ?? 0;
-            $aiHits = $summary['ai_hits'] ?? 0;
-            $rateHits = $summary['rate_limit_hits'] ?? 0;
-            $totalTokens = number_format($summary['total_tokens'] ?? 0);
-            $totalCost = number_format($summary['total_cost_usd'] ?? 0, 4);
-
-            $faqPct = $totalQueries > 0 ? round(($faqHits / $totalQueries) * 100) : 0;
-            $aiPct = $totalQueries > 0 ? round(($aiHits / $totalQueries) * 100) : 0;
-            $ratePct = $totalQueries > 0 ? round(($rateHits / $totalQueries) * 100) : 0;
-
-            $summaryStr = "Total Queries: {$totalQueries} | FAQ Matches: {$faqHits} ({$faqPct}% Saved) | AI Calls: {$aiHits} | Total Tokens: {$totalTokens} | Est. Cost: \${$totalCost}";
-
-            // Build Visual ASCII Bar Chart
-            $chartLines = ["DAILY INTERACTION VOLUME:"];
-            $dailyLabels = $data['daily_chart']['labels'] ?? [];
-            $dailyValues = $data['daily_chart']['values'] ?? [];
-            $maxDaily = max(1, ...($dailyValues ?: [1]));
-
-            if (empty($dailyLabels)) {
-                $chartLines[] = "  (No interaction data logged yet)";
-            } else {
-                $slicedLabels = count($dailyLabels) > 25 ? array_slice($dailyLabels, -25) : $dailyLabels;
-                $slicedValues = count($dailyValues) > 25 ? array_slice($dailyValues, -25) : $dailyValues;
-
-                foreach ($slicedLabels as $idx => $lbl) {
-                    $val = $slicedValues[$idx] ?? 0;
-                    $barLen = (int)round(($val / $maxDaily) * 20);
-                    $barStr = str_repeat('█', max(1, $barLen));
-                    $chartLines[] = sprintf("  %s : %s (%d queries)", $lbl, $barStr, $val);
-                }
-            }
-
-            $chartLines[] = "";
-            $chartLines[] = "QUERY SOURCE DISTRIBUTION RATIO:";
-            $chartLines[] = sprintf("  FAQ Matches (Free) : %s %d (%d%%)", str_repeat('█', (int)round(($faqPct / 100) * 20)), $faqHits, $faqPct);
-            $chartLines[] = sprintf("  AI Model Calls     : %s %d (%d%%)", str_repeat('█', (int)round(($aiPct / 100) * 20)), $aiHits, $aiPct);
-            $chartLines[] = sprintf("  Rate Limit Shield  : %s %d (%d%%)", str_repeat('█', (int)round(($ratePct / 100) * 20)), $rateHits, $ratePct);
-
-            $chartStr = implode("\n", $chartLines);
-
-            // Recommendations
             $recs = $data['recommendations'] ?? [];
+
             $recLines = [];
-            if (!empty($recs)) {
-                foreach ($recs as $rec) {
-                    $recLines[] = "• [{$rec['count']}x asked] Q: {$rec['sample_question']} => A: " . substr($rec['suggested_answer'], 0, 100) . "...";
-                }
-                $recStr = implode("\n\n", $recLines);
-            } else {
-                $recStr = "No candidate FAQ recommendations at this time. All interactions logged in user/data/ai-chatbot/interactions.json.";
+            foreach ($recs as $rec) {
+                $recLines[] = "• [{$rec['count']}x asked] Q: {$rec['sample_question']} => A: " . substr($rec['suggested_answer'], 0, 100) . "...";
             }
 
-            $errorLogs = $logger->getErrorLogs();
+            $recStr = $recLines !== []
+                ? implode("\n\n", $recLines)
+                : 'No candidate FAQ recommendations at this time. All interactions logged in user/data/ai-chatbot/interactions.json.';
 
-            // Helper lambda to mutate default values in field tree
-            $mutateTree = function (&$tree) use (&$mutateTree, $summaryStr, $chartStr, $recStr, $errorLogs) {
+            $mutateTree = function (array &$tree) use (&$mutateTree, $recStr): void {
                 foreach ($tree as $key => &$node) {
-                    if (is_array($node)) {
-                        if ($key === 'analytics_summary_text') {
-                            $node['default'] = $summaryStr;
-                        } elseif ($key === 'analytics_chart_display') {
-                            $node['default'] = $chartStr;
-                        } elseif ($key === 'analytics_recommendations_text') {
-                            $node['default'] = $recStr;
-                        } elseif ($key === 'ai_chatbot_error_log_display') {
-                            $node['default'] = $errorLogs;
-                        }
-                        if (isset($node['fields']) && is_array($node['fields'])) {
-                            $mutateTree($node['fields']);
-                        }
+                    if (!is_array($node)) {
+                        continue;
+                    }
+                    if ($key === 'analytics_recommendations_text') {
+                        $node['default'] = $recStr;
+                    }
+                    if (isset($node['fields']) && is_array($node['fields'])) {
+                        $mutateTree($node['fields']);
                     }
                 }
             };
 
             $mutateTree($fields);
             $event['fields'] = $fields;
-        } catch (\Throwable $t) {}
+        } catch (\Throwable $t) {
+            // Admin blueprint enrichment is optional; never break the admin page.
+        }
     }
 
     /**
@@ -421,16 +243,12 @@ class AiChatbotPlugin extends Plugin
         if ($this->isAdmin()) {
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
-                'onTwigSiteVariables' => ['onTwigSiteVariables', 0],
-                'onAdminTwigSiteVariables' => ['onAdminTwigSiteVariables', 0],
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
-                'onBlueprintCreated' => ['onBlueprintCreated', 0],
             ]);
         } else {
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
-                'onTwigSiteVariables' => ['onTwigSiteVariables', 0],
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
                 'onOutputGenerated' => ['onOutputGenerated', 0],
@@ -442,7 +260,7 @@ class AiChatbotPlugin extends Plugin
      * Universal Direct Output HTML Injector.
      * Guarantees chatbot widget injection across all themes regardless of whether theme calls assets.js() or not.
      */
-    public function onOutputGenerated()
+    public function onOutputGenerated($event): void
     {
         if ($this->isAdmin()) {
             return;
@@ -452,7 +270,7 @@ class AiChatbotPlugin extends Plugin
             return;
         }
 
-        $output = $this->grav['output'];
+        $output = (string)($event['output'] ?? '');
 
         // Check if output is HTML and body tag exists
         if (empty($output) || strpos($output, '</body>') === false) {
@@ -508,26 +326,31 @@ class AiChatbotPlugin extends Plugin
             ]);
         } catch (\Throwable $t) {}
 
-        $jsConfig = json_encode([
-            'apiEndpoint' => '/chatbot-api',
-            'restBase' => $this->getRestBase(),
-            'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
-            'botTitle' => $this->config->get('plugins.ai-chatbot.bot_title', 'Website Assistant'),
-            'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
-            'customErrorMessage' => $this->config->get('plugins.ai-chatbot.custom_error_message', 'An unexpected connection error occurred. Please try again later.'),
-            'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
-            'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
-            'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
-            'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
-            'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', 'Hi there! Need help finding anything on our website?'),
-            'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
-            'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
-            'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
-            'maxTokens' => (int)$this->config->get('plugins.ai-chatbot.max_tokens', 800),
-            'maxInputTokens' => (int)$this->config->get('plugins.ai-chatbot.max_input_tokens', 500),
-            'contextWindowTokens' => (int)$this->config->get('plugins.ai-chatbot.context_window_tokens', 8192),
-            'currentRoute' => $currentRoute,
-        ]);
+        try {
+            $jsConfig = json_encode([
+                'apiEndpoint' => '/chatbot-api',
+                'restBase' => $this->getRestBase(),
+                'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
+                'botTitle' => $this->config->get('plugins.ai-chatbot.bot_title', 'Website Assistant'),
+                'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
+                'customErrorMessage' => $this->config->get('plugins.ai-chatbot.custom_error_message', 'An unexpected connection error occurred. Please try again later.'),
+                'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
+                'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
+                'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
+                'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
+                'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', 'Hi there! Need help finding anything on our website?'),
+                'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
+                'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
+                'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
+                'maxTokens' => (int)$this->config->get('plugins.ai-chatbot.max_tokens', 800),
+                'maxInputTokens' => (int)$this->config->get('plugins.ai-chatbot.max_input_tokens', 500),
+                'contextWindowTokens' => (int)$this->config->get('plugins.ai-chatbot.context_window_tokens', 8192),
+                'currentRoute' => $currentRoute,
+            ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $jsConfig = '{}';
+            (new Logger($this->grav))->logError('Failed to encode chatbot widget config: ' . $e->getMessage(), 'WIDGET_CONFIG');
+        }
 
         $baseUrl = rtrim($this->grav['base_url_relative'] ?? '', '/');
         $cssUrl = "{$baseUrl}/user/plugins/ai-chatbot/assets/css/chatbot.css";
@@ -541,8 +364,7 @@ class AiChatbotPlugin extends Plugin
 {$widgetHtml}
 ";
 
-        $output = str_replace('</body>', $injection . "\n</body>", $output);
-        $this->grav['output'] = $output;
+        $event['output'] = str_replace('</body>', $injection . "\n</body>", $output);
     }
 
     /**
@@ -560,22 +382,41 @@ class AiChatbotPlugin extends Plugin
 
     protected function routeCheck()
     {
-        $rawUrl = $_SERVER['REQUEST_URI'] ?? '';
-        $redirectUrl = $_SERVER['REDIRECT_URL'] ?? '';
+        $requestPath = $this->getRequestPath();
+        $redirectUrl = (string)($_SERVER['REDIRECT_URL'] ?? '');
+        $redirectPath = $redirectUrl !== '' ? (string)(parse_url($redirectUrl, PHP_URL_PATH) ?: '') : '';
+        $redirectPath = $redirectPath !== '' ? '/' . trim($redirectPath, '/') : '';
 
-        if (
-            strpos($rawUrl, 'chatbot-api') !== false || 
-            strpos($rawUrl, 'chatbot-export') !== false ||
-            strpos($redirectUrl, 'chatbot-api') !== false ||
-            strpos($redirectUrl, 'chatbot-export') !== false
-        ) {
-            if (strpos($rawUrl, 'chatbot-export') !== false || strpos($redirectUrl, 'chatbot-export') !== false) {
-                $this->handleAnalyticsExport();
-            } else {
-                $this->handleChatbotQueryApi();
-            }
+        if ($requestPath === '/chatbot-export' || $redirectPath === '/chatbot-export') {
+            $this->handleAnalyticsExport();
             exit();
         }
+
+        if ($requestPath === '/chatbot-api' || $redirectPath === '/chatbot-api') {
+            $this->handleChatbotQueryApi();
+            exit();
+        }
+    }
+
+    /**
+     * Request path with the configured base path removed, or '' when absent.
+     */
+    protected function getRequestPath(): string
+    {
+        $uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+        $path = (string)(parse_url($uri, PHP_URL_PATH) ?: '');
+        if ($path === '') {
+            return '';
+        }
+
+        $path = '/' . trim($path, '/');
+        $base = '/' . trim((string)($this->grav['base_url_relative'] ?? ''), '/');
+        if ($base !== '/' && ($path === $base || str_starts_with($path, $base . '/'))) {
+            $path = substr($path, strlen($base));
+            $path = $path === '' ? '/' : $path;
+        }
+
+        return $path;
     }
 
     protected function handleChatbotQueryApi()
@@ -585,13 +426,6 @@ class AiChatbotPlugin extends Plugin
         header('Sunset: Wed, 31 Dec 2026 23:59:59 GMT');
         header('Warning: 299 - "Endpoint /chatbot-api is deprecated. Migrate to /api/v1/ai-chatbot/query"');
         header('Link: <' . $this->getRestBase() . '/query>; rel="successor-version"');
-
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            header('Access-Control-Allow-Origin: *');
-            header('Access-Control-Allow-Headers: Content-Type');
-            http_response_code(200);
-            exit();
-        }
 
         // Initialize Grav Pages container so FAQ pages are loaded
         if (isset($this->grav['pages'])) {
@@ -609,8 +443,8 @@ class AiChatbotPlugin extends Plugin
 
         // BC shim policy: legacy /chatbot-api only serves PUBLIC visitor actions.
         // Admin actions must use /api/v1/ai-chatbot/* with X-API-Token + api.system.* perms.
-        $adminOnly = ['test_api_key', 'fetch_models', 'test_model_health', 'rebuild_rag_index', 'get_metrics', 'get_live_logs', 'get_security_logs', 'release_ip_lockouts', 'clear_security_logs', 'clear_analytics', 'generate_demo_data', 'analytics_report', 'test_connection'];
-        if (in_array($action, $adminOnly, true)) {
+        $publicActions = ['query', 'force_ai', 'summarize_page'];
+        if (!in_array($action, $publicActions, true)) {
             http_response_code(403);
             echo json_encode([
                 'success' => false,
@@ -624,7 +458,9 @@ class AiChatbotPlugin extends Plugin
         $handler = new ChatbotHandler($this->grav, $cfg);
         $response = $handler->processRequest($data);
 
-        http_response_code(200);
+        $status = (int)($response['http_code'] ?? 200);
+        unset($response['http_code']);
+        http_response_code($status);
         echo json_encode($response);
         exit();
     }
@@ -649,70 +485,28 @@ class AiChatbotPlugin extends Plugin
     }
 
     /**
-     * Handle export download with user whitelist authentication check.
+     * Handle export download with an administrator permission check.
      * NOTE: preferred path is GET /api/v1/ai-chatbot/export (permission-enforced).
      * This legacy /chatbot-export shim no longer trusts raw cookies/session arrays.
      */
     protected function handleAnalyticsExport()
     {
-        $requireAuth = (bool)$this->config->get('plugins.ai-chatbot.export_require_auth', true);
+        $user = $this->getAuthenticatedAdminUser();
+        $isAdmin = false;
 
-        if ($requireAuth) {
-            $user = $this->getAuthenticatedAdminUser();
+        if (is_object($user) && !empty($user->authenticated) && method_exists($user, 'authorize')) {
+            $isAdmin = $user->authorize('admin.super') || $user->authorize('admin.plugins');
+        }
 
-            $rawAllowed = $this->config->get('plugins.ai-chatbot.export_allowed_users', "admin\nmilkboy");
-            $allowedUsers = array_filter(array_map('trim', preg_split('/[\r\n,]+/', (string)$rawAllowed)));
-
-            $username = '';
-            if (is_object($user)) {
-                $username = strtolower(trim((string)($user->username ?? $user->name ?? '')));
-            } elseif (is_array($user)) {
-                $username = strtolower(trim((string)($user['username'] ?? $user['name'] ?? '')));
-            }
-
-            $isAuthorized = false;
-
-            // Require an actually-authenticated Grav user object — never a bare cookie.
-            $authenticated = false;
-            if (is_object($user)) {
-                $authenticated = !empty($user->authenticated) || (method_exists($user, 'authorize') && $user->authorize('admin.login'));
-            } elseif (is_array($user)) {
-                $authenticated = !empty($user['authenticated']);
-            } elseif (isset($this->grav['user']) && !empty($this->grav['user']->authenticated)) {
-                $user = $this->grav['user'];
-                $username = strtolower(trim((string)($user->username ?? '')));
-                $authenticated = true;
-            }
-
-            if ($authenticated) {
-                if (empty($allowedUsers)) {
-                    $isAuthorized = true;
-                } else {
-                    foreach ($allowedUsers as $allowed) {
-                        if (strtolower($allowed) === $username) {
-                            $isAuthorized = true;
-                            break;
-                        }
-                    }
-
-                    if (!$isAuthorized && is_object($user) && method_exists($user, 'authorize')) {
-                        if ($user->authorize('admin.super') || $user->authorize('admin.plugins')) {
-                            $isAuthorized = true;
-                        }
-                    }
-                }
-            }
-
-            if (!$isAuthorized) {
-                http_response_code(403);
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'status' => 403,
-                    'error' => 'Forbidden',
-                    'message' => "Access Denied: User '" . ($username ?: 'guest') . "' is not authorized to download interaction telemetry data. Please log in as a whitelisted admin user (" . implode(', ', $allowedUsers) . ") or use /api/v1/ai-chatbot/export."
-                ], JSON_PRETTY_PRINT);
-                exit();
-            }
+        if (!$isAdmin) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 403,
+                'error' => 'Forbidden',
+                'message' => 'Access denied. Use /api/v1/ai-chatbot/export with an authenticated admin account.',
+            ]);
+            exit();
         }
 
         $format = $_GET['format'] ?? 'csv';
@@ -727,120 +521,6 @@ class AiChatbotPlugin extends Plugin
     public function onTwigTemplatePaths()
     {
         $this->grav['twig']->twig_paths[] = __DIR__ . '/templates';
-    }
-
-    /**
-     * Inject front-end assets & CSS/JS configuration for floating chat widget based on page visibility rules.
-     */
-    public function onTwigSiteVariables()
-    {
-        if (!$this->isPluginEnabled()) {
-            return;
-        }
-
-        $rawRoute = $this->grav['uri']->path() ?: '/';
-        $currentRoute = $this->normalizeRoute($rawRoute);
-        $pageObject = $this->grav['page'] ?? null;
-        $pageRoute = ($pageObject && method_exists($pageObject, 'route') && $pageObject->route()) ? $this->normalizeRoute($pageObject->route()) : '';
-
-        $displayMode = $this->config->get('plugins.ai-chatbot.display_mode', 'all');
-
-        if ($displayMode !== 'all') {
-            $rawPages = $this->config->get('plugins.ai-chatbot.display_pages', '');
-            $pagesList = array_filter(array_map('trim', explode("\n", str_replace("\r", "", $rawPages))));
-
-            $isListed = false;
-            foreach ($pagesList as $pRoute) {
-                $cleanP = $this->normalizeRoute($pRoute);
-
-                if (
-                    $currentRoute === $cleanP ||
-                    ($pageRoute && $pageRoute === $cleanP) ||
-                    (($currentRoute === '/' || $currentRoute === '/home' || $pageRoute === '/home' || $pageRoute === '/blog') && ($cleanP === '/' || $cleanP === '/home'))
-                ) {
-                    $isListed = true;
-                    break;
-                }
-            }
-
-            if ($displayMode === 'selected_only' && !$isListed) {
-                return; // Hide widget on this page
-            }
-
-            if ($displayMode === 'exclude_selected' && $isListed) {
-                return; // Hide widget on this page
-            }
-        }
-
-        $assets = $this->grav['assets'];
-        $assets->addCss('plugin://ai-chatbot/assets/css/chatbot.css');
-
-        // Pass configuration data to JavaScript
-        $jsConfig = json_encode([
-            'apiEndpoint' => '/chatbot-api',
-            'restBase' => $this->getRestBase(),
-            'position' => $this->config->get('plugins.ai-chatbot.position', 'bottom-right'),
-            'botTitle' => $this->config->get('plugins.ai-chatbot.bot_title', 'Website Assistant'),
-            'welcomeMessage' => $this->config->get('plugins.ai-chatbot.welcome_message', 'Hello! How can I help you with this website today?'),
-            'customErrorMessage' => $this->config->get('plugins.ai-chatbot.custom_error_message', 'An unexpected connection error occurred. Please try again later.'),
-            'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
-            'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
-            'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
-            'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
-            'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', 'Hi there! Need help finding anything on our website?'),
-            'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
-            'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
-            'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
-            'maxTokens' => (int)$this->config->get('plugins.ai-chatbot.max_tokens', 800),
-            'maxInputTokens' => (int)$this->config->get('plugins.ai-chatbot.max_input_tokens', 500),
-            'contextWindowTokens' => (int)$this->config->get('plugins.ai-chatbot.context_window_tokens', 8192),
-            'currentRoute' => $currentRoute,
-        ]);
-
-        $assets->addInlineJs("window.GravChatbotConfig = {$jsConfig};");
-        $assets->addJs('plugin://ai-chatbot/assets/js/chatbot.js', ['group' => 'bottom']);
-
-        // Render Widget Twig Partial into Page Body
-        $twig = $this->grav['twig'];
-        $widgetHtml = '';
-        try {
-            $widgetHtml = $twig->processTemplate('partials/chatbot-widget.html.twig', [
-                'config' => $this->config
-            ]);
-        } catch (\Throwable $t) {}
-
-        $this->grav['assets']->addInlineJs("
-            (function() {
-                function injectGravChatbot() {
-                    if (!document.getElementById('grav-ai-chatbot-root')) {
-                        var div = document.createElement('div');
-                        div.innerHTML = " . json_encode($widgetHtml) . ";
-                        if (document.body) {
-                            document.body.appendChild(div.firstElementChild);
-                        }
-                    }
-                }
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', injectGravChatbot);
-                } else {
-                    injectGravChatbot();
-                }
-            })();
-        ");
-    }
-
-    /**
-     * Inject admin-specific assets for analytics reporting.
-     * NOTE: admin-next/fields/*.js are auto-bundled by Admin2 via
-     * GET /api/v1/gpm/plugins/{slug}/fields — do NOT addJs() them here
-     * (would double-register with wrong window.__GRAV_FIELD_TAG context).
-     */
-    public function onAdminTwigSiteVariables()
-    {
-        $assets = $this->grav['assets'];
-        $assets->addCss('plugin://ai-chatbot/assets/css/admin-analytics.css');
-        $assets->addJs('plugin://ai-chatbot/assets/js/admin-analytics.js');
-        $assets->addJs('plugin://ai-chatbot/assets/js/admin-model-tools.js');
     }
 
     /**

@@ -63,7 +63,15 @@ class ChatbotSecurityLogs extends HTMLElement {
         headers['X-API-Token'] = window.__GRAV_API_TOKEN;
       }
 
-      const endpoint = actionName === 'release_ip_lockouts' ? '/api/v1/ai-chatbot/unlock' : '/api/v1/ai-chatbot/unlock';
+      const endpoints = {
+        unlock: '/api/v1/ai-chatbot/unlock',
+        clear_logs: '/api/v1/ai-chatbot/clear-logs',
+      };
+      const endpoint = endpoints[actionName];
+      if (!endpoint) {
+        throw new Error(`Unknown action: ${actionName}`);
+      }
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: headers,
@@ -307,8 +315,8 @@ class ChatbotSecurityLogs extends HTMLElement {
     const btnClear = this.shadowRoot.querySelector('#btn-clear');
 
     if (btnRefresh) btnRefresh.addEventListener('click', () => this._fetchData());
-    if (btnUnlock) btnUnlock.addEventListener('click', () => this._handleAction('release_ip_lockouts'));
-    if (btnClear) btnClear.addEventListener('click', () => this._handleAction('clear_security_logs'));
+    if (btnUnlock) btnUnlock.addEventListener('click', () => this._handleAction('unlock'));
+    if (btnClear) btnClear.addEventListener('click', () => this._handleAction('clear_logs'));
   }
 }
 

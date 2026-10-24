@@ -34,11 +34,6 @@ class GeminiClient implements AiClientInterface
             ];
         }
 
-        $targetModel = $this->model;
-        if ($targetModel === 'gemini-1.5-flash' || $targetModel === 'gemini-1.5-flash-latest' || $targetModel === 'gemini-1.5-pro') {
-            $targetModel = 'gemini-2.0-flash';
-        }
-
         // Format contents payload for Gemini REST API
         $contents = [];
         foreach ($messages as $msg) {
@@ -70,20 +65,19 @@ class GeminiClient implements AiClientInterface
             ]
         ];
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$targetModel}:generateContent?key={$this->apiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent";
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($payload),
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . $this->apiKey],
             CURLOPT_TIMEOUT => $this->timeout,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2
         ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
 
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

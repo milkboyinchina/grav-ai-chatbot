@@ -2,6 +2,7 @@
 namespace Grav\Plugin\AiChatbot\Rag;
 
 use Grav\Common\Grav;
+use Grav\Plugin\AiChatbot\DataPath;
 
 /**
  * Class VectorStore
@@ -18,15 +19,8 @@ class VectorStore
     public function __construct(Grav $grav)
     {
         $this->grav = $grav;
-        $dataDir = $grav['locator']->findResource('user://data/ai-chatbot', true, true);
-        if (!$dataDir) {
-            $dataDir = '/var/www/html/user/data/ai-chatbot';
-        }
-        if (!is_dir($dataDir)) {
-            @mkdir($dataDir, 0755, true);
-        }
-
-        $this->dbPath = $dataDir . '/rag_index.sqlite';
+        DataPath::ensureDirectory();
+        $this->dbPath = DataPath::file('rag_index.sqlite');
         $this->initDb();
     }
 

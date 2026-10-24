@@ -18,8 +18,6 @@ en:
     CUSTOM_SYSTEM_PROMPT_HELP: Custom system instructions for AI model. If left empty, defaults to CoT suppression and character limit rules.
     MAX_RESPONSE_CHARS: Max Response Characters (Soft Limit)
     MAX_RESPONSE_CHARS_HELP: Soft guidance for maximum characters in AI replies (default 1000 characters).
-    TEST_CONNECTION: Test AI API Connection
-    TEST_CONNECTION_HELP: Test your API key and provider model configuration live before saving settings
     FAQ_SETTINGS: FAQ Pre-Matching Settings
     FAQ_ENABLED: Enable FAQ Pre-Matching
     FAQ_ENABLED_HELP: Answers matching questions from the FAQ page directly without using AI API keys
@@ -40,13 +38,10 @@ en:
     RATE_LIMIT_ENABLED: Enable IP Rate Limiting
     RATE_LIMIT_MAX: Max Requests Per Window
     RATE_LIMIT_WINDOW: Window Duration (Seconds)
-    STRICT_SITE_SCOPE: Strict Site Scope
     SESSION_SETTINGS: Session Retention Settings
     SESSION_RETENTION_DAYS: Chat Retention Period (Days)
     SESSION_RETENTION_DAYS_HELP: Number of days to retain visitor chat history & active state across pages, tabs, and refreshes (set 0 for session-only)
     LOGGING_SETTINGS: Logging & FAQ Analytics
-    LOGGING_ENABLED: Enable Interaction Logging
-    LOG_API_USAGE: Track Token Usage & Estimated Cost
     UI_SETTINGS: Chatbot Widget UI & Themes
     THEME_PRESET: UI Theme Preset
     THEME_PRESET_HELP: Select visual color theme styling
@@ -89,8 +84,6 @@ id:
     CUSTOM_SYSTEM_PROMPT_HELP: Instruksi sistem kustom untuk model AI. Jika dikosongkan, memakai aturan bawaan penekanan CoT dan batas karakter.
     MAX_RESPONSE_CHARS: Maksimum Karakter Respons (Batas Lunak)
     MAX_RESPONSE_CHARS_HELP: Panduan lunak untuk jumlah maksimum karakter balasan AI (bawaan 1000 karakter).
-    TEST_CONNECTION: Uji Koneksi API AI
-    TEST_CONNECTION_HELP: Uji kunci API dan konfigurasi model penyedia secara langsung sebelum menyimpan pengaturan
     FAQ_SETTINGS: Pengaturan Pra-Pencocokan FAQ
     FAQ_ENABLED: Aktifkan Pra-Pencocokan FAQ
     FAQ_ENABLED_HELP: Menjawab pertanyaan yang cocok dari halaman FAQ secara langsung tanpa memakai kunci API AI
@@ -111,13 +104,10 @@ id:
     RATE_LIMIT_ENABLED: Aktifkan Pembatasan Laju per IP
     RATE_LIMIT_MAX: Maksimum Permintaan per Jendela
     RATE_LIMIT_WINDOW: Durasi Jendela (Detik)
-    STRICT_SITE_SCOPE: Cakupan Situs Ketat
     SESSION_SETTINGS: Pengaturan Retensi Sesi
     SESSION_RETENTION_DAYS: Periode Retensi Obrolan (Hari)
     SESSION_RETENTION_DAYS_HELP: Jumlah hari penyimpanan riwayat obrolan dan status aktif pengunjung di seluruh halaman, tab, dan pemuatan ulang (isi 0 untuk sesi saja)
     LOGGING_SETTINGS: Log & Analitik FAQ
-    LOGGING_ENABLED: Aktifkan Log Interaksi
-    LOG_API_USAGE: Lacak Pemakaian Token & Estimasi Biaya
     UI_SETTINGS: UI & Tema Widget Chatbot
     THEME_PRESET: Preset Tema UI
     THEME_PRESET_HELP: Pilih gaya warna tema visual

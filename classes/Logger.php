@@ -25,17 +25,6 @@ class Logger
     public function logInteraction(array $entry): void
     {
         $logFile = $this->getLogFilePath();
-        $dir = dirname($logFile);
-
-        if (!file_exists($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        $logs = [];
-        if (file_exists($logFile)) {
-            $raw = file_get_contents($logFile);
-            $logs = json_decode($raw, true) ?: [];
-        }
 
         $config = $this->grav['config']->get('plugins.ai-chatbot', []);
         $inputPricePerM = (float)($config['cost_input_token_price_per_m'] ?? 0.15);
@@ -51,25 +40,23 @@ class Logger
         $record = [
             'id' => uniqid('log_', true),
             'timestamp' => $entry['timestamp'] ?? date('c'),
-            'ip_hash' => substr(hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1') . '|ai-chatbot'), 0, 16),
+            'ip_hash' => substr(hash('sha256', RateLimiter::getClientIp() . '|ai-chatbot'), 0, 16),
             'question' => trim($entry['question'] ?? ''),
             'answer' => trim($entry['answer'] ?? ''),
             'source' => $entry['source'] ?? 'ai_api', // 'faq_match', 'ai_api', 'rate_limit', 'guardrail'
             'source_page' => $entry['source_page'] ?? $_SERVER['HTTP_REFERER'] ?? $_SERVER['REQUEST_URI'] ?? '/',
-            'provider' => $entry['provider'] ?? 'groq',
+            'provider' => $entry['provider'] ?? 'gemini',
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
             'total_tokens' => $totalTokens,
             'estimated_cost_usd' => round($estCost, 6)
         ];
 
-        // Append record and keep last 500 records
-        array_unshift($logs, $record);
-        if (count($logs) > 500) {
-            $logs = array_slice($logs, 0, 500);
-        }
-
-        file_put_contents($logFile, json_encode($logs, JSON_PRETTY_PRINT));
+        // Append record and keep last 500 records under a single exclusive lock.
+        $this->updateJsonLocked($logFile, static function (array $logs) use ($record): array {
+            array_unshift($logs, $record);
+            return array_slice($logs, 0, 500);
+        });
     }
 
     /**
@@ -77,10 +64,7 @@ class Logger
      */
     public function clearLogs(): void
     {
-        $logFile = $this->getLogFilePath();
-        if (file_exists($logFile)) {
-            file_put_contents($logFile, json_encode([], JSON_PRETTY_PRINT));
-        }
+        $this->writeJsonLocked($this->getLogFilePath(), []);
     }
 
     /**
@@ -88,12 +72,7 @@ class Logger
      */
     public function saveLogs(array $logs): void
     {
-        $logFile = $this->getLogFilePath();
-        $dir = dirname($logFile);
-        if (!file_exists($dir)) {
-            mkdir($dir, 0755, true);
-        }
-        file_put_contents($logFile, json_encode(array_values($logs), JSON_PRETTY_PRINT));
+        $this->writeJsonLocked($this->getLogFilePath(), array_values($logs));
     }
 
     /**
@@ -101,12 +80,7 @@ class Logger
      */
     public function getLogs(): array
     {
-        $logFile = $this->getLogFilePath();
-        if (!file_exists($logFile)) {
-            return [];
-        }
-        $raw = file_get_contents($logFile);
-        return json_decode($raw, true) ?: [];
+        return $this->readJsonLocked($this->getLogFilePath());
     }
 
     /**
@@ -115,10 +89,6 @@ class Logger
     public function logAiResponse(array $data): void
     {
         $logFile = $this->getAiResponseLogFilePath();
-        $dir = dirname($logFile);
-        if (!file_exists($dir)) {
-            mkdir($dir, 0755, true);
-        }
 
         $timestamp = date('Y-m-d H:i:s P');
         $provider = $data['provider'] ?? 'ai';
@@ -143,7 +113,7 @@ class Logger
             $error ? "\nError: {$error}" : ''
         );
 
-        file_put_contents($logFile, $logEntry, FILE_APPEND);
+        $this->appendLocked($logFile, $logEntry);
     }
 
     /**
@@ -152,15 +122,11 @@ class Logger
     public function logError(string $message, string $context = 'GENERAL'): void
     {
         $errorFile = $this->getErrorLogFilePath();
-        $dir = dirname($errorFile);
-        if (!file_exists($dir)) {
-            mkdir($dir, 0755, true);
-        }
 
         $timestamp = date('Y-m-d H:i:s P');
         $logLine = sprintf("[%s] [ERROR] [%s] %s\n", $timestamp, strtoupper($context), trim($message));
 
-        file_put_contents($errorFile, $logLine, FILE_APPEND);
+        $this->appendLocked($errorFile, $logLine);
     }
 
     /**
@@ -183,28 +149,131 @@ class Logger
     {
         $errorFile = $this->getErrorLogFilePath();
         if (file_exists($errorFile)) {
-            file_put_contents($errorFile, '');
+            file_put_contents($errorFile, '', LOCK_EX);
         }
     }
 
     protected function getLogFilePath(): string
     {
-        $locator = $this->grav['locator'];
-        $base = $locator->findResource('user://data', true) ?: (defined('GRAV_ROOT') ? GRAV_ROOT . '/user/data' : '/var/www/html/user/data');
-        return $base . '/ai-chatbot/interactions.json';
+        return DataPath::file('interactions.json');
     }
 
     public function getAiResponseLogFilePath(): string
     {
-        $locator = $this->grav['locator'];
-        $base = $locator->findResource('user://data', true) ?: (defined('GRAV_ROOT') ? GRAV_ROOT . '/user/data' : '/var/www/html/user/data');
-        return $base . '/ai-chatbot/ai_responses.log';
+        return DataPath::file('ai_responses.log');
     }
 
     public function getErrorLogFilePath(): string
     {
-        $locator = $this->grav['locator'];
-        $base = $locator->findResource('user://data', true) ?: (defined('GRAV_ROOT') ? GRAV_ROOT . '/user/data' : '/var/www/html/user/data');
-        return $base . '/ai-chatbot/error.log';
+        return DataPath::file('error.log');
+    }
+
+    /**
+     * Read a JSON array while holding a shared lock.
+     */
+    protected function readJsonLocked(string $file): array
+    {
+        if (!file_exists($file)) {
+            return [];
+        }
+
+        $handle = fopen($file, 'rb');
+        if ($handle === false) {
+            return [];
+        }
+
+        try {
+            if (!flock($handle, LOCK_SH)) {
+                return [];
+            }
+            $raw = stream_get_contents($handle);
+            flock($handle, LOCK_UN);
+        } finally {
+            fclose($handle);
+        }
+
+        return json_decode((string)$raw, true) ?: [];
+    }
+
+    /**
+     * Mutate a JSON array while holding an exclusive lock across read and write.
+     */
+    protected function updateJsonLocked(string $file, callable $mutator): void
+    {
+        DataPath::ensureDirectory();
+
+        $handle = fopen($file, 'c+b');
+        if ($handle === false) {
+            return;
+        }
+
+        try {
+            if (!flock($handle, LOCK_EX)) {
+                return;
+            }
+            $raw = stream_get_contents($handle);
+            $data = json_decode((string)$raw, true);
+            if (!is_array($data)) {
+                $data = [];
+            }
+            $data = $mutator($data);
+            ftruncate($handle, 0);
+            rewind($handle);
+            fwrite($handle, json_encode($data, JSON_PRETTY_PRINT));
+            fflush($handle);
+            flock($handle, LOCK_UN);
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    /**
+     * Replace a JSON file while holding an exclusive lock.
+     */
+    protected function writeJsonLocked(string $file, array $data): void
+    {
+        DataPath::ensureDirectory();
+
+        $handle = fopen($file, 'cb');
+        if ($handle === false) {
+            return;
+        }
+
+        try {
+            if (!flock($handle, LOCK_EX)) {
+                return;
+            }
+            ftruncate($handle, 0);
+            rewind($handle);
+            fwrite($handle, json_encode($data, JSON_PRETTY_PRINT));
+            fflush($handle);
+            flock($handle, LOCK_UN);
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    /**
+     * Append a text line while holding an exclusive lock.
+     */
+    protected function appendLocked(string $file, string $line): void
+    {
+        DataPath::ensureDirectory();
+
+        $handle = fopen($file, 'ab');
+        if ($handle === false) {
+            return;
+        }
+
+        try {
+            if (!flock($handle, LOCK_EX)) {
+                return;
+            }
+            fwrite($handle, $line);
+            fflush($handle);
+            flock($handle, LOCK_UN);
+        } finally {
+            fclose($handle);
+        }
     }
 }

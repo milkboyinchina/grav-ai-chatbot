@@ -44,7 +44,7 @@ class RateLimiter
             $windowSeconds = 60;
         }
 
-        $ip = $this->getClientIp();
+        $ip = self::getClientIp();
         $cacheKey = 'ai_chatbot_rate_' . md5($ip);
         
         /** @var Cache $cache */
@@ -90,38 +90,62 @@ class RateLimiter
         ];
     }
 
-    protected function getClientIp(): string
+    /**
+     * Resolve the visitor IP. Shared by rate limiting and lockout identity.
+     */
+    public static function getClientIp(): string
     {
-        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        // Only trust proxy headers when the direct peer is a trusted private/docker network.
+        $remoteAddr = (string)($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+
+        // Only trust proxy headers when the direct peer is a trusted private network.
         // Prevents trivial IP spoofing via X-Forwarded-For from the public internet.
-        if ($this->isTrustedProxy($remoteAddr)) {
+        if (self::isTrustedProxy($remoteAddr)) {
             if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-                $candidate = trim(explode(',', $_SERVER['HTTP_CLIENT_IP'])[0]);
+                $candidate = trim(explode(',', (string)$_SERVER['HTTP_CLIENT_IP'])[0]);
                 if (filter_var($candidate, FILTER_VALIDATE_IP)) {
                     return $candidate;
                 }
             }
             if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-                $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+                $ips = explode(',', (string)$_SERVER['HTTP_X_FORWARDED_FOR']);
                 $candidate = trim($ips[0]);
                 if (filter_var($candidate, FILTER_VALIDATE_IP)) {
                     return $candidate;
                 }
             }
         }
+
         return $remoteAddr;
     }
 
-    protected function isTrustedProxy(string $ip): bool
+    /**
+     * Trust loopback and RFC1918 peers only.
+     */
+    public static function isTrustedProxy(string $ip): bool
     {
-        // Loopback + RFC1918 + docker bridge ranges
         if ($ip === '127.0.0.1' || $ip === '::1') {
             return true;
         }
-        if (str_starts_with($ip, '10.') || str_starts_with($ip, '192.168.') || str_starts_with($ip, '172.')) {
+
+        $long = ip2long($ip);
+        if ($long === false) {
+            return false;
+        }
+        $long &= 0xFFFFFFFF;
+
+        // 10.0.0.0/8
+        if (($long & 0xFF000000) === 0x0A000000) {
             return true;
         }
+        // 172.16.0.0/12
+        if (($long & 0xFFF00000) === 0xAC100000) {
+            return true;
+        }
+        // 192.168.0.0/16
+        if (($long & 0xFFFF0000) === 0xC0A80000) {
+            return true;
+        }
+
         return false;
     }
 }
