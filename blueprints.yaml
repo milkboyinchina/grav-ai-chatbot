@@ -1,7 +1,7 @@
 name: Grav AI Chatbot
 slug: ai-chatbot
 type: plugin
-version: 2.0.0
+version: 2.1.0
 description: AI-powered chatbot plugin for Grav CMS supporting Groq (Ultra-Fast), Google Gemini, OpenRouter, and OpenAI with local FAQ pre-matching, multilingual support, multi-tier contact resolution, page summarization, rate-limiting, custom UI theme presets, proactive toasts, persistent chat session retention, customizable quick reply buttons, live API connection testing, blacklisted word safety guardrails, page visibility rules, and analytics reporting.
 icon: robot
 author:
@@ -89,6 +89,7 @@ form:
           label: PLUGIN_AI_CHATBOT.MODEL
           help: Model identifier (e.g. gemini-3.1-flash-lite, gpt-4o-mini, llama3.3, mistral, deepseek-r1)
           default: gemini-3.1-flash-lite
+          placeholder: 'Default: gemini-3.1-flash-lite'
 
         model_operations:
           type: chatbot-model-tools
@@ -110,6 +111,7 @@ form:
           label: ⏱️ AI Provider API Timeout (Seconds)
           help: Maximum HTTP execution time in seconds for AI provider responses (default 30 seconds, range 5-120)
           default: 30
+          placeholder: 'Default: 30'
           validate:
             type: int
             min: 5
@@ -120,6 +122,7 @@ form:
           label: 🔤 Max Output Tokens per Response
           help: Maximum completion tokens generated per AI reply (default 800 tokens, range 50-4000)
           default: 800
+          placeholder: 'Default: 800'
           validate:
             type: int
             min: 50
@@ -130,6 +133,7 @@ form:
           label: 📥 Max Input Tokens (User Question Limit)
           help: Maximum allowed input tokens for user question (default 500 tokens, ~2000 characters). If exceeded, a warning message is displayed.
           default: 500
+          placeholder: 'Default: 500'
           validate:
             type: int
             min: 50
@@ -140,6 +144,7 @@ form:
           label: 🪟 Model Context Window Limit (Tokens)
           help: Total token context window capacity of the AI model (default 8192 tokens, e.g. 8192, 16384, 128000)
           default: 8192
+          placeholder: 'Default: 8192'
 
         custom_system_prompt:
           type: textarea
@@ -152,6 +157,7 @@ form:
           label: 📏 Max Response Characters (Soft Limit)
           help: Soft guidance for maximum characters in AI replies (default 1000 characters).
           default: 1000
+          placeholder: 'Default: 1000'
           validate:
             type: int
             min: 100
@@ -202,12 +208,49 @@ form:
           label: 🏷️ Embedding Model Identifier
           help: Embedding model name (e.g. nomic-embed-text, text-embedding-004, text-embedding-3-small)
           default: 'tfidf_local'
+          placeholder: 'Default: tfidf_local'
+
+        rag_query_expansion:
+          type: toggle
+          label: 🔍 Enable HyDE Query Expansion
+          help: Expand user queries with hypothetical document embeddings before retrieval (slower, may improve recall)
+          highlight: 0
+          default: 0
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        rag_embedding_api_key:
+          type: text
+          wrapper_classes: chatbot-outlined
+          outerclasses: chatbot-outlined
+          label: 🔑 Embedding API Key
+          help: API key for the embedding provider (if required)
+          placeholder: 'Enter API Key (optional)...'
+          show_on: "rag_embedding_provider: gemini,openai,custom"
+          validate:
+            required: false
+
+        rag_embedding_endpoint:
+          type: text
+          wrapper_classes: chatbot-outlined
+          outerclasses: chatbot-outlined
+          label: 🌐 Embedding Endpoint
+          help: Base URL for the embedding provider
+          placeholder: 'e.g. http://localhost:11434'
+          show_on: "rag_embedding_provider: ollama,custom"
+          validate:
+            required: false
 
         rag_top_k:
           type: text
           label: 🎯 Top-K Chunks to Retrieve
-          help: Number of relevant page chunks to inject into the prompt context per query (Default 3, Range 1-10)
-          default: 3
+          help: Number of relevant page chunks to inject into the prompt context per query (Default 5, Range 1-10)
+          placeholder: 'Default: 5'
+          default: 5
+          placeholder: 'Default: 5'
           validate:
             type: int
             min: 1
@@ -216,8 +259,10 @@ form:
         rag_min_similarity:
           type: text
           label: 📊 Minimum Similarity Threshold (%)
-          help: Minimum similarity score required to include a page chunk (Default 65%)
-          default: 65
+          help: Minimum similarity score required to include a page chunk (Default 50%)
+          placeholder: 'Default: 50'
+          default: 50
+          placeholder: 'Default: 50'
           validate:
             type: int
             min: 10
@@ -240,6 +285,7 @@ form:
           label: 🕒 Scheduled Cron Expression
           help: Standard 5-field cron expression for background re-indexing (Default "0 2 * * *" = Daily at 2:00 AM)
           default: '0 2 * * *'
+          placeholder: 'Default: 0 2 * * *'
 
         rebuild_rag_index_button:
           type: chatbot-rag-tools
@@ -282,12 +328,14 @@ form:
           label: PLUGIN_AI_CHATBOT.FAQ_ROUTE
           help: PLUGIN_AI_CHATBOT.FAQ_ROUTE_HELP
           default: /faq
+          placeholder: 'Default: /faq'
 
         faq_similarity_threshold:
           type: range
           label: PLUGIN_AI_CHATBOT.FAQ_SIMILARITY
           help: PLUGIN_AI_CHATBOT.FAQ_SIMILARITY_HELP
           default: 70
+          placeholder: 'Default: 70'
           validate:
             min: 50
             max: 100
@@ -303,6 +351,7 @@ form:
           label: PLUGIN_AI_CHATBOT.CONTACT_ROUTE
           help: PLUGIN_AI_CHATBOT.CONTACT_ROUTE_HELP
           default: /contact
+          placeholder: 'Default: /contact'
 
         enable_hidden_contacts:
           type: toggle
@@ -321,6 +370,7 @@ form:
           label: PLUGIN_AI_CHATBOT.HIDDEN_CONTACT_ROUTE
           help: PLUGIN_AI_CHATBOT.HIDDEN_CONTACT_ROUTE_HELP
           default: /hidden-contacts
+          placeholder: 'Default: /hidden-contacts'
 
     section_ui:
       type: section
@@ -362,6 +412,7 @@ form:
           label: 📍 Specific Target Page Routes (One path per line)
           help: "What is this for?\nEnter relative URL page paths (one per line) where you want to show or hide the chatbot widget based on your visibility rule above.\n\nExamples of Page Routes:\n• / (or /home) = Main Website Home Page\n• /contact = Contact Us Page\n• /faq = Frequently Asked Questions Page\n• /blog = Blog Archive Page\n\nHow it works:\n- If 'Show ONLY on Specific Selected Page Routes' is chosen above, the chatbot WILL ONLY appear on the routes listed here.\n- If 'Show Everywhere EXCEPT Selected Page Routes' is chosen above, the chatbot WILL BE HIDDEN on the routes listed here."
           default: "/\n/home\n/contact\n/faq"
+          placeholder: 'Default: /\n/home\n/contact\n/faq'
           rows: 5
 
         bot_title:
@@ -369,17 +420,20 @@ form:
           label: 🤖 Chatbot Header Window Title
           help: Title displayed in the top header bar of the chat widget window (default "Website Assistant")
           default: 'Website Assistant'
+          placeholder: 'Default: Website Assistant'
 
         welcome_message:
           type: text
           label: PLUGIN_AI_CHATBOT.WELCOME_MESSAGE
           default: 'Hello! How can I help you with this website today?'
+          placeholder: 'Default: Hello! How can I help you with this website today?'
 
         custom_error_message:
           type: text
           label: Custom Connection Error Response Message
           help: Custom message displayed in the chat window when a network connection or AI API error occurs
           default: 'An unexpected connection error occurred. Please try again later.'
+          placeholder: 'Default: An unexpected connection error occurred. Please try again later.'
 
         cot_empty_response_text:
           type: text
@@ -405,6 +459,30 @@ form:
           validate:
             type: bool
 
+        notification_enabled:
+          type: toggle
+          label: PLUGIN_AI_CHATBOT.NOTIFICATION_ENABLED
+          help: PLUGIN_AI_CHATBOT.NOTIFICATION_ENABLED_HELP
+          highlight: 1
+          default: 1
+          options:
+            1: PLUGIN_ADMIN.ENABLED
+            0: PLUGIN_ADMIN.DISABLED
+          validate:
+            type: bool
+
+        notification_text:
+          type: text
+          label: PLUGIN_AI_CHATBOT.NOTIFICATION_TEXT
+          default: '👋 Hi there! Need help finding anything on our website?'
+          placeholder: 'Default: 👋 Hi there! Need help finding anything on our website?'
+
+        notification_delay_seconds:
+          type: text
+          label: PLUGIN_AI_CHATBOT.NOTIFICATION_DELAY
+          default: 4
+          placeholder: 'Default: 4'
+
         quick_replies:
           type: list
           label: PLUGIN_AI_CHATBOT.QUICK_REPLIES
@@ -427,28 +505,6 @@ form:
               label: Action Name or Question Prompt
               default: 'summarize_page'
 
-        notification_enabled:
-          type: toggle
-          label: PLUGIN_AI_CHATBOT.NOTIFICATION_ENABLED
-          help: PLUGIN_AI_CHATBOT.NOTIFICATION_ENABLED_HELP
-          highlight: 1
-          default: 1
-          options:
-            1: PLUGIN_ADMIN.ENABLED
-            0: PLUGIN_ADMIN.DISABLED
-          validate:
-            type: bool
-
-        notification_text:
-          type: text
-          label: PLUGIN_AI_CHATBOT.NOTIFICATION_TEXT
-          default: '👋 Hi there! Need help finding anything on our website?'
-
-        notification_delay_seconds:
-          type: text
-          label: PLUGIN_AI_CHATBOT.NOTIFICATION_DELAY
-          default: 4
-
     section_session:
       type: section
       title: PLUGIN_AI_CHATBOT.SESSION_SETTINGS
@@ -459,6 +515,7 @@ form:
           label: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS
           help: PLUGIN_AI_CHATBOT.SESSION_RETENTION_DAYS_HELP
           default: 7
+          placeholder: 'Default: 7'
 
     section_security:
       type: section
@@ -480,11 +537,13 @@ form:
           type: text
           label: PLUGIN_AI_CHATBOT.RATE_LIMIT_MAX
           default: 10
+          placeholder: 'Default: 10'
 
         rate_limit_window_seconds:
           type: text
           label: PLUGIN_AI_CHATBOT.RATE_LIMIT_WINDOW
           default: 60
+          placeholder: 'Default: 60'
 
         blacklist_filter_enabled:
           type: toggle
@@ -541,12 +600,14 @@ form:
           label: Input Token Price(USD) per 1 Million Token
           help: Price in USD per 1,000,000 Input / Prompt Tokens (e.g. Google Gemini 1.5 Flash = $0.15 per 1M)
           default: '0.15'
+          placeholder: 'Default: 0.15'
 
         cost_output_token_price_per_m:
           type: text
           label: Output Token Price(USD) per 1 Million Token
           help: Price in USD per 1,000,000 Output / Completion Tokens (e.g. Google Gemini 1.5 Flash = $0.60 per 1M)
           default: '0.60'
+          placeholder: 'Default: 0.60'
 
         cost_estimation_example:
           type: textarea
@@ -587,6 +648,7 @@ form:
           type: text
           label: 📥 Full CSV Report Download URL
           default: /chatbot-export?format=csv
+          placeholder: 'Default: /chatbot-export?format=csv'
           help: Full absolute or relative URL to download CSV spreadsheet report.
           readonly: true
           ignore: true
@@ -597,6 +659,7 @@ form:
           type: text
           label: 📄 Full JSON Analytics Dataset Download URL
           default: /chatbot-export?format=json
+          placeholder: 'Default: /chatbot-export?format=json'
           help: Full absolute or relative URL to download JSON telemetry dataset.
           readonly: true
           ignore: true
@@ -607,6 +670,7 @@ form:
           type: text
           label: 💾 Full Raw Interactions Log Download URL
           default: /chatbot-export?format=raw_interactions
+          placeholder: 'Default: /chatbot-export?format=raw_interactions'
           help: Full absolute or relative URL to download complete raw interaction entries.
           readonly: true
           ignore: true
@@ -629,6 +693,7 @@ form:
           label: 💡 Candidate FAQ Recommendations & Telemetry Logs
           help: Frequently asked visitor queries handled by AI API. Adding them to /faq page saves future API costs.
           default: "No candidate FAQ recommendations at this time."
+          placeholder: 'Default: No candidate FAQ recommendations at this time.'
           rows: 5
           readonly: true
           classes: grav-chatbot-recs-field

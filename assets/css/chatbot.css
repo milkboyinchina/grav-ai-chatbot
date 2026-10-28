@@ -16,53 +16,6 @@
   left: 24px;
 }
 
-/* Notification Toast */
-.grav-chatbot-toast {
-  position: absolute;
-  bottom: 70px;
-  width: 260px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(229, 231, 235, 0.8);
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-  font-size: 13px;
-  color: #1f2937;
-  line-height: 1.4;
-  display: none;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  animation: gravToastFade 0.3s ease;
-  cursor: pointer;
-}
-
-.grav-chatbot-toast.active {
-  display: flex !important;
-}
-
-.grav-chatbot-container.bottom-right .grav-chatbot-toast { right: 0; }
-.grav-chatbot-container.bottom-left .grav-chatbot-toast { left: 0; }
-
-@keyframes gravToastFade {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.grav-chatbot-toast-close {
-  background: transparent;
-  border: none;
-  font-size: 16px;
-  color: #9ca3af;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.grav-chatbot-toast-close:hover { color: #4b5563; }
-
 /* Launcher Button */
 .grav-chatbot-launcher {
   width: 56px;

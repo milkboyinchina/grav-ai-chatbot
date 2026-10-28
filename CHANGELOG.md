@@ -5,6 +5,27 @@ All notable changes to the Grav AI Chatbot plugin will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-10-24
+
+### Added
+- **Default system prompt** rewritten as a structured, multilingual template with `{max_response_chars}`, `{site_name}`, `{languages}` placeholders; security boundary now applied uniformly across all providers and actions.
+- **New providers**: Anthropic Claude (new `AnthropicClient`), DeepSeek, Zhipu AI (GLM), Xiaomi Mimo, OpenCode Zen, OpenCode Go, Reflection AI.
+- **Google preset refresh**: default chat model `gemini-2.5-flash`, embedding option `text-embedding-004`.
+- **RAG status endpoint** `GET /api/v1/ai-chatbot/rag-status` and live status panel in Admin2 RAG tools.
+- **Auto-bootstrap** RAG index when store is empty (TF-IDF provider).
+- **Language metadata** stored per chunk with SQLite migration for existing databases.
+
+### Changed
+- AI Provider Settings UX streamlined (single Connect & Load Models flow, Advanced accordion).
+- Configuration page sections reordered for readability.
+- Provider list sorted and expanded in Admin2 detector.
+
+### Removed
+- Proactive notification toast (`notification_enabled`, `notification_text`, `notification_delay_seconds`).
+- Cost estimation pricing inputs (`cost_input_token_price_per_m`, `cost_output_token_price_per_m`, `cost_estimation_example`).
+- `cot_empty_response_text` (hardcoded fallback used instead).
+- Security boundary duplicated in `OpenAiCompatibleClient` (now centralized in handler).
+
 ## [2.0.0] - Unreleased
 
 ### Added

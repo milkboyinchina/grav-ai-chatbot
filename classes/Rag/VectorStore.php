@@ -39,10 +39,20 @@ class VectorStore
                     content TEXT NOT NULL,
                     hash TEXT NOT NULL,
                     embedding_blob TEXT NOT NULL,
+                    language TEXT NOT NULL DEFAULT '',
                     updated_at INTEGER NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_rag_route ON rag_chunks(route);
             ");
+            // Migration for existing SQLite files created before the language column existed.
+            $cols = $this->pdo->query("PRAGMA table_info(rag_chunks)")->fetchAll(\PDO::FETCH_ASSOC);
+            $hasLanguage = false;
+            foreach ($cols as $col) {
+                if (($col['name'] ?? '') === 'language') { $hasLanguage = true; break; }
+            }
+            if (!$hasLanguage) {
+                $this->pdo->exec("ALTER TABLE rag_chunks ADD COLUMN language TEXT NOT NULL DEFAULT ''");
+            }
         } catch (\Throwable $e) {
             $this->pdo = null;
         }
@@ -54,8 +64,8 @@ class VectorStore
 
         try {
             $stmt = $this->pdo->prepare("
-                INSERT OR REPLACE INTO rag_chunks (chunk_id, route, title, section, anchor, content, hash, embedding_blob, updated_at)
-                VALUES (:chunk_id, :route, :title, :section, :anchor, :content, :hash, :embedding_blob, :updated_at)
+                INSERT OR REPLACE INTO rag_chunks (chunk_id, route, title, section, anchor, content, hash, embedding_blob, language, updated_at)
+                VALUES (:chunk_id, :route, :title, :section, :anchor, :content, :hash, :embedding_blob, :language, :updated_at)
             ");
 
             return $stmt->execute([
@@ -67,6 +77,7 @@ class VectorStore
                 ':content' => $chunk['content'],
                 ':hash' => $chunk['hash'],
                 ':embedding_blob' => json_encode($embedding),
+                ':language' => $chunk['language'] ?? '',
                 ':updated_at' => time()
             ]);
         } catch (\Throwable $e) {
@@ -105,6 +116,78 @@ class VectorStore
             return $this->pdo->exec("DELETE FROM rag_chunks") !== false;
         } catch (\Throwable $e) {
             return false;
+        }
+    }
+
+    public function getDbPath(): string
+    {
+        return $this->dbPath;
+    }
+
+    /**
+     * Return the size in bytes of the SQLite index file.
+     *
+     * @return int
+     */
+    public function getStorageSize(): int
+    {
+        if (file_exists($this->dbPath)) {
+            $size = filesize($this->dbPath);
+            return $size === false ? 0 : (int)$size;
+        }
+        return 0;
+    }
+
+    /**
+     * Return all indexed chunks for a given route, ordered by section.
+     *
+     * @param string $route
+     * @return array
+     */
+    public function getChunksByRoute(string $route): array
+    {
+        if (!$this->pdo) return [];
+        try {
+            $stmt = $this->pdo->prepare("SELECT * FROM rag_chunks WHERE route = :route ORDER BY section ASC, chunk_id ASC");
+            $stmt->execute([':route' => $route]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Return a list of indexed routes with chunk count, languages, and last update.
+     *
+     * @return array List of ['route', 'chunks', 'languages', 'last_updated']
+     */
+    public function getIndexedRoutes(): array
+    {
+        if (!$this->pdo) return [];
+        try {
+            $stmt = $this->pdo->query("
+                SELECT route,
+                       COUNT(*) AS chunks,
+                       GROUP_CONCAT(DISTINCT language) AS languages,
+                       MAX(updated_at) AS last_updated
+                FROM rag_chunks
+                GROUP BY route
+                ORDER BY route ASC
+            ");
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            $out = [];
+            foreach ($rows as $r) {
+                $langs = array_values(array_filter(array_map('trim', explode(',', (string)($r['languages'] ?? '')))));
+                $out[] = [
+                    'route' => (string)($r['route'] ?? ''),
+                    'chunks' => (int)($r['chunks'] ?? 0),
+                    'languages' => $langs,
+                    'last_updated' => (int)($r['last_updated'] ?? 0),
+                ];
+            }
+            return $out;
+        } catch (\Throwable $e) {
+            return [];
         }
     }
 

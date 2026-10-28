@@ -10,7 +10,8 @@ We actively maintain and provide security patches for the following versions:
 
 | Version | Supported | Notes |
 | :--- | :--- | :--- |
-| **2.0.x** | ✅ Yes | Current release: Grav 2.0 REST API, Admin 2 dashboards, multi-layered security guardrails. |
+| **2.1.x** | ✅ Yes | Current release: Grav 2.0 REST API, Admin 2 dashboards, multi-layered security guardrails, uniform security boundary. |
+| **2.0.x** | ⚠️ Security fixes only | Previous release. |
 | **1.1.x** | ⚠️ Critical Security Only | Upgrades to 2.0.x recommended. |
 | **< 1.1.0** | ❌ No | Deprecated. Please upgrade to the latest version immediately. |
 

@@ -31,7 +31,7 @@ class AiClientFactory
                 return new OpenAiCompatibleClient(
                     $apiKey,
                     $model ?: 'llama-3.3-70b-versatile',
-                    'https://api.groq.com/openai/v1',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://api.groq.com/openai/v1',
                     false,
                     $timeout,
                     $maxTokens,
@@ -42,7 +42,7 @@ class AiClientFactory
                 return new OpenAiCompatibleClient(
                     $apiKey,
                     $model ?: 'google/gemini-flash-1.5',
-                    'https://openrouter.ai/api/v1',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://openrouter.ai/api/v1',
                     true,
                     $timeout,
                     $maxTokens,
@@ -53,7 +53,7 @@ class AiClientFactory
                 return new OpenAiCompatibleClient(
                     $apiKey,
                     $model ?: 'gpt-4o-mini',
-                    'https://api.openai.com/v1',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://api.openai.com/v1',
                     false,
                     $timeout,
                     $maxTokens,
@@ -91,11 +91,85 @@ class AiClientFactory
                     $contextWindowTokens
                 );
 
+            case 'claude':
+                return new AnthropicClient(
+                    $apiKey,
+                    $model ?: 'claude-sonnet-4-5',
+                    $timeout,
+                    $maxTokens
+                );
+
+            case 'deepseek':
+                return new OpenAiCompatibleClient(
+                    $apiKey,
+                    $model ?: 'deepseek-chat',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://api.deepseek.com/v1',
+                    false,
+                    $timeout,
+                    $maxTokens,
+                    $contextWindowTokens
+                );
+
+            case 'zhipu':
+                return new OpenAiCompatibleClient(
+                    $apiKey,
+                    $model ?: 'glm-4-flash',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://open.bigmodel.cn/api/paas/v4',
+                    false,
+                    $timeout,
+                    $maxTokens,
+                    $contextWindowTokens
+                );
+
+            case 'xiaomi':
+                return new OpenAiCompatibleClient(
+                    $apiKey,
+                    $model ?: 'mimo-v2-flash',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://api.xiaomimimo.com/v1',
+                    false,
+                    $timeout,
+                    $maxTokens,
+                    $contextWindowTokens
+                );
+
+            case 'opencode-zen':
+                return new OpenAiCompatibleClient(
+                    $apiKey,
+                    $model ?: 'opencode-zen-default',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://opencode.ai/zen/v1',
+                    false,
+                    $timeout,
+                    $maxTokens,
+                    $contextWindowTokens
+                );
+
+            case 'opencode-go':
+                return new OpenAiCompatibleClient(
+                    $apiKey,
+                    $model ?: 'opencode-go-default',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://opencode.ai/go/v1',
+                    false,
+                    $timeout,
+                    $maxTokens,
+                    $contextWindowTokens
+                );
+
+            case 'reflection':
+                return new OpenAiCompatibleClient(
+                    $apiKey,
+                    $model ?: 'reflection-default',
+                    $customEndpoint !== '' ? $customEndpoint : 'https://api.reflection.ai/openai/v1',
+                    false,
+                    $timeout,
+                    $maxTokens,
+                    $contextWindowTokens
+                );
+
             case 'gemini':
             default:
                 return new GeminiClient(
                     $apiKey,
-                    $model ?: 'gemini-3.1-flash-lite',
+                    $model ?: 'gemini-2.5-flash',
                     $timeout,
                     $maxTokens
                 );

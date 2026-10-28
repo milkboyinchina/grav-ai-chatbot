@@ -56,13 +56,32 @@ class ContextIndexer
 
         $result = [];
         foreach ($allPages as $page) {
-            if ($page instanceof Page && $page->published() && $page->routable()) {
-                $result[] = [
-                    'route' => $page->route(),
-                    'title' => $page->title(),
-                    'content' => strip_tags($page->content())
-                ];
+            if (!($page instanceof Page) || !$page->published() || !$page->routable()) {
+                continue;
             }
+            try {
+                $route = $page->route();
+                $title = $page->title();
+            } catch (\Throwable $t) {
+                continue;
+            }
+            try {
+                $content = strip_tags($page->content());
+            } catch (\Throwable $t) {
+                // Modular Twig processing can fail outside normal page rendering
+                // (e.g. API context); fall back to raw markdown instead of
+                // failing the entire summarization request.
+                try {
+                    $content = strip_tags($page->rawMarkdown());
+                } catch (\Throwable $t2) {
+                    continue;
+                }
+            }
+            $result[] = [
+                'route' => $route,
+                'title' => $title,
+                'content' => $content
+            ];
         }
         return $result;
     }

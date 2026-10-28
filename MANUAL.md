@@ -7,8 +7,8 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 ## 📋 Table of Contents
 
 1. [Plugin Master Enable / Disable](#1-plugin-master-enable--disable)
-2. [Section 1: AI Provider Settings (`section_provider`)](#section-1-ai-provider-settings-section_provider)
-3. [Section 2: 🧠 RAG (Retrieval-Augmented Generation) & Page Indexing Engine (`section_rag`)](#section-2--rag-retrieval-augmented-generation--page-indexing-engine-section_rag)
+2. [Section 1: Chat Provider Settings (`section_provider`)](#section-1-chat-provider-settings-section_provider)
+3. [Section 2: RAG Provider Settings (`section_rag`)](#section-2-rag-provider-settings-section_rag)
    - [💡 Important: Provider & API Key Shared Dependency](#-important-provider--api-key-shared-dependency)
    - [⏰ Does Installing the Plugin Add a Cron Schedule Automatically?](#-does-installing-the-plugin-add-a-cron-schedule-automatically)
    - [⚙️ Server Crontab Setup Guide](#%EF%B8%8F-server-crontab-setup-guide)
@@ -32,7 +32,7 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 
 ---
 
-## Section 1: AI Provider Settings (`section_provider`)
+## Section 1: Chat Provider Settings (`section_provider`)
 
 ### 📍 Accessing Admin Settings
 
@@ -46,11 +46,11 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 | :--- | :--- | :--- | :--- |
 | **Enable AI Fallback** | `ai_enabled` | `1` (Enabled) | Master toggle for cloud AI generation. When disabled, only local FAQ answers are delivered. |
 | **AI Disabled Message** | `ai_disabled_response_text` | *"AI assistant is currently disabled..."* | Text displayed to visitors when AI fallback is turned off. |
-| **AI Provider** | `provider` | `gemini` | Options (in alphabetical order): `gemini` (Google Gemini API), `groq` (Groq Cloud), `ollama` (Ollama Local Host), `omniroute` (OmniRoute OpenAI-compatible gateway), `openai` (OpenAI Official API), `openrouter` (OpenRouter AI Gateway). |
+| **AI Provider** | `provider` | `gemini` | Options (in alphabetical order): `gemini` (Google Gemini API), `groq` (Groq Cloud), `ollama` (Custom OpenAI-Compatible endpoint, e.g. local Ollama / vLLM / LM Studio), `omniroute` (OmniRoute OpenAI-compatible gateway), `openai` (OpenAI Official API), `openrouter` (OpenRouter AI Gateway). |
 | **API Key** | `api_key` | *Blank* | **🔑 SHARED FIELD**: Secret API Key. Used for chat completions AND reused by RAG when cloud embedding is selected (`gemini` or `openai`). Leave blank for local Ollama/TF-IDF. When this field is blank, the plugin falls back to the `AI_CHATBOT_API_KEY` environment variable (set it in `.env`) so the secret can stay out of version control. |
 | **Model Identifier** | `model` | `gemini-3.1-flash-lite` | Identifier string for chat completions (e.g. `gemini-3.1-flash-lite`, `gpt-4o-mini`, `qwen/qwen3.6-27b`, `openrouter/free`, `llama-3.3-70b-versatile`, `deepseek-r1`). |
 | **Model Tools & Live Health Check** | `model_operations` | *Custom Tool* | **🛠️ 3-STEP WIZARD**: Step 1 (🔑 Test Key), Step 2 (🔄 Retrieve Models sorted alphabetically), Step 3 (⚡ Health Ping & ✨ Use This Model with **✍️ Switch to Unlisted / Custom Model Input** button). |
-| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Base endpoint URL. Required for `omniroute` and `ollama`. Must be a valid `http` or `https` URL, for example `https://gateway.example.com/v1`. |
+| **Custom Endpoint URL** | `custom_endpoint` | *Blank* | **🌐 SHARED FIELD**: Base endpoint URL only, for example `https://gateway.example.com/v1`. Required for `omniroute` and `ollama` (custom); optional override for other presets. Must be a valid `http` or `https` URL. Do not append `/chat/completions` or `/models`, they are added automatically. |
 | **API Timeout (Sec)** | `api_timeout` | `30` | Maximum HTTP execution time in seconds (Range: 5 - 120s). |
 | **Max Output Tokens** | `max_tokens` | `800` | Token limit for AI completion replies (Range: 50 - 4,000 tokens). |
 | **Max Input Tokens** | `max_input_tokens` | `500` | Maximum allowed tokens per user question (~2000 characters). |
@@ -76,7 +76,7 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 
 ---
 
-## Section 2: 🧠 RAG (Retrieval-Augmented Generation) & Page Indexing Engine (`section_rag`)
+## Section 2: RAG Provider Settings (`section_rag`)
 
 The RAG engine parses your published Grav site pages, breaks them down into heading-aware sections, and stores them in a local SQLite vector database (`user/data/ai-chatbot/rag_index.sqlite`).
 
@@ -86,8 +86,10 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 | :--- | :--- | :--- | :--- |
 | **Enable RAG Retrieval** | `rag_enabled` | `1` (Enabled) | Use SQLite vector search to inject relevant section chunks into prompts instead of full-site text. |
 | **Automatic Page Indexing** | `rag_indexing_enabled` | `1` (Enabled) | Enables automatic indexing on `onPageSaved`, `onPageDeleted`, and background cron runs. |
-| **RAG Embedding Engine** | `rag_embedding_provider` | `tfidf_local` | Drivers: `tfidf_local` (Free local BM25), `ollama` (Local Ollama), `gemini` (`text-embedding-004`), `openai` (`text-embedding-3-small`). |
+| **RAG Embedding Engine** | `rag_embedding_provider` | `tfidf_local` | Drivers: `tfidf_local` (Free local BM25), `ollama` (Local Ollama), `gemini` (`text-embedding-004`), `openai` (`text-embedding-3-small`), `custom` (Custom OpenAI-Compatible Endpoint, e.g. vLLM / LM Studio / TEI). |
 | **Embedding Model ID** | `rag_embedding_model` | `tfidf_local` | Model string (e.g., `nomic-embed-text`, `text-embedding-004`, `text-embedding-3-small`). |
+| **Embedding API Key** | `rag_embedding_api_key` | *Blank (reuse main key)* | Optional override for cloud embeddings. Leave blank to reuse Section 1 `api_key`. Fill when chat and embeddings run on different vendors, or set `AI_CHATBOT_EMBEDDING_API_KEY` in `.env`. |
+| **Embedding Endpoint URL** | `rag_embedding_endpoint` | *Blank (reuse shared endpoint)* | Optional override for local/custom embedding servers (e.g. `http://localhost:11434`). Leave blank to reuse the shared Custom Endpoint URL from Section 1. Required when the embedding engine is `ollama` or `custom` and Section 1 has no endpoint. |
 | **Top-K Chunks Count** | `rag_top_k` | `3` | Number of section chunks injected per prompt (Range: 1 - 10). |
 | **Min Similarity %** | `rag_min_similarity` | `65` | Minimum relevance threshold score % required to include a chunk (Range: 10 - 100%). |
 | **Background Cron Scheduler** | `rag_scheduler_enabled` | `1` (Enabled) | Automatically re-indexes site pages in background via Grav CMS Scheduler. |
@@ -97,6 +99,8 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 ---
 
 ### 🚀 How to Run RAG Indexing Manually
+
+> **Note for self-hosters behind a reverse proxy (nginx, Apache, Cloudflare):** The UI rebuild button runs synchronously over HTTP. If your proxy has a short read timeout (e.g. 30s), large rebuilds may be cut off. Recommended: set `proxy_read_timeout` (nginx) or `ProxyTimeout` (Apache) to at least **120 seconds** for the admin route. Alternatively, use the CLI method below which has no timeout.
 
 There are 3 convenient ways to run or trigger the RAG page indexing process manually whenever you publish new content or change embedding configurations:
 
@@ -131,6 +135,11 @@ php bin/grav scheduler -r
 
 The RAG engine supports 4 distinct embedding drivers. Choose the engine that best matches your hosting environment, budget, and privacy requirements:
 
+All four engines feed the **same retrieval pipeline**: each page chunk and each visitor question are turned into a vector, ranked by 60% cosine similarity + 40% keyword overlap, filtered by the minimum similarity threshold, and the top-K chunks are injected into the prompt. The only difference is **how those vectors are produced**:
+
+- **`tfidf_local` (DEFAULT)** builds a 64-dimension term-frequency vector by hashing each word with CRC32. It is **literal word matching**: a question about "benchmark testing" only finds chunks containing those exact words. Zero cost, no API key, works offline, auto-bootstraps on first query. Best for small sites where visitors use the site's own vocabulary.
+- **`gemini` / `openai` / `ollama`** use a neural embedding model that maps text to a dense semantic vector (hundreds to thousands of dimensions). It matches on **meaning**, so "benchmark testing" finds a post about "iGPU vs CPU performance" even with no shared words. Costs API calls or a local model on every index and query, requires a key (or local endpoint), and changing models means reindexing because vectors are model-specific.
+
 #### Option 1: ⚡ Local TF-IDF / BM25 Inverted Index (`tfidf_local`) [DEFAULT RECOMMENDED]
 - **Recommended Model ID**: `tfidf_local`
 - **Cost**: **$0.00** (Zero API token cost)
@@ -162,6 +171,14 @@ The RAG engine supports 4 distinct embedding drivers. Choose the engine that bes
 - **Why Choose This?**:  
   - Industry-standard OpenAI semantic vector performance. Best choice if your entire AI stack is built around OpenAI models and enterprise API compliance.
 
+#### Option 5: 🔧 Custom OpenAI-Compatible Endpoint (`custom`)
+- **Recommended Model ID**: Whatever your local/remote server exposes (e.g. `nomic-embed-text`, `bge-m3`, `text-embedding-3-small`).
+- **Cost**: Depends on the host (free for local servers).
+- **Requirements**: Requires a **Custom Endpoint URL** (Section 1) pointing at an OpenAI-compatible `/v1` base. API key is optional (sent as Bearer only when provided).
+- **Why Choose This?**:  
+  - Use any OpenAI-compatible embedding server: vLLM, LM Studio, text-embeddings-inference, Ollama's `/v1` endpoint, or a remote gateway.
+  - Reuses the OpenAI `/v1/embeddings` request shape, so it works with any server that implements that route.
+
 ---
 
 ### 💡 Important: Provider & API Key Shared Dependency
@@ -169,8 +186,8 @@ The RAG engine supports 4 distinct embedding drivers. Choose the engine that bes
 To keep setup simple and avoid redundant configuration, RAG **reuses credentials from Section 1**:
 
 1. **Which API Key is used?**
-   - RAG uses the **`api_key`** field from **Section 1 (AI Provider Settings)**.
-   - If `gemini` or `openai` is selected as the `rag_embedding_provider`, RAG automatically reads `api_key` from Section 1.
+   - RAG uses the **`rag_embedding_api_key`** field when filled, otherwise it reuses **`api_key`** from **Section 1 (AI Provider Settings)**.
+   - If `gemini` or `openai` is selected as the `rag_embedding_provider`, fill `rag_embedding_api_key` when the chat key belongs to a different vendor (e.g. Reflection chat + Gemini embeddings).
 2. **Which Custom Endpoint is used?**
    - If `ollama` is selected for RAG, RAG reuses **`custom_endpoint`** from Section 1 (or defaults to `http://localhost:11434`).
 3. **What happens if a Cloud API Key is missing?**

@@ -17,7 +17,7 @@ graph TD
     E2 -->|Contact Intent| F2[Local Contact Info Response]
     E2 -->|No Match| G[Rag Retriever SQLite Vector Search]
     G --> H[AiClientFactory.php to GeminiClient or OpenAiCompatibleClient]
-    H --> I[LLM API Provider Gemini/Groq/OpenAI/OpenRouter/Ollama/OmniRoute]
+    H --> I[LLM API Provider Gemini/Groq/OpenAI/OpenRouter/Ollama/OmniRoute/Claude/DeepSeek/Zhipu/Xiaomi/OpenCode/Reflection]
     I --> J[Logger.php Telemetry and Cost Accounting]
     J --> K[JSON Output Response to Frontend]
 ```
@@ -33,8 +33,9 @@ graph TD
 | **`Rag\Indexer`** | `classes/Rag/Indexer.php` | Heading-aware page chunker and embedding writer to the SQLite vector store; incremental SHA-256 hashing. |
 | **`Rag\Retriever`** | `classes/Rag/Retriever.php` | Similarity search over the SQLite vector store; returns Top-K chunks for the prompt. |
 | **`RateLimiter`** | `classes/RateLimiter.php` | Per-IP rolling-window request limiting backed by Grav cache. |
-| **`AiClientFactory`** | `classes/AiClientFactory.php` | Selects the concrete AI client (`GeminiClient` or `OpenAiCompatibleClient`) from provider config. |
-| **`OpenAiCompatibleClient`** | `classes/OpenAiCompatibleClient.php` | Driver for OpenAI, Groq, OpenRouter, OmniRoute, and Ollama APIs with system security boundary injection. |
+| **`AiClientFactory`** | `classes/AiClientFactory.php` | Selects the concrete AI client (`GeminiClient`, `AnthropicClient`, or `OpenAiCompatibleClient`) from provider config. |
+| **`AnthropicClient`** | `classes/AnthropicClient.php` | Driver for Anthropic Claude Messages API with `x-api-key` and `anthropic-version` headers. |
+| **`OpenAiCompatibleClient`** | `classes/OpenAiCompatibleClient.php` | Driver for OpenAI, Groq, OpenRouter, OmniRoute, Ollama, DeepSeek, Zhipu, Xiaomi, OpenCode, and Reflection APIs. |
 | **`Logger`** | `classes/Logger.php` | Interaction telemetry recording (`interactions.json`), cost calculation, and error logging (`error.log`). |
 | **`AnalyticsReportGenerator`** | `classes/AnalyticsReportGenerator.php` | Telemetry aggregation, FAQ candidate recommendations, and CSV/JSON export generation. |
 
@@ -56,6 +57,7 @@ All modern client-side chat widgets and Admin 2 dashboard components communicate
 | GET | `/ai-chatbot/export?format=csv\|json\|raw_interactions` | `api.system.read` | File download. |
 | POST | `/ai-chatbot/test-key`, `/models`, `/health` | `api.system.write` | Provider tools (Admin2 model-tools). |
 | POST | `/ai-chatbot/reindex` | `api.system.write` | Rebuild RAG index. |
+| GET | `/ai-chatbot/rag-status` | `api.system.read` | RAG index status (chunk count, provider, last run, last error). |
 | POST | `/ai-chatbot/unlock` | `api.system.write` | Release IP lockouts. |
 | POST | `/ai-chatbot/clear-logs` | `api.system.write` | Clear `error.log` and release IP lockouts. |
 

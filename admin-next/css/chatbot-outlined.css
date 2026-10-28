@@ -1,0 +1,32 @@
+/**
+ * Outlined style for ai-chatbot blueprint text fields.
+ *
+ * Applied through `wrapper_classes: chatbot-outlined` in blueprints.yaml.
+ * Classic Admin and frontend form templates render `wrapper_classes` on the
+ * field wrapper div, so these rules draw a bordered (outlined) input while
+ * leaving Admin2 behavior unchanged when the class is not consumed there.
+ */
+.chatbot-outlined input[type="text"],
+.chatbot-outlined input:not([type]),
+.chatbot-outlined textarea {
+  background: transparent;
+  border: 1px solid var(--form-border, #c9cfd8);
+  border-radius: 6px;
+  padding: 6px 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chatbot-outlined input[type="text"]:focus,
+.chatbot-outlined input:not([type]):focus,
+.chatbot-outlined textarea:focus {
+  border-color: var(--form-border-focus, #3b82f6);
+  box-shadow: 0 0 0 1px var(--form-border-focus, #3b82f6);
+  outline: none;
+}
+
+.chatbot-outlined input[type="text"][readonly],
+.chatbot-outlined input:not([type])[readonly],
+.chatbot-outlined textarea[readonly] {
+  background: rgba(127, 127, 127, 0.08);
+}

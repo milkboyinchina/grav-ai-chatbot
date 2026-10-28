@@ -3,7 +3,7 @@ ai_enabled: true
 ai_disabled_response_text: "AI assistant is currently disabled. Please search our FAQ or contact site support for assistance."
 provider: gemini
 api_key: ''
-model: 'gemini-3.1-flash-lite'
+model: ''
 custom_endpoint: ''
 api_timeout: 30
 max_tokens: 800
@@ -15,8 +15,11 @@ rag_enabled: true
 rag_indexing_enabled: true
 rag_embedding_provider: tfidf_local
 rag_embedding_model: tfidf_local
-rag_top_k: 3
-rag_min_similarity: 65
+rag_embedding_api_key: ''
+rag_embedding_endpoint: ''
+rag_top_k: 5
+rag_min_similarity: 50
+rag_query_expansion: 0
 rag_scheduler_enabled: true
 rag_scheduler_cron: '0 2 * * *'
 
@@ -39,9 +42,6 @@ blacklist_response_text: "⚠️ Safety Guardrail: Your message contains prohibi
 session_retention_days: 7
 
 log_ai_responses: false
-cost_input_token_price_per_m: '0.15'
-cost_output_token_price_per_m: '0.60'
-
 theme_preset: glass_blue
 position: bottom-right
 display_mode: all
@@ -49,7 +49,6 @@ display_pages: "/\n/contact\n/faq"
 bot_title: 'Website Assistant'
 welcome_message: 'Hello! How can I help you with this website today?'
 custom_error_message: 'An unexpected connection error occurred. Please try again later.'
-cot_empty_response_text: "I'm sorry, I didn't quite understand that. Could you please rephrase your question?"
 accent_color: '#3b82f6'
 
 quick_replies_enabled: true
@@ -64,6 +63,3 @@ quick_replies:
     type: question
     action_or_prompt: 'When was this company established?'
 
-notification_enabled: true
-notification_text: '👋 Hi there! Need help finding anything on our website?'
-notification_delay_seconds: 4

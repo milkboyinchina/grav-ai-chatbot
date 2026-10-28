@@ -2,9 +2,9 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Grav CMS](https://img.shields.io/badge/Grav-2.0%2B-orange.svg)](https://getgrav.org)
-[![Version](https://img.shields.io/badge/Version-v2.0.0-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
+[![Version](https://img.shields.io/badge/Version-v2.1.0-green.svg)](https://github.com/milkboyinchina/grav-ai-chatbot)
 
-An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retrieval-Augmented Generation (RAG) vector search, multi-engine AI inference (**Groq Ultra-Fast Llama 3**, **Google Gemini**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching with alias normalization, customizable AI disabled response messages, multi-tier contact resolution, customizable quick replies, and telemetry dashboards.
+An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retrieval-Augmented Generation (RAG) vector search, multi-engine AI inference (**Groq**, **Google Gemini**, **Anthropic Claude**, **DeepSeek**, **Zhipu AI**, **Xiaomi Mimo**, **OpenCode Zen/Go**, **Reflection AI**, **OpenRouter**, **OpenAI**, or **Custom Endpoints**), local semantic FAQ pre-matching, multi-tier contact resolution, customizable quick replies, and telemetry dashboards.
 
 ## 🌐 Live Demo & Hardware Benchmark Test
 
@@ -15,7 +15,7 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 
 > [!WARNING]
 > **Proof of Extreme Token Efficiency & Context Window Optimization**:  
-> The live demo backend on `milkboy.my.id` is powered by a custom Ollama endpoint running on a **remote janky old Intel Celeron N4100 low-power mini PC** serving custom `Qwen2.5-0.8B`! Running at snail's Average 3.59 tokens/sec.
+> The live demo backend on `milkboy.my.id` is powered by a custom Ollama endpoint running on a ~remote janky old Intel Celeron N4100 low-power mini PC~ Mac mini M1 serving `Minicpm5-2B`! Running at an ~snail's~ average 35 tokens/sec.
 > Because the RAG engine trims system prompt context down to 300–500 tokens, even ultra-low-spec hardware can process site queries in "real™" time. Please expect slight hardware-bound processing latency when testing complex queries (*your mileage may vary!*).
 > Don't judge me, I'm not made of money.
 ---

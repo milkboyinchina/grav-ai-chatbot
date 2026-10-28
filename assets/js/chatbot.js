@@ -12,9 +12,6 @@
     const accentColor = config.accentColor || '#3b82f6';
     const themePreset = config.themePreset || 'glass_blue';
     const retentionDays = config.sessionRetentionDays || 7;
-    const notificationEnabled = config.notificationEnabled !== false;
-    const notificationText = config.notificationText || 'Hi there! Need help finding anything on our website?';
-    const notificationDelaySeconds = config.notificationDelaySeconds || 4;
     const quickRepliesEnabled = config.quickRepliesEnabled !== false;
     const quickReplies = config.quickReplies || [];
 
@@ -43,9 +40,6 @@
     const messagesFeed = widgetRoot.querySelector('#grav-chatbot-messages');
     const inputForm = widgetRoot.querySelector('#grav-chatbot-form');
     const inputField = widgetRoot.querySelector('#grav-chatbot-input');
-    const toastEl = widgetRoot.querySelector('#grav-chatbot-toast');
-    const toastText = widgetRoot.querySelector('#grav-chatbot-toast-text');
-    const toastClose = widgetRoot.querySelector('#grav-chatbot-toast-close');
     const quickRepliesContainer = widgetRoot.querySelector('.grav-chatbot-quick-actions');
 
     // Render Quick Replies
@@ -59,7 +53,10 @@
         btn.addEventListener('click', function () {
           // Only summarize_page is a real internal action. Every other entry is
           // sent as a normal question so stale or custom entries stay harmless.
-          if (qr.type === 'action' && qr.action_or_prompt === 'summarize_page') {
+          // Normalize spaces/hyphens/case so saved variants like
+          // "summarize page" still trigger the internal action.
+          var normAction = String(qr.action_or_prompt || '').toLowerCase().replace(/[\s_-]+/g, '_');
+          if (qr.type === 'action' && (normAction === 'summarize_page' || normAction === 'summarizepage')) {
             sendQuestion(qr.label || 'Summarize Page', 'summarize_page');
           } else {
             sendQuestion(qr.action_or_prompt || qr.label, 'query');
@@ -78,10 +75,6 @@
           windowEl.classList.add('active');
         }
         if (toggleBtn) toggleBtn.classList.add('active');
-        if (toastEl) {
-          toastEl.style.display = 'none';
-          toastEl.classList.remove('active');
-        }
         if (messagesFeed && messagesFeed.children.length === 0) {
           appendMessage('assistant', welcomeMessage, null, true);
         }
@@ -99,31 +92,6 @@
     if (toggleBtn) toggleBtn.addEventListener('click', () => toggleChat());
     if (closeBtn) closeBtn.addEventListener('click', () => toggleChat(false));
 
-    // Proactive Toast Notification
-    if (notificationEnabled && toastEl && toastText) {
-      toastText.textContent = notificationText;
-      setTimeout(() => {
-        if (!isOpen && !localStorage.getItem('grav_chatbot_toast_dismissed')) {
-          toastEl.style.display = 'flex';
-          toastEl.classList.add('active');
-        }
-      }, notificationDelaySeconds * 1000);
-
-      if (toastClose) {
-        toastClose.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toastEl.style.display = 'none';
-          toastEl.classList.remove('active');
-          localStorage.setItem('grav_chatbot_toast_dismissed', 'true');
-        });
-      }
-
-      toastEl.addEventListener('click', () => {
-        toastEl.style.display = 'none';
-        toastEl.classList.remove('active');
-        toggleChat(true);
-      });
-    }
 
     function appendMessage(role, text, source, skipSave) {
       if (!messagesFeed) return;

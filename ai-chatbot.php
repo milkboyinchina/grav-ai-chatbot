@@ -61,6 +61,8 @@ class AiChatbotPlugin extends Plugin
     {
         $configured = trim((string)$this->config->get('plugins.ai-chatbot.api_key', ''));
         if ($configured !== '') {
+            // Main key set; still allow a dedicated embedding key from env.
+            $this->applyEmbeddingEnvOverride();
             return;
         }
 
@@ -72,6 +74,30 @@ class AiChatbotPlugin extends Plugin
         $envKey = trim((string)$envKey);
         if ($envKey !== '') {
             $this->config->set('plugins.ai-chatbot.api_key', $envKey);
+        }
+
+        $this->applyEmbeddingEnvOverride();
+    }
+
+    /**
+     * Overlay a dedicated embedding secret so chat and embeddings can run
+     * on different vendors without storing either key in version control.
+     */
+    protected function applyEmbeddingEnvOverride(): void
+    {
+        $configured = trim((string)$this->config->get('plugins.ai-chatbot.rag_embedding_api_key', ''));
+        if ($configured !== '') {
+            return;
+        }
+
+        $envKey = getenv('AI_CHATBOT_EMBEDDING_API_KEY');
+        if ($envKey === false || trim((string)$envKey) === '') {
+            $envKey = $_ENV['AI_CHATBOT_EMBEDDING_API_KEY'] ?? $_SERVER['AI_CHATBOT_EMBEDDING_API_KEY'] ?? '';
+        }
+
+        $envKey = trim((string)$envKey);
+        if ($envKey !== '') {
+            $this->config->set('plugins.ai-chatbot.rag_embedding_api_key', $envKey);
         }
     }
 
@@ -115,7 +141,11 @@ class AiChatbotPlugin extends Plugin
         $routes->post('/ai-chatbot/test-key', [$controller, 'testKey']);
         $routes->post('/ai-chatbot/models', [$controller, 'fetchModels']);
         $routes->post('/ai-chatbot/health', [$controller, 'testHealth']);
+        $routes->post('/ai-chatbot/test-embedding', [$controller, 'testEmbedding']);
         $routes->post('/ai-chatbot/reindex', [$controller, 'rebuildIndex']);
+        $routes->post('/ai-chatbot/reindex-incremental', [$controller, 'rebuildIndexIncremental']);
+        $routes->get('/ai-chatbot/rag-status', [$controller, 'ragStatus']);
+        $routes->get('/ai-chatbot/rag-pages', [$controller, 'ragIndexedPages']);
         $routes->post('/ai-chatbot/unlock', [$controller, 'unlock']);
         $routes->post('/ai-chatbot/clear-logs', [$controller, 'clearLogs']);
         $routes->get('/ai-chatbot/export', [$controller, 'export']);
@@ -246,6 +276,8 @@ class AiChatbotPlugin extends Plugin
                 'onPageInitialized' => ['onPageInitialized', 1000],
                 'onPageNotFound' => ['onPageNotFound', 1000],
             ]);
+            // Outlined style for blueprint text fields (wrapper_classes marker).
+            $this->grav['assets']->addCss('plugin://ai-chatbot/admin-next/css/chatbot-outlined.css');
         } else {
             $this->enable([
                 'onTwigTemplatePaths' => ['onTwigTemplatePaths', 0],
@@ -337,9 +369,7 @@ class AiChatbotPlugin extends Plugin
                 'accentColor' => $this->config->get('plugins.ai-chatbot.accent_color', '#3b82f6'),
                 'themePreset' => $this->config->get('plugins.ai-chatbot.theme_preset', 'glass_blue'),
                 'sessionRetentionDays' => (int)$this->config->get('plugins.ai-chatbot.session_retention_days', 7),
-                'notificationEnabled' => (bool)$this->config->get('plugins.ai-chatbot.notification_enabled', true),
-                'notificationText' => $this->config->get('plugins.ai-chatbot.notification_text', 'Hi there! Need help finding anything on our website?'),
-                'notificationDelaySeconds' => (int)$this->config->get('plugins.ai-chatbot.notification_delay_seconds', 4),
+
                 'quickRepliesEnabled' => (bool)$this->config->get('plugins.ai-chatbot.quick_replies_enabled', true),
                 'quickReplies' => (array)$this->config->get('plugins.ai-chatbot.quick_replies', []),
                 'maxTokens' => (int)$this->config->get('plugins.ai-chatbot.max_tokens', 800),
@@ -537,7 +567,7 @@ class AiChatbotPlugin extends Plugin
             try {
                 $indexer = new \Grav\Plugin\AiChatbot\Rag\Indexer($this->grav, $this->config->toArray());
                 $indexer->indexSinglePage($page);
-            } catch (\Throwable $t) {}
+            } catch (\Throwable $t) { (new \Grav\Plugin\AiChatbot\Logger($this->grav))->logError($t->getMessage(), 'RAG_INDEX'); }
         }
     }
 
@@ -555,7 +585,7 @@ class AiChatbotPlugin extends Plugin
             try {
                 $indexer = new \Grav\Plugin\AiChatbot\Rag\Indexer($this->grav, $this->config->toArray());
                 $indexer->removePageByRoute($page->route());
-            } catch (\Throwable $t) {}
+            } catch (\Throwable $t) { (new \Grav\Plugin\AiChatbot\Logger($this->grav))->logError($t->getMessage(), 'RAG_INDEX'); }
         }
     }
 
@@ -583,6 +613,6 @@ class AiChatbotPlugin extends Plugin
             $locator = $this->grav['locator'] ?? null;
             $logBase = $locator ? $locator->findResource('user://data', true) : null;
             $job->output(($logBase ?: 'user/data') . '/ai-chatbot/rag_scheduler.log');
-        } catch (\Throwable $t) {}
+        } catch (\Throwable $t) { (new \Grav\Plugin\AiChatbot\Logger($this->grav))->logError($t->getMessage(), 'RAG_SCHEDULER'); }
     }
 }

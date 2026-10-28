@@ -21,6 +21,7 @@ class Chunker
 
     /**
      * Chunk all published and routable Grav pages into structural content blocks.
+     * Iterates over all supported languages so multilingual pages are indexed.
      *
      * @param array $excludeRoutes Routes to skip
      * @return array Array of structured chunks
@@ -29,41 +30,81 @@ class Chunker
     {
         $allChunks = [];
 
-        try {
-            $pagesContainer = $this->grav['pages'] ?? null;
-            if (!$pagesContainer) {
-                return [];
-            }
-
-            if (method_exists($pagesContainer, 'init')) {
-                try {
-                    $pagesContainer->init();
-                } catch (\Throwable $t) {}
-            }
-
-            $pages = $pagesContainer->all() ?: [];
-        } catch (\Throwable $e) {
-            $pages = [];
+        $supported = $this->grav['config']->get('system.languages.supported', ['en']);
+        if (!is_array($supported) || empty($supported)) {
+            $supported = ['en'];
         }
 
-        /** @var Page $page */
-        foreach ($pages as $page) {
+        $languageManager = $this->grav['language'] ?? null;
+        $pagesContainer = $this->grav['pages'] ?? null;
+        if (!$pagesContainer) {
+            return [];
+        }
+
+        foreach ($supported as $lang) {
+            $lang = (string)$lang;
             try {
-                if (!$page instanceof Page || !$page->published() || !$page->routable()) {
-                    continue;
+                if ($languageManager && method_exists($languageManager, 'setActive')) {
+                    $languageManager->setActive($lang);
                 }
 
-                $route = $page->route();
-                if (in_array($route, $excludeRoutes, true) || strpos($route, '/hidden-') !== false) {
-                    continue;
+                // Reset pages container so it rebuilds for the active language
+                try {
+                    $ref = new \ReflectionProperty($pagesContainer, 'initialized');
+                    $ref->setAccessible(true);
+                    $ref->setValue($pagesContainer, false);
+                } catch (\Throwable $t) {
+                }
+                if (method_exists($pagesContainer, 'init')) {
+                    try {
+                        $pagesContainer->init();
+                    } catch (\Throwable $t) {
+                    }
                 }
 
-                $pageChunks = $this->chunkPage($page);
-                foreach ($pageChunks as $chunk) {
-                    $allChunks[] = $chunk;
+                $pages = $pagesContainer->all() ?: [];
+            } catch (\Throwable $e) {
+                $pages = [];
+            }
+
+            foreach ($pages as $page) {
+                try {
+                    if (!$page instanceof Page || !$page->published() || !$page->routable()) {
+                        continue;
+                    }
+
+                    $route = $page->route();
+                    if (in_array($route, $excludeRoutes, true) || strpos($route, '/hidden-') !== false) {
+                        continue;
+                    }
+
+                    if (method_exists($page, 'language')) {
+                        try {
+                            $page->language($lang);
+                        } catch (\Throwable $t) {
+                        }
+                    }
+
+                    $pageChunks = $this->chunkPage($page);
+                    foreach ($pageChunks as &$chunk) {
+                        $chunk['language'] = $lang;
+                    }
+                    unset($chunk);
+                    foreach ($pageChunks as $chunk) {
+                        $allChunks[] = $chunk;
+                    }
+                } catch (\Throwable $t) {
+                    continue;
                 }
+            }
+        }
+
+        // Restore default language
+        if ($languageManager && method_exists($languageManager, 'setActive')) {
+            try {
+                $default = $this->grav['config']->get('system.languages.default', 'en');
+                $languageManager->setActive($default);
             } catch (\Throwable $t) {
-                continue;
             }
         }
 
@@ -80,6 +121,7 @@ class Chunker
     {
         $route = $page->route();
         $title = $page->title();
+        $language = (method_exists($page, 'language') && $page->language()) ? (string)$page->language() : 'default';
         $rawMarkdown = $page->rawMarkdown();
 
         if (empty(trim($rawMarkdown))) {
@@ -140,7 +182,7 @@ class Chunker
 
             if ($totalWords <= $chunkSize) {
                 $contentStr = implode(' ', $words);
-                $chunkId = md5("{$route}_{$chunkIndex}_" . substr($contentStr, 0, 50));
+                $chunkId = md5("{$route}_{$language}_{$chunkIndex}_" . substr($contentStr, 0, 50));
                 $chunks[] = [
                     'chunk_id' => $chunkId,
                     'route' => $route,
@@ -148,7 +190,8 @@ class Chunker
                     'section' => $headingText,
                     'anchor' => $anchor,
                     'content' => $contentStr,
-                    'hash' => hash('sha256', $contentStr)
+                    'hash' => hash('sha256', $contentStr),
+                    'language' => $language
                 ];
                 $chunkIndex++;
             } else {
@@ -156,7 +199,7 @@ class Chunker
                     $slice = array_slice($words, $i, $chunkSize);
                     if (empty($slice)) break;
                     $contentStr = implode(' ', $slice);
-                    $chunkId = md5("{$route}_{$chunkIndex}_" . substr($contentStr, 0, 50));
+                    $chunkId = md5("{$route}_{$language}_{$chunkIndex}_" . substr($contentStr, 0, 50));
                     $chunks[] = [
                         'chunk_id' => $chunkId,
                         'route' => $route,
@@ -164,7 +207,8 @@ class Chunker
                         'section' => $headingText,
                         'anchor' => $anchor,
                         'content' => $contentStr,
-                        'hash' => hash('sha256', $contentStr)
+                        'hash' => hash('sha256', $contentStr),
+                        'language' => $language
                     ];
                     $chunkIndex++;
                     if ($i + $chunkSize >= $totalWords) break;

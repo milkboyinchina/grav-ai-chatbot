@@ -1,7 +1,10 @@
 en:
   PLUGIN_AI_CHATBOT:
     ENABLED: Enabled
-    PROVIDER_SETTINGS: AI Provider Settings
+    PROVIDER_SETTINGS: Chat Provider Settings
+    CHAT_PROVIDER_SETTINGS_TEXT: Configure the AI chat engine, API key, model, and endpoint.
+    RAG_PROVIDER_SETTINGS: RAG Provider Settings
+    RAG_PROVIDER_SETTINGS_TEXT: Configure vector embeddings and page indexing for retrieval.
     AI_ENABLED: Enable AI API Fallback
     AI_ENABLED_HELP: When disabled, chatbot strictly uses local FAQ page answers and will not make AI API calls.
     AI_DISABLED_RESPONSE_TEXT: AI Disabled Response Message
@@ -15,7 +18,7 @@ en:
     CUSTOM_ENDPOINT: Custom Base Endpoint URL
     CUSTOM_ENDPOINT_HELP: E.g. https://openrouter.ai/api/v1 (only required for Custom provider)
     CUSTOM_SYSTEM_PROMPT: Custom System Prompt / Instructions
-    CUSTOM_SYSTEM_PROMPT_HELP: Custom system instructions for AI model. If left empty, defaults to CoT suppression and character limit rules.
+    CUSTOM_SYSTEM_PROMPT_HELP: Custom system instructions for AI model. If left empty, uses the built-in default prompt. Supports placeholders {max_response_chars}, {site_name}, {languages}. The security boundary is always appended.
     MAX_RESPONSE_CHARS: Max Response Characters (Soft Limit)
     MAX_RESPONSE_CHARS_HELP: Soft guidance for maximum characters in AI replies (default 1000 characters).
     FAQ_SETTINGS: FAQ Pre-Matching Settings
@@ -57,17 +60,14 @@ en:
     QUICK_REPLIES_ENABLED_HELP: Shows quick reply suggestion pills above the chat input box
     QUICK_REPLIES: Customizable Quick Reply Buttons
     QUICK_REPLIES_HELP: Add or customize quick suggestion buttons (e.g. Summarize Page, Contact Owner, or custom question prompts)
-    NOTIFICATION_ENABLED: Proactive Notification Toast
-    NOTIFICATION_ENABLED_HELP: Shows pop-up message toast above launcher button
-    NOTIFICATION_TEXT: Toast Notification Text
-    NOTIFICATION_DELAY: Toast Delay (Seconds)
-    COT_EMPTY_RESPONSE_TEXT: AI Unclear Response Message
-    COT_EMPTY_RESPONSE_TEXT_HELP: Message shown when the AI could not generate a clear answer (e.g. nonsensical input).
 
 id:
   PLUGIN_AI_CHATBOT:
     ENABLED: Aktif
-    PROVIDER_SETTINGS: Pengaturan Penyedia AI
+    PROVIDER_SETTINGS: Pengaturan Penyedia Chat
+    CHAT_PROVIDER_SETTINGS_TEXT: Konfigurasi mesin chat AI, kunci API, model, dan endpoint.
+    RAG_PROVIDER_SETTINGS: Pengaturan Penyedia RAG
+    RAG_PROVIDER_SETTINGS_TEXT: Konfigurasi embedding vektor dan pengindeksan halaman untuk retrieval.
     AI_ENABLED: Aktifkan Fallback API AI
     AI_ENABLED_HELP: Jika dinonaktifkan, chatbot hanya memakai jawaban FAQ lokal dan tidak memanggil API AI.
     AI_DISABLED_RESPONSE_TEXT: Pesan Respons AI Nonaktif
@@ -81,7 +81,7 @@ id:
     CUSTOM_ENDPOINT: URL Endpoint Kustom
     CUSTOM_ENDPOINT_HELP: Contoh https://openrouter.ai/api/v1 (hanya diperlukan untuk penyedia Kustom)
     CUSTOM_SYSTEM_PROMPT: Prompt / Instruksi Sistem Kustom
-    CUSTOM_SYSTEM_PROMPT_HELP: Instruksi sistem kustom untuk model AI. Jika dikosongkan, memakai aturan bawaan penekanan CoT dan batas karakter.
+    CUSTOM_SYSTEM_PROMPT_HELP: Instruksi sistem kustom untuk model AI. Jika dikosongkan, memakai prompt bawaan. Mendukung placeholder {max_response_chars}, {site_name}, {languages}. Batas keamanan selalu ditambahkan.
     MAX_RESPONSE_CHARS: Maksimum Karakter Respons (Batas Lunak)
     MAX_RESPONSE_CHARS_HELP: Panduan lunak untuk jumlah maksimum karakter balasan AI (bawaan 1000 karakter).
     FAQ_SETTINGS: Pengaturan Pra-Pencocokan FAQ
@@ -123,9 +123,3 @@ id:
     QUICK_REPLIES_ENABLED_HELP: Menampilkan pil saran balasan cepat di atas kotak input obrolan
     QUICK_REPLIES: Tombol Balasan Cepat yang Dapat Dikustom
     QUICK_REPLIES_HELP: Tambah atau sesuaikan tombol saran cepat (mis. Ringkas Halaman, Kontak Pemilik, atau prompt pertanyaan kustom)
-    NOTIFICATION_ENABLED: Notifikasi Toast Proaktif
-    NOTIFICATION_ENABLED_HELP: Menampilkan pesan toast pop-up di atas tombol peluncur
-    NOTIFICATION_TEXT: Teks Notifikasi Toast
-    NOTIFICATION_DELAY: Jeda Toast (Detik)
-    COT_EMPTY_RESPONSE_TEXT: Pesan Respons AI Tidak Jelas
-    COT_EMPTY_RESPONSE_TEXT_HELP: Pesan yang ditampilkan saat AI tidak dapat menghasilkan jawaban yang jelas (mis. input tidak masuk akal).

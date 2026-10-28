@@ -172,16 +172,82 @@ class ChatbotApiController extends AbstractApiController
     }
 
     /**
+     * POST /ai-chatbot/test-embedding - admin only.
+     */
+    public function testEmbedding(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->requirePermission($request, 'api.system.write');
+
+        $body = $this->getRequestBody($request);
+        $response = $this->handler()->processRequest(array_merge($body, ['action' => 'test_embedding']));
+        $status = (int)($response['http_code'] ?? 200);
+        unset($response['http_code']);
+        return ApiResponse::create($response, $status);
+    }
+    /**
      * POST /ai-chatbot/reindex - admin only.
      */
     public function rebuildIndex(ServerRequestInterface $request): ResponseInterface
     {
         $this->requirePermission($request, 'api.system.write');
 
-        $response = $this->handler()->processRequest(['action' => 'rebuild_rag_index']);
+        // Rebuilds can take minutes on large sites; remove PHP web-SAPI timeout.
+        set_time_limit(0);
+        ignore_user_abort(true);
+
+        $response = $this->handler(true)->processRequest(['action' => 'rebuild_rag_index']);
         $status = (int)($response['http_code'] ?? 200);
         unset($response['http_code']);
         return ApiResponse::create($response, $status);
+    }
+
+    /**
+     * POST /ai-chatbot/reindex-incremental - admin only.
+     * Incremental update: re-chunks all pages but skips unchanged chunks by hash.
+     */
+    public function rebuildIndexIncremental(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->requirePermission($request, 'api.system.write');
+        set_time_limit(0);
+        ignore_user_abort(true);
+
+        $response = $this->handler(true)->processRequest(['action' => 'rebuild_rag_index_incremental']);
+        $status = (int)($response['http_code'] ?? 200);
+        unset($response['http_code']);
+        return ApiResponse::create($response, $status);
+    }
+
+    /**
+     * GET /ai-chatbot/rag-pages - admin only. List currently indexed pages.
+     */
+    public function ragIndexedPages(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->requirePermission($request, 'api.system.read');
+        try {
+            $config = $this->pluginConfig();
+            $indexer = new \Grav\Plugin\AiChatbot\Rag\Indexer($this->grav, $config);
+            $pages = $indexer->getIndexedPages();
+            return ApiResponse::create(['success' => true, 'pages' => $pages, 'count' => count($pages)], 200);
+        } catch (\Throwable $e) {
+            return ApiResponse::create(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /ai-chatbot/rag-status - admin only.
+     */
+    public function ragStatus(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->requirePermission($request, 'api.system.read');
+
+        try {
+            $config = $this->pluginConfig();
+            $indexer = new \Grav\Plugin\AiChatbot\Rag\Indexer($this->grav, $config);
+            $status = $indexer->getStatus();
+            return ApiResponse::create(['success' => true, 'status' => $status], 200);
+        } catch (\Throwable $e) {
+            return ApiResponse::create(['success' => false, 'error' => $e->getMessage()], 500);
+        }
     }
 
     /**
