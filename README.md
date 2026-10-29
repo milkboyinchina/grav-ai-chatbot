@@ -38,7 +38,7 @@ The plugin includes a multi-layered security hardening suite protecting against 
 - ⏱️ **Server-Side Token Flooding Defense**: Enforces a configurable token ceiling (`max_input_tokens`, default 500 tokens ≈ 2000 characters) and a hard server-side truncation at **500 characters** before invoking LLM API providers.
 - 🔑 **Credential Stuffing Cool-Off Protection**: Tracks security guardrail violations by anonymized IP hash. 5 violations within 60s trigger a **15-minute temporary IP lockout** (`429 Security Cool-Off`).
 - 📊 **Real-Time Admin 2 Security Audit Dashboard (`<chatbot-security-logs>`)**: Renders real-time threat meter, live audit violation logs, and admin lockout release controls in Grav Admin 2.
-- 💸 **Provider API Key Spending Cap (Cost Overrun Guard)**: Lets the site owner set a desired spending cap on provider API key usage (daily/monthly budget limit) so the chatbot stops calling the provider once the cap is reached, preventing cost overrun when many visitors use it.
+- 💸 **Provider API Key Spending Cap (Cost Overrun Guard)**: Set your desired spending cap directly in your provider's billing/dashboard settings so the provider cuts off usage once the cap is reached, preventing cost overrun when many visitors use the chatbot.
 
 ---
 
@@ -172,7 +172,7 @@ Navigate to **Grav Admin -> Plugins -> Grav AI Chatbot** to configure:
 | **Chatbot Widget UI** | Theme Presets, Floating Position, Page Display Visibility Rules, Welcome Message, Accent Color, **Quick Reply Buttons List** |
 | **Proactive Toasts** | Enable Toast, Toast Text, Delay Seconds |
 | **Session Retention** | Session Retention Period (Days) |
-| **Security & Limits** | IP Rate Limiting Enable, Max Requests Per Window, Window Duration (Seconds), Blacklist Guardrail Toggle, Blacklisted Vocabulary, Blacklist Response Text, **Provider API Key Spending Cap (cost overrun guard)** |
+| **Security & Limits** | IP Rate Limiting Enable, Max Requests Per Window, Window Duration (Seconds), Blacklist Guardrail Toggle, Blacklisted Vocabulary, Blacklist Response Text, **Provider API Key Spending Cap (set in provider dashboard, cost overrun guard)** |
 | **Analytics & Telemetry** | Candidate FAQ Recommendations, Telemetry Log Location, Export CSV/JSON/Raw Links, Live Error & Security Audit Log |
 
 ---
