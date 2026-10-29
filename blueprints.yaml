@@ -200,13 +200,13 @@ form:
           options:
             tfidf_local: ⚡ Local TF-IDF / BM25 Inverted Index (Free / No External API Needed)
             ollama: 🦙 Ollama Local Embeddings (nomic-embed-text / mxbai-embed-large)
-            gemini: ♊ Google Gemini Embeddings (text-embedding-004)
+            gemini: ♊ Google Gemini Embeddings (gemini-embedding-2)
             openai: 🤖 OpenAI / OpenRouter Embeddings (text-embedding-3-small)
 
         rag_embedding_model:
           type: text
           label: 🏷️ Embedding Model Identifier
-          help: Embedding model name (e.g. nomic-embed-text, text-embedding-004, text-embedding-3-small)
+          help: Embedding model name (e.g. nomic-embed-text, gemini-embedding-2, text-embedding-3-small). Use "Fetch Models" in RAG tools to list available.
           default: 'tfidf_local'
           placeholder: 'Default: tfidf_local'
 
@@ -250,7 +250,6 @@ form:
           help: Number of relevant page chunks to inject into the prompt context per query (Default 5, Range 1-10)
           placeholder: 'Default: 5'
           default: 5
-          placeholder: 'Default: 5'
           validate:
             type: int
             min: 1
@@ -262,7 +261,6 @@ form:
           help: Minimum similarity score required to include a page chunk (Default 50%)
           placeholder: 'Default: 50'
           default: 50
-          placeholder: 'Default: 50'
           validate:
             type: int
             min: 10

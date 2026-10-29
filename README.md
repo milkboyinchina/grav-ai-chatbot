@@ -15,7 +15,7 @@ An intelligent, enterprise-ready **Grav CMS AI Chatbot Plugin** supporting Retri
 
 > [!WARNING]
 > **Proof of Extreme Token Efficiency & Context Window Optimization**:  
-> The live demo backend on `milkboy.my.id` is powered by a custom Ollama endpoint running on a ~remote janky old Intel Celeron N4100 low-power mini PC~ Mac mini M1 serving `Minicpm5-2B`! Running at an ~snail's~ average 35 tokens/sec.
+> The live demo backend on `milkboy.my.id` is powered by a custom Ollama endpoint running on a ~remote janky old Intel Celeron N4100 low-power mini PC~ It was fun tinkering with a low-end PC, but a real site has to run smooth, so I switched to a Mac M1 (8GB) running OpenCPM 5-2B! Running at an ~snail's~ average 35 tokens/sec.
 > Because the RAG engine trims system prompt context down to 300–500 tokens, even ultra-low-spec hardware can process site queries in "real™" time. Please expect slight hardware-bound processing latency when testing complex queries (*your mileage may vary!*).
 > Don't judge me, I'm not made of money.
 ---
@@ -38,6 +38,7 @@ The plugin includes a multi-layered security hardening suite protecting against 
 - ⏱️ **Server-Side Token Flooding Defense**: Enforces a configurable token ceiling (`max_input_tokens`, default 500 tokens ≈ 2000 characters) and a hard server-side truncation at **500 characters** before invoking LLM API providers.
 - 🔑 **Credential Stuffing Cool-Off Protection**: Tracks security guardrail violations by anonymized IP hash. 5 violations within 60s trigger a **15-minute temporary IP lockout** (`429 Security Cool-Off`).
 - 📊 **Real-Time Admin 2 Security Audit Dashboard (`<chatbot-security-logs>`)**: Renders real-time threat meter, live audit violation logs, and admin lockout release controls in Grav Admin 2.
+- 💸 **Provider API Key Spending Cap (Cost Overrun Guard)**: Lets the site owner set a desired spending cap on provider API key usage (daily/monthly budget limit) so the chatbot stops calling the provider once the cap is reached, preventing cost overrun when many visitors use it.
 
 ---
 
@@ -171,7 +172,7 @@ Navigate to **Grav Admin -> Plugins -> Grav AI Chatbot** to configure:
 | **Chatbot Widget UI** | Theme Presets, Floating Position, Page Display Visibility Rules, Welcome Message, Accent Color, **Quick Reply Buttons List** |
 | **Proactive Toasts** | Enable Toast, Toast Text, Delay Seconds |
 | **Session Retention** | Session Retention Period (Days) |
-| **Security & Limits** | IP Rate Limiting Enable, Max Requests Per Window, Window Duration (Seconds), Blacklist Guardrail Toggle, Blacklisted Vocabulary, Blacklist Response Text |
+| **Security & Limits** | IP Rate Limiting Enable, Max Requests Per Window, Window Duration (Seconds), Blacklist Guardrail Toggle, Blacklisted Vocabulary, Blacklist Response Text, **Provider API Key Spending Cap (cost overrun guard)** |
 | **Analytics & Telemetry** | Candidate FAQ Recommendations, Telemetry Log Location, Export CSV/JSON/Raw Links, Live Error & Security Audit Log |
 
 ---

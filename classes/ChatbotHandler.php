@@ -620,6 +620,28 @@ class ChatbotHandler
      */
     protected function fetchModels(array $data): array
     {
+        $forEmbedding = !empty($data['embedding']);
+
+        // Allow RAG embedding providers (which use a different vocabulary) to
+        // drive model listing. tfidf_local has no remote model list.
+        $ragProvider = strtolower(trim((string)($data['rag_embedding_provider'] ?? '')));
+        if ($ragProvider !== '') {
+            if ($ragProvider === 'tfidf_local') {
+                return [
+                    'http_code' => 200,
+                    'success' => true,
+                    'provider' => 'tfidf_local',
+                    'models' => [],
+                    'message' => 'No remote models for local TF-IDF.'
+                ];
+            }
+            if ($ragProvider === 'custom') {
+                $data['provider'] = 'openai';
+            } else {
+                $data['provider'] = $ragProvider;
+            }
+        }
+
         $provider = $this->sanitizeProvider($data['provider'] ?? $this->config['provider'] ?? 'gemini');
         $apiKey = trim($data['api_key'] ?? '');
         if (empty($apiKey)) {
@@ -680,7 +702,8 @@ class ChatbotHandler
                     $json = json_decode($response, true);
                     foreach ($json['models'] ?? [] as $m) {
                         $name = str_replace('models/', '', $m['name'] ?? '');
-                        if (!empty($name) && str_contains($name, 'gemini')) {
+                        $needle = $forEmbedding ? 'embed' : 'gemini';
+                        if (!empty($name) && str_contains(strtolower($name), $needle)) {
                             $models[] = $name;
                         }
                     }
@@ -760,6 +783,9 @@ class ChatbotHandler
                     $json = json_decode($response, true);
                     foreach ($json['data'] ?? [] as $m) {
                         if (!empty($m['id'])) {
+                            if ($forEmbedding && stripos($m['id'], 'embed') === false) {
+                                continue;
+                            }
                             $models[] = $m['id'];
                         }
                     }
@@ -767,21 +793,30 @@ class ChatbotHandler
             }
 
             if (empty($models)) {
-                $defaults = [
-                    'claude' => ['claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
-                    'deepseek' => ['deepseek-chat', 'deepseek-reasoner'],
-                    'gemini' => ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'],
-                    'groq' => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-                    'openai' => ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
-                    'openrouter' => ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
-                    'omniroute' => ['gemini/gemini-3.1-flash-lite', 'gemini/gemini-2.5-flash', 'openai/gpt-4o-mini', 'llama3.3', 'qwen2.5-coder'],
-                    'opencode-zen' => ['opencode-zen-default'],
-                    'opencode-go' => ['opencode-go-default'],
-                    'reflection' => ['reflection-default'],
-                    'xiaomi' => ['mimo-v2-flash'],
-                    'zhipu' => ['glm-4-flash', 'glm-4']
-                ];
-                $models = $defaults[$provider] ?? ['gemini/gemini-3.1-flash-lite', 'gpt-4o-mini', 'llama3.3'];
+                if ($forEmbedding) {
+                    $embedDefaults = [
+                        'gemini' => ['gemini-embedding-2', 'gemini-embedding-001'],
+                        'openai' => ['text-embedding-3-small', 'text-embedding-3-large'],
+                        'ollama' => ['nomic-embed-text', 'mxbai-embed-large'],
+                    ];
+                    $models = $embedDefaults[$provider] ?? [];
+                } else {
+                    $defaults = [
+                        'claude' => ['claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
+                        'deepseek' => ['deepseek-chat', 'deepseek-reasoner'],
+                        'gemini' => ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+                        'groq' => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+                        'openai' => ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
+                        'openrouter' => ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
+                        'omniroute' => ['gemini/gemini-3.1-flash-lite', 'gemini/gemini-2.5-flash', 'openai/gpt-4o-mini', 'llama3.3', 'qwen2.5-coder'],
+                        'opencode-zen' => ['opencode-zen-default'],
+                        'opencode-go' => ['opencode-go-default'],
+                        'reflection' => ['reflection-default'],
+                        'xiaomi' => ['mimo-v2-flash'],
+                        'zhipu' => ['glm-4-flash', 'glm-4']
+                    ];
+                    $models = $defaults[$provider] ?? ['gemini/gemini-3.1-flash-lite', 'gpt-4o-mini', 'llama3.3'];
+                }
             }
 
             return [

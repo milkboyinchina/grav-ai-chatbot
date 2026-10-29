@@ -14,6 +14,8 @@ class ChatbotRagTools extends HTMLElement {
     this._indexedPages = null;
     this._showIndexedPages = false;
     this._indexedPagesLoading = false;
+    this._embedModels = [];
+    this._embedModelsLoading = false;
   }
 
   set field(f) {
@@ -120,6 +122,62 @@ class ChatbotRagTools extends HTMLElement {
       if (el) out[p] = el;
     }
     return out;
+  }
+
+  async _fetchEmbeddingModels() {
+    if (this._embedModelsLoading) return;
+    this._embedModelsLoading = true;
+    this._render();
+    let cands = this._findOuterCandidates(['RAG Embedding', 'Embedding Model', 'Embedding API', 'Embedding Endpoint', 'Custom URL']);
+    if (!cands['RAG Embedding']) {
+      await new Promise(r => setTimeout(r, 150));
+      cands = this._findOuterCandidates(['RAG Embedding', 'Embedding Model', 'Embedding API', 'Embedding Endpoint', 'Custom URL']);
+    }
+    const provider = cands['RAG Embedding'] ? cands['RAG Embedding'].value : '';
+    const apiKey = cands['Embedding API'] ? cands['Embedding API'].value : '';
+    const endpoint = cands['Embedding Endpoint'] ? cands['Embedding Endpoint'].value : (cands['Custom URL'] ? cands['Custom URL'].value : '');
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (typeof window !== 'undefined' && window.__GRAV_API_TOKEN) {
+        headers['X-API-Token'] = window.__GRAV_API_TOKEN;
+      }
+      const res = await fetch('/api/v1/ai-chatbot/models', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          rag_embedding_provider: provider,
+          api_key: apiKey,
+          custom_endpoint: endpoint,
+          embedding: true
+        })
+      });
+      const json = await res.json();
+      const payload = json.data || json;
+      this._embedModelsLoading = false;
+      if (payload.success && Array.isArray(payload.models)) {
+        this._embedModels = payload.models;
+        this._status = { type: 'success', message: '✅ Fetched ' + payload.models.length + ' embedding models.' };
+      } else {
+        this._embedModels = [];
+        this._status = { type: 'error', message: '❌ ' + (payload.message || payload.error || 'Failed to fetch models') };
+      }
+    } catch (err) {
+      this._embedModelsLoading = false;
+      this._embedModels = [];
+      this._status = { type: 'error', message: '❌ ' + err.message };
+    }
+    this._render();
+  }
+
+  _applyEmbeddingModel(name) {
+    if (!name) return;
+    const cands = this._findOuterCandidates(['Embedding Model']);
+    const el = cands['Embedding Model'];
+    if (el) {
+      el.value = name;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   }
 
   async _testEmbedding() {
@@ -319,11 +377,12 @@ class ChatbotRagTools extends HTMLElement {
         ${this._indexStatus ? `<div class="status info" style="margin-bottom:10px;">Chunks: ${this._indexStatus.chunk_count ?? 0} | Storage: ${this._indexStatus.db_size_human ?? (this._indexStatus.db_size_bytes ? (this._indexStatus.db_size_bytes / 1048576).toFixed(2) + ' MB' : '0 B')} | Provider: ${this._indexStatus.embedding_provider ?? ''} | Model: ${this._indexStatus.embedding_model ?? ''} | Last run: ${this._indexStatus.last_run ? new Date(this._indexStatus.last_run * 1000).toLocaleString() : 'never'}${this._indexStatus.last_error ? ' | Error: ' + String(this._indexStatus.last_error).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) : ''}</div>` : ''}
         ${this._indexStatus ? `<div class="status info" style="margin-bottom:10px;">Auto-indexing: ${this._indexStatus.indexing_enabled ? 'Enabled' : 'Disabled'} | Scheduler: ${this._indexStatus.scheduler_enabled ? 'Enabled' : 'Disabled'}${this._indexStatus.scheduler_enabled ? ' (' + (this._indexStatus.scheduler_cron || '') + ')' : ''}</div>` : ''}
         ${this._indexStatus && this._indexStatus.embedding_provider && this._indexStatus.embedding_model ? this._staleWarning(this._indexStatus) : ''}
+        <button type="button" id="btn-fetch-embed-models" ${this._embedModelsLoading ? 'disabled' : ''} style="background:#7c3aed;margin-right:8px;">🔍 Fetch Embedding Models</button>
         <button type="button" id="btn-test-embed" ${this._embedBusy ? 'disabled' : ''} style="background:#2563eb;margin-right:8px;">🧪 Test Embedding</button>
         <button type="button" id="btn-incremental" ${this._busy ? 'disabled' : ''} style="background:#0ea5e9;margin-right:8px;">🔄 Incremental Index Update</button>
         <button type="button" id="btn-rebuild" ${this._busy ? 'disabled' : ''} style="background:#ef4444;">⚡ Rebuild RAG Vector Index Now</button>
         <button type="button" id="btn-toggle-pages" ${this._busy ? 'disabled' : ''} style="background:#6b7280;margin-left:8px;margin-top:8px;">${this._showIndexedPages ? 'Hide' : 'Show'} indexed pages${this._indexedPages ? ' (' + this._indexedPages.length + ')' : ''}</button>
-        ${this._showIndexedPages ? (this._indexedPagesLoading ? '<div class="status info" style="margin-top:8px;">⏳ Loading indexed pages...</div>' : (this._indexedPages && this._indexedPages.length ? `<div style="max-height:240px;overflow:auto;margin-top:8px;font-size:12px;"><table style="width:100%;border-collapse:collapse;"><thead><tr><th style="text-align:left;padding:4px;border-bottom:1px solid #e5e7eb;">Route</th><th style="text-align:right;padding:4px;border-bottom:1px solid #e5e7eb;">Chunks</th><th style="text-align:left;padding:4px;border-bottom:1px solid #e5e7eb;">Langs</th><th style="text-align:left;padding:4px;border-bottom:1px solid #e5e7eb;">Last updated</th></tr></thead><tbody>${this._indexedPages.map(p => `<tr><td style="padding:4px;">${String(p.route).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</td><td style="text-align:right;padding:4px;">${p.chunks}</td><td style="padding:4px;">${(p.languages || []).join(', ')}</td><td style="padding:4px;">${p.last_updated ? new Date(p.last_updated * 1000).toLocaleString() : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="status info" style="margin-top:8px;">No indexed pages yet.</div>')) : ''}
+        ${this._embedModels && this._embedModels.length ? `<div style="margin-top:8px;"><label style="font-size:12px;font-weight:600;">Embedding models:</label> <select id="sel-embed-model" style="padding:4px 8px;border-radius:4px;border:1px solid #d1d5db;font-size:12px;"><option value="">-- select to apply --</option>${this._embedModels.map(m => `<option value="${String(m).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}">${String(m).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</option>`).join('')}</select></div>` : ''}
         ${s.message ? `<div class="status ${s.type}">${s.message}</div>` : ''}
         ${this._embedStatus && this._embedStatus.message ? `<div class="status ${this._embedStatus.type}">${this._embedStatus.message}</div>` : ''}
       </div>
@@ -337,10 +396,14 @@ class ChatbotRagTools extends HTMLElement {
     if (btnRebuild) btnRebuild.addEventListener('click', () => this._rebuild());
     const btnIncremental = this.shadowRoot.querySelector('#btn-incremental');
     if (btnIncremental) btnIncremental.addEventListener('click', () => this._incremental());
+    const btnFetchEmbed = this.shadowRoot.querySelector('#btn-fetch-embed-models');
+    if (btnFetchEmbed) btnFetchEmbed.addEventListener('click', () => this._fetchEmbeddingModels());
     const btnTest = this.shadowRoot.querySelector('#btn-test-embed');
     if (btnTest) btnTest.addEventListener('click', () => this._testEmbedding());
     const btnTogglePages = this.shadowRoot.querySelector('#btn-toggle-pages');
     if (btnTogglePages) btnTogglePages.addEventListener('click', () => this._toggleIndexedPages());
+    const selEmbed = this.shadowRoot.querySelector('#sel-embed-model');
+    if (selEmbed) selEmbed.addEventListener('change', (e) => this._applyEmbeddingModel(e.target.value));
   }
 
   _staleWarning(status) {

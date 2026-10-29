@@ -47,7 +47,7 @@ class EmbeddingProvider
             }
         } elseif ($this->provider === 'gemini') {
             $this->endpoint = 'https://generativelanguage.googleapis.com/v1beta';
-            $this->model = $this->model ?: 'text-embedding-004';
+            $this->model = $this->model ?: 'gemini-embedding-2';
         } elseif ($this->provider === 'openai' || $this->provider === 'custom') {
             if ($customEndpoint !== '') {
                 $this->endpoint = $customEndpoint;

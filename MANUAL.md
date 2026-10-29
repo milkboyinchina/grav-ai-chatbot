@@ -68,7 +68,7 @@ Welcome to the user-friendly manual for the **Grav CMS AI Chatbot Plugin** (`use
 > 1. **Free API Access (No Credit Card Required)**: Google AI Studio provides generous free tier rate limits (up to **15 Requests Per Minute (RPM)** and **1 Million Tokens Per Minute (TPM)**) for model `gemini-2.0-flash`.
 > 2. **Instant API Key Generation**: Developers can obtain a free API key instantly in under 30 seconds at [Google AI Studio](https://aistudio.google.com/).
 > 3. **High Intelligence & Speed**: `gemini-2.0-flash` offers sub-second latency and strong multimodal reasoning, making it ideal for testing live website queries without incurring monthly API bills.
-> 4. **Seamless RAG Integration**: Reuses the same Gemini API key for both AI chat completions (`gemini-2.0-flash`) and vector embeddings (`text-embedding-004`).
+> 4. **Seamless RAG Integration**: Reuses the same Gemini API key for both AI chat completions (`gemini-2.0-flash`) and vector embeddings (`gemini-embedding-2`).
 
 > [!NOTE]
 > **Disclaimer & Message to Google**:  
@@ -86,8 +86,8 @@ The RAG engine parses your published Grav site pages, breaks them down into head
 | :--- | :--- | :--- | :--- |
 | **Enable RAG Retrieval** | `rag_enabled` | `1` (Enabled) | Use SQLite vector search to inject relevant section chunks into prompts instead of full-site text. |
 | **Automatic Page Indexing** | `rag_indexing_enabled` | `1` (Enabled) | Enables automatic indexing on `onPageSaved`, `onPageDeleted`, and background cron runs. |
-| **RAG Embedding Engine** | `rag_embedding_provider` | `tfidf_local` | Drivers: `tfidf_local` (Free local BM25), `ollama` (Local Ollama), `gemini` (`text-embedding-004`), `openai` (`text-embedding-3-small`), `custom` (Custom OpenAI-Compatible Endpoint, e.g. vLLM / LM Studio / TEI). |
-| **Embedding Model ID** | `rag_embedding_model` | `tfidf_local` | Model string (e.g., `nomic-embed-text`, `text-embedding-004`, `text-embedding-3-small`). |
+| **RAG Embedding Engine** | `rag_embedding_provider` | `tfidf_local` | Drivers: `tfidf_local` (Free local BM25), `ollama` (Local Ollama), `gemini` (`gemini-embedding-2`), `openai` (`text-embedding-3-small`), `custom` (Custom OpenAI-Compatible Endpoint, e.g. vLLM / LM Studio / TEI). |
+| **Embedding Model ID** | `rag_embedding_model` | `tfidf_local` | Model string (e.g., `nomic-embed-text`, `gemini-embedding-2`, `text-embedding-3-small`). |
 | **Embedding API Key** | `rag_embedding_api_key` | *Blank (reuse main key)* | Optional override for cloud embeddings. Leave blank to reuse Section 1 `api_key`. Fill when chat and embeddings run on different vendors, or set `AI_CHATBOT_EMBEDDING_API_KEY` in `.env`. |
 | **Embedding Endpoint URL** | `rag_embedding_endpoint` | *Blank (reuse shared endpoint)* | Optional override for local/custom embedding servers (e.g. `http://localhost:11434`). Leave blank to reuse the shared Custom Endpoint URL from Section 1. Required when the embedding engine is `ollama` or `custom` and Section 1 has no endpoint. |
 | **Top-K Chunks Count** | `rag_top_k` | `3` | Number of section chunks injected per prompt (Range: 1 - 10). |
@@ -157,7 +157,7 @@ All four engines feed the **same retrieval pipeline**: each page chunk and each 
   - Ideal if you run your own local AI hardware or home lab server and want 100% private, local semantic vector search without sending data to external clouds.
 
 #### Option 3: ♊ Google Gemini Embeddings (`gemini`)
-- **Recommended Model ID**: `text-embedding-004`
+- **Recommended Model ID**: `gemini-embedding-2`
 - **Cost**: Micro-fractional cloud pricing (~$0.00002 / 1k tokens)
 - **Requirements**: Requires `gemini` API Key set in Section 1.
 - **Why Choose This?**:  
